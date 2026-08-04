@@ -1007,3 +1007,161 @@ button#generate.generating {
     .cg label { font-size: 14px; }
     .section summary { font-size: 13px; }
 }
+
+/* ───── Cell Almanac ───── */
+#almanacOverlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 210;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.25s ease;
+}
+#almanacOverlay.hidden { opacity: 0; pointer-events: none; }
+#almanacCard {
+    position: relative;
+    max-width: 560px; width: 92%;
+    max-height: 88vh; overflow-y: auto;
+    background: rgba(8,8,28,0.95); backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 24px 22px 20px;
+    color: #cde;
+}
+#almanacCard h3 {
+    font-size: 18px; font-weight: 600; color: #fff;
+    margin: 0 0 4px;
+}
+#almanacSub {
+    font-size: 13px; color: #9ab; margin-bottom: 14px;
+}
+.alm-chip {
+    display: inline-block; width: 10px; height: 10px;
+    border-radius: 2px; vertical-align: middle; margin-right: 6px;
+}
+#almanacClose {
+    position: absolute; top: 10px; right: 14px;
+    background: none; border: none;
+    color: #667; font-size: 22px; cursor: pointer;
+    line-height: 1; padding: 4px;
+    transition: color 0.2s;
+}
+#almanacClose:hover { color: #fff; }
+
+.alm-tabs {
+    display: flex; gap: 4px; margin-bottom: 12px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px; padding: 3px;
+}
+.alm-tab {
+    flex: 1; padding: 7px 10px;
+    background: none; border: none; border-radius: 6px;
+    color: #89a; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.alm-tab:hover { color: #cde; }
+.alm-tab.active { background: rgba(80,120,220,0.32); color: #fff; }
+
+#almanacDateRow {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+#almanacDate { flex: 1; }
+#almanacDateLabel {
+    font-size: 13px; color: #cde; min-width: 62px; text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.alm-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px 12px; margin-bottom: 14px;
+}
+.alm-stats > div { display: flex; flex-direction: column; gap: 1px; }
+.alm-k {
+    font-size: 10px; color: #778; text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.alm-v { font-size: 13px; color: #dee; }
+.alm-marine { margin-top: 12px; grid-template-columns: repeat(2, 1fr); }
+
+.alm-chart { width: 100%; height: auto; display: block; overflow: visible; }
+.alm-grid { stroke: rgba(255,255,255,0.07); stroke-width: 1; }
+.alm-freeze { stroke: rgba(120,180,255,0.4); stroke-width: 1; stroke-dasharray: 3 3; }
+.alm-axis { fill: #778; font-size: 9px; font-family: inherit; }
+.alm-axis-t { text-anchor: end; }
+.alm-axis-p { text-anchor: start; fill: #6a8fbf; }
+.alm-month { text-anchor: middle; }
+.alm-bar { fill: rgba(80,150,230,0.55); }
+.alm-band { fill: rgba(255,150,80,0.14); }
+.alm-line { fill: none; stroke: #ff9a4d; stroke-width: 2; stroke-linejoin: round; }
+.alm-dot { fill: #ff9a4d; }
+.alm-daylight { fill: rgba(255,220,120,0.08); }
+
+.alm-legend {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    font-size: 11px; color: #889; margin-top: 8px;
+}
+.alm-legend i {
+    display: inline-block; width: 10px; height: 10px;
+    margin-right: 5px; vertical-align: middle; border-radius: 2px;
+}
+.alm-sw-line { background: #ff9a4d; height: 3px !important; border-radius: 2px; }
+.alm-sw-band { background: rgba(255,150,80,0.3); }
+.alm-sw-bar { background: rgba(80,150,230,0.7); }
+
+.alm-note {
+    font-size: 12px; color: #889; line-height: 1.55; margin: 12px 0 0;
+}
+.alm-prose {
+    font-size: 14px; color: #dee; line-height: 1.6; margin: 10px 0 0;
+    padding: 10px 12px; background: rgba(255,255,255,0.035);
+    border-left: 2px solid rgba(120,160,240,0.4); border-radius: 0 6px 6px 0;
+}
+.alm-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+.alm-tag {
+    font-size: 11px; color: #bcd; padding: 2px 8px;
+    background: rgba(90,130,220,0.18); border-radius: 10px;
+    border: 1px solid rgba(120,160,240,0.2);
+}
+
+.alm-week { display: flex; flex-direction: column; gap: 2px; }
+.alm-day {
+    display: grid; grid-template-columns: 128px 34px 1fr;
+    align-items: center; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.alm-day:last-child { border-bottom: none; }
+.alm-day-head { display: flex; flex-direction: column; gap: 1px; }
+.alm-day-date { font-size: 13px; color: #dee; }
+.alm-day-temp { font-size: 11px; color: #889; font-variant-numeric: tabular-nums; }
+.alm-day-bar-wrap {
+    height: 30px; display: flex; align-items: flex-end; justify-content: center;
+}
+.alm-day-bar {
+    width: 12px; min-height: 2px; border-radius: 2px 2px 0 0;
+    background: rgba(80,150,230,0.65);
+}
+.alm-day-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 3px; }
+.alm-day-text { font-size: 12px; color: #9ab; line-height: 1.5; margin: 0; }
+
+.hi-hint {
+    display: inline-block; margin-top: 4px;
+    font-size: 11px; color: #778; font-style: italic;
+}
+
+/* ───── Cell Almanac: mobile ───── */
+@media (max-width: 768px) {
+    #almanacCard {
+        width: 100%; max-width: none;
+        max-height: 90vh;
+        border-radius: 14px 14px 0 0;
+        padding: 20px 16px 24px;
+        position: absolute; bottom: 0; left: 0;
+    }
+    #almanacOverlay { align-items: flex-end; }
+    /* 44px touch targets */
+    .alm-tab { padding: 12px 8px; font-size: 14px; min-height: 44px; }
+    #almanacClose { font-size: 28px; padding: 10px; top: 6px; right: 8px; min-width: 44px; min-height: 44px; }
+    #almanacDate { height: 44px; }
+    .alm-stats { grid-template-columns: repeat(2, 1fr); }
+    .alm-day { grid-template-columns: 104px 28px 1fr; gap: 8px; }
+    .alm-day-date { font-size: 12px; }
+}

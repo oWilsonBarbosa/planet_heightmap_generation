@@ -36,6 +36,7 @@ All three are considered together; ties are broken in the order above.
 - **Seasonal wind simulation** — pressure-driven wind patterns with a longitude-varying ITCZ that tracks the thermal equator (~5° over ocean, up to 15-20° over continents), Gaussian pressure bands (subtropical highs, subpolar lows, polar highs), land/sea thermal contrast for monsoon-like pressure reversals, elevation barometric effects, and Coriolis-deflected geostrophic wind with natural cross-equatorial flow reversal. Computed for both summer and winter seasons.
 - **Ocean surface currents** — rule-based geographic gyre simulation driven by wind belts (trade winds, westerlies, polar easterlies) with a longitude-varying ITCZ equatorial countercurrent. Continental shelves are classified as western or eastern boundaries via coast-normal BFS, producing subtropical gyres (CW in NH, CCW in SH) with western boundary intensification (Gulf Stream, Kuroshio effect) and weaker eastern boundary return flow. Detects circumpolar channels for unobstructed eastward currents (Antarctic Circumpolar Current). Currents are colored by heat transport: red = warm poleward flow, blue = cold equatorward flow, black = zonal (neutral). Computed for both summer and winter seasons.
 - **Precipitation** — blended dual-model approach: a complex moisture advection simulation is combined 50-50 with a fast heuristic zonal model. The advection model simulates wind-driven moisture transport from coasts with six mechanisms: ITCZ convective uplift, frontal convergence, orographic rain/shadow, lee cyclogenesis, polar-front precipitation, and subtropical high suppression. The heuristic model provides smooth latitude-based patterns (ITCZ wet belt, subtropical dry belt, mid-latitude recovery, polar dryness) modulated by continentality and orographic effects. Blending the two reduces splotchiness while preserving terrain-informed detail and strengthening subtropical desert formation (~20–35°). Visualized on a brown (dry) → green (moderate) → blue (wet) color ramp. Computed for both summer and winter seasons.
+- **Cell Almanac** — click any cell to unroll its climate along a time axis. **Year** fits a harmonic through the two seasonal samples to produce a twelve-month climograph (temperature line, day/night band, precipitation bars); tropical cells get a second harmonic where the ITCZ crosses their latitude twice a year, so double rainy seasons show up as two peaks rather than one. **Day** gives exact solar geometry (declination, daylight length, sunrise/sunset, polar night and midnight sun) plus an hour-by-hour temperature curve whose swing widens over dry continental interiors and high ground. **Week** runs a Richardson-type stochastic weather generator — a two-state Markov chain for wet/dry days, exponential rain depths, and AR(1) temperature anomalies — and narrates each day with named phenomena (thunderstorms, frost, föhn winds, sea fog, dust storms, gales). Ocean cells report sea state and current instead. The weather RNG is keyed on planet seed + cell + day of year, so the same cell on the same date reads identically every visit and across shared planet codes. Computed on demand for one cell, so it adds nothing to generation time.
 - **Map type switcher** — first-class Terrain / Satellite / Climate / Heightmap tabs with color legends for each view
 - **On-demand climate** — optional deferred climate computation; skip climate during generation for faster terrain iteration, compute it on demand when needed
 - **Detailed visualization** — twenty-six selectable inspection layers organized by category (Geology, Atmosphere, Ocean, Climate, Elevation) for viewing each component in isolation. Wind/pressure layers show directional wind arrows, ocean current layers show current arrows colored by heat transport, on both globe and map views. Precipitation layers use a brown→green→blue ramp showing dry to wet regions.
@@ -172,12 +173,16 @@ Navigation hints are shown in the sidebar panel and as a contextual tooltip when
 | Rotate globe / pan map | Drag | Drag (one finger) |
 | Zoom | Scroll wheel | Pinch with two fingers |
 | Highlight plate + info card | Hover | — |
+| Open the Cell Almanac | Click a cell (without dragging) | Tap a cell (outside edit mode) |
+| Close the Almanac | Click outside it, or press Escape | Tap outside it |
 | Mark plate for reshaping | Ctrl-click a plate (multi-select) | Tap the edit button (pencil), then tap plates |
 | Undo pending plate | Ctrl-click the same plate again | Tap the same plate again |
 | Apply pending edits | Click the Rebuild button | Tap the Rebuild button |
 | Cancel all pending edits | Press Escape | — |
 
 Hovering over a region shows an info card with plate type, elevation, coordinates, and (when climate has been computed) temperature, precipitation, and K&ouml;ppen classification. Pending plates show a colored tint (green = ocean→land, blue = land→ocean) and hover text indicates "(pending)".
+
+Clicking a cell — a click that doesn't turn into a drag, so ordinary rotation still works — opens the **Cell Almanac** for it. Ctrl-click remains plate editing and is unaffected; on mobile, tapping a cell opens the almanac only when edit mode is off. The almanac has Year / Day / Week tabs and a day-of-year scrubber, and closes on Escape, the × button, or a click outside. Because region indices don't survive a rebuild, the almanac closes automatically when the planet is regenerated or plates are edited.
 
 ### Mobile Support
 
@@ -187,6 +192,7 @@ World Orogen is fully usable on phones and tablets:
 - **Pinch-to-zoom** — two-finger pinch zooms the globe and map, using the same smooth lerp as desktop scroll-zoom.
 - **View switcher** — a dropdown in the top-right lets you switch between Terrain, Satellite, Climate, and Heightmap views without opening the bottom sheet.
 - **Edit-mode toggle** — a floating pencil button (bottom-right) activates plate editing. Tap it to toggle edit mode (glows green when active), then tap plates to mark them. Tap the Rebuild button to apply all changes at once.
+- **Cell Almanac as a bottom sheet** — on narrow screens the almanac docks to the bottom of the viewport with enlarged tabs and scrubber, rather than floating as a centered card.
 - **Touch-friendly targets** — buttons, checkboxes, and sliders are enlarged for comfortable finger input.
 - **Performance** — detail warning thresholds are lowered on touch devices (orange at 200K, red at 500K). Export widths above 8192px are disabled on mobile.
 - **Tooltips** reposition above their trigger instead of to the right, so they stay on screen.
@@ -222,6 +228,8 @@ World Orogen is fully usable on phones and tablets:
 - **Density-based subduction** — tanh mapping of density differences with undulation noise
 - **BFS distance fields** — randomized frontier expansion from boundary seeds, used for elevation, coast distance, rift width, ridge profiles, and back-arc basins
 - **Gaussian dome uplift** — hotspot volcanism modeled as dual-component Gaussians (thermal swell + volcanic peak) with domain-warped shape distortion, anisotropic drift elongation, summit calderas, radial rift ridges, and age-dependent texture blending
+- **Harmonic seasonal fit** (Cell Almanac) — the two seasonal samples are interpolated to a continuous year by a cosine anchored to the northern summer peak. Southern-hemisphere cells need no special case: their summer sample is already the colder one, so the harmonic flips sign and peaks in December by itself. The precipitation amplitude is scaled by π/2 so each half-year integral comes out exactly equal to its seasonal sample, and a second harmonic is added at the two days when the ITCZ crosses the cell's latitude, renormalised to leave the annual total unchanged
+- **Richardson weather generator** (Cell Almanac) — wet and dry days follow a two-state Markov chain whose transition probabilities `P(W|W) = f + p(1−f)` and `P(W|D) = f(1−p)` give it a stationary wet fraction of exactly `f`, the fraction implied by that month's rainfall. Rain depths are exponential about the month's mean event size; temperature is an AR(1) anomaly around the daily climatology. The chain is always run from day 0 of the year and its RNG is keyed on (planet seed, region, day), so any window is reproducible from any entry point
 
 ## Project Structure
 
@@ -262,7 +270,9 @@ js/
   temperature.js        Temperature simulation — ITCZ thermal equator, lapse rate, continentality, ocean currents
   scene.js              Three.js scene, cameras, controls, lights
   planet-mesh.js        Voronoi mesh, map projection, hover highlight
-  edit-mode.js          Ctrl-click plate multi-select + hover info
+  edit-mode.js          Ctrl-click plate multi-select + hover info + almanac click
+  almanac.js            Cell Almanac simulation — harmonic year fit, solar geometry, stochastic weather generator
+  almanac-ui.js         Cell Almanac panel — climograph, diurnal curve, week strip (inline SVG)
   detail-scale.js       Non-linear (power-curve) detail slider mapping
 ```
 

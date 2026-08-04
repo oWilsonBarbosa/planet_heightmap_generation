@@ -9,6 +9,7 @@ import { generate, reapplyViaWorker, computeClimateViaWorker, editRecomputeViaWo
 import { encodePlanetCode, decodePlanetCode } from './planet-code.js';
 import { buildMesh, updateMeshColors, updateSuperPlateBorders, buildMapMesh, rebuildGrids, exportMap, exportMapBatch, buildWindArrows, buildOceanCurrentArrows, updateKoppenHoverHighlight, updateMapKoppenHoverHighlight, updatePendingHighlight, updateMapPendingHighlight } from './planet-mesh.js';
 import { setupEditMode } from './edit-mode.js';
+import { resetAlmanac } from './almanac-ui.js';
 import { detailFromSlider, sliderFromDetail } from './detail-scale.js';
 import { KOPPEN_CLASSES } from './koppen.js';
 import { elevationToColor } from './color-map.js';
@@ -470,6 +471,10 @@ genBtn.addEventListener('click', () => {
 });
 genBtn.addEventListener('generate-done', snapshotSliders);
 genBtn.addEventListener('generate-done', hideBuildOverlay);
+// Region indices don't survive a rebuild — close the almanac rather than
+// letting it report a stale cell.
+genBtn.addEventListener('generate-done', resetAlmanac);
+document.addEventListener('plates-edited', resetAlmanac);
 genBtn.addEventListener('generate-done', () => {
     const infoEl = document.getElementById('info');
     if (!infoEl.dataset.nudged) {

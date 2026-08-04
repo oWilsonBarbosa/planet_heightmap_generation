@@ -8,6 +8,7 @@ import { state } from './state.js';
 import { updateHoverHighlight, updateMapHoverHighlight, updatePendingHighlight, updateMapPendingHighlight } from './planet-mesh.js';
 import { KOPPEN_CLASSES } from './koppen.js';
 import { elevToHeightKm } from './color-map.js';
+import { openAlmanac } from './almanac-ui.js';
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -157,6 +158,9 @@ function buildHoverHTML(region, plate) {
                 }
             }
         }
+
+        // Almanac entry point
+        lines.push(`<span class="hi-hint">${state.isTouchDevice ? 'Tap' : 'Click'} for the almanac — year, day and week here</span>`);
     }
 
     return lines.join('<br>');
@@ -177,10 +181,12 @@ export function setupEditMode() {
             // Ctrl-click or mobile edit-mode tap: plate editing
             const hit = getHitInfo(e);
             if (!hit) return;
-            downInfo = { x: e.clientX, y: e.clientY, plate: hit.plate };
+            downInfo = { x: e.clientX, y: e.clientY, plate: hit.plate, kind: 'edit' };
         } else if (e.button === 0 || e.button === 2) {
-            // Regular click/right-click: orbit or pan — skip hover raycasts
+            // Regular click/right-click: orbit or pan — skip hover raycasts.
+            // A left press that never turns into a drag opens the almanac instead.
             orbiting = true;
+            if (e.button === 0) downInfo = { x: e.clientX, y: e.clientY, kind: 'view' };
         }
     });
 
@@ -190,6 +196,16 @@ export function setupEditMode() {
 
         const dx = e.clientX - downInfo.x;
         const dy = e.clientY - downInfo.y;
+
+        // A click that didn't drag, outside edit mode: open the cell almanac.
+        if (downInfo.kind === 'view') {
+            if (dx * dx + dy * dy < 36) {
+                const hit = getHitInfo(e);
+                if (hit) openAlmanac(hit.region);
+            }
+            downInfo = null;
+            return;
+        }
 
         if (dx * dx + dy * dy < 36) {
             const pid = downInfo.plate;

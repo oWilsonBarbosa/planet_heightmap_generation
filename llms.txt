@@ -12,6 +12,7 @@ World Orogen generates realistic procedural planets shaped by tectonic plate sim
 - Simulates seasonal climate: wind patterns, ocean currents, precipitation, and Köppen classification
 - Creates hotspot volcanism with drift-trail island chains (like Hawaii)
 - Allows interactive editing — select multiple tectonic plates for batch reshaping with visual preview before rebuild
+- Unrolls any single cell along a time axis (Cell Almanac): a twelve-month climograph, one day hour by hour with real solar geometry, and a week of stochastic day-by-day weather narrated in plain language
 - Import your own equirectangular B&W heightmaps (Earth, Mars, hand-drawn) onto a 3D globe with automatic climate simulation
 
 ## Who it's for
@@ -29,6 +30,7 @@ World Orogen generates realistic procedural planets shaped by tectonic plate sim
 - 26 detailed inspection layers (geology, atmosphere, ocean, climate)
 - Export high-resolution equirectangular maps up to 65,536px wide
 - Shareable planet codes — copy a compact code to reproduce any planet exactly
+- Per-cell weather is seeded from planet code + cell + day of year, so a given date in a given place is reproducible across sessions and shared planets
 - Works on desktop and mobile browsers
 - No build step, no dependencies to install — pure ES modules
 
@@ -42,4 +44,5 @@ https://orogen.studio/
 - Fibonacci sphere meshing with Voronoi tessellation
 - Braun-Willett stream power erosion, Barnes et al. pit-filling algorithm
 - Dual-model precipitation (advection simulation + zonal heuristic)
+- Cell Almanac: harmonic fit through two seasonal samples (with an ITCZ-driven second harmonic for double rainy seasons), exact solar declination and hour-angle geometry, and a Richardson-type stochastic weather generator (Markov wet/dry chain, exponential rain depths, AR(1) temperature)
 - Fully client-side — no server, no data collection

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>World Orogen — Procedural Planet Generator</title>
-    <meta name="description" content="Generate realistic procedural planets with tectonic plates, erosion, climate simulation, and volcanic islands — free, in your browser. Export heightmaps for worldbuilding, games, and tabletop RPGs.">
-    <meta name="keywords" content="procedural planet generator, world generator, heightmap generator, tectonic simulation, worldbuilding tool, fantasy map maker, terrain generator, planet builder, procedural generation, Three.js, tabletop RPG map, D&D world map, game dev heightmap">
+    <meta name="description" content="Generate realistic procedural planets with tectonic plates, erosion, climate simulation, and volcanic islands — free, in your browser. Click any cell for a per-location almanac: monthly climograph, hour-by-hour day, and simulated weather. Export heightmaps for worldbuilding, games, and tabletop RPGs.">
+    <meta name="keywords" content="procedural planet generator, world generator, heightmap generator, tectonic simulation, worldbuilding tool, fantasy map maker, terrain generator, planet builder, procedural generation, Three.js, tabletop RPG map, D&D world map, game dev heightmap, climograph, climate almanac, weather generator, Köppen climate map">
     <meta name="author" content="World Orogen">
     <meta name="theme-color" content="#0a0e17">
     <link rel="canonical" href="https://orogen.studio/">
@@ -14,7 +14,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://orogen.studio/">
     <meta property="og:title" content="World Orogen — Procedural Planet Generator">
-    <meta property="og:description" content="Generate realistic procedural planets with tectonic plates, erosion, climate simulation, and volcanic islands — free, in your browser. Export heightmaps for worldbuilding, games, and tabletop RPGs.">
+    <meta property="og:description" content="Generate realistic procedural planets with tectonic plates, erosion, climate simulation, and volcanic islands — free, in your browser. Click any cell for a per-location almanac: monthly climograph, hour-by-hour day, and simulated weather. Export heightmaps for worldbuilding, games, and tabletop RPGs.">
     <meta property="og:image" content="https://orogen.studio/preview.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -23,7 +23,7 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="World Orogen — Procedural Planet Generator">
-    <meta name="twitter:description" content="Generate realistic procedural planets with tectonic plates, erosion, climate simulation, and volcanic islands — free, in your browser.">
+    <meta name="twitter:description" content="Generate realistic procedural planets with tectonic plates, erosion, and climate — then click any cell to read its year, day, and week of weather. Free, in your browser.">
     <meta name="twitter:image" content="https://orogen.studio/preview.png">
 
     <!-- Structured Data -->
@@ -33,7 +33,7 @@
         "@type": "WebApplication",
         "name": "World Orogen",
         "url": "https://orogen.studio/",
-        "description": "A browser-based procedural planet generator that creates realistic terrestrial planets with tectonic plate simulation, erosion, climate modeling, and interactive editing. Export heightmaps, satellite views, and climate maps for worldbuilding, game development, and tabletop RPGs.",
+        "description": "A browser-based procedural planet generator that creates realistic terrestrial planets with tectonic plate simulation, erosion, climate modeling, per-cell climate almanacs, and interactive editing. Export heightmaps, satellite views, and climate maps for worldbuilding, game development, and tabletop RPGs.",
         "applicationCategory": "DesignApplication",
         "operatingSystem": "Any (browser-based)",
         "browserRequirements": "Requires a modern browser with WebGL support",
@@ -48,6 +48,7 @@
             "Climate simulation with wind, precipitation, and ocean currents",
             "Hotspot volcanism with island chains",
             "Interactive plate editing",
+            "Per-cell climate almanac with monthly climograph, diurnal cycle, and simulated weather",
             "Equirectangular heightmap import with automatic climate simulation",
             "Equirectangular map export up to 65536px",
             "Multiple visualization modes (terrain, satellite, climate, heightmap)",
@@ -94,6 +95,14 @@
             },
             {
                 "@type": "Question",
+                "name": "Can I see what the weather is like in a specific place?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Yes. Click any cell on the globe to open its Cell Almanac. It shows a twelve-month climograph of temperature and rainfall, a single day hour by hour with real sunrise and sunset times for that latitude, and a week of simulated day-by-day weather described in plain language. The weather is generated from the planet code, the cell, and the date, so the same place on the same day always reads the same — you can write a scene around it and it stays true."
+                }
+            },
+            {
+                "@type": "Question",
                 "name": "How do I share a planet with someone?",
                 "acceptedAnswer": {
                     "@type": "Answer",
@@ -128,6 +137,7 @@
             <li>Climate simulation with seasonal wind patterns, ocean currents, precipitation, and K&ouml;ppen climate classification</li>
             <li>Hotspot volcanism with drift-trail island chains (like Hawaii)</li>
             <li>Interactive plate editing — select multiple plates for batch land/ocean toggling with visual preview before rebuild</li>
+            <li>Cell Almanac — click any cell for a twelve-month climograph, an hour-by-hour day with real sunrise and sunset times, and a week of simulated day-by-day weather</li>
             <li>Heightmap import — bring your own equirectangular B&amp;W heightmap (Earth, Mars, hand-drawn) and run full climate simulation on it</li>
             <li>Multiple visualization modes: terrain, satellite biome, climate, and heightmap</li>
             <li>26 detailed inspection layers for geology, atmosphere, ocean, and climate</li>
@@ -135,7 +145,7 @@
             <li>Shareable planet codes — copy a code to share your exact planet with others</li>
         </ul>
         <h2>Use Cases</h2>
-        <p>World Orogen is used by worldbuilders, game developers, tabletop RPG players, fantasy authors, and anyone who needs realistic terrain. Export heightmaps for use in game engines like Unity or Unreal, or download satellite-style maps for your D&amp;D campaign setting. The climate simulation produces realistic biome distributions for believable fantasy worlds.</p>
+        <p>World Orogen is used by worldbuilders, game developers, tabletop RPG players, fantasy authors, and anyone who needs realistic terrain. Export heightmaps for use in game engines like Unity or Unreal, or download satellite-style maps for your D&amp;D campaign setting. The climate simulation produces realistic biome distributions for believable fantasy worlds, and the Cell Almanac turns any single location into concrete weather you can write a scene around — reproducible from the planet code, so a date in one place always reads the same.</p>
         <h2>Share Your World</h2>
         <p>Every planet has a unique planet code. Share the URL (e.g. orogen.studio/#CODE) to let anyone recreate your exact world — including any tectonic plates you've edited by hand.</p>
     </main>
@@ -390,6 +400,7 @@
             <div class="tutorial-step" data-step="2">
                 <h3>Explore &amp; Edit</h3>
                 <p><strong>Drag</strong> to rotate the globe. <strong>Scroll</strong> to zoom in and out. <strong>Ctrl-click</strong> plates to mark them for reshaping &mdash; select multiple, then hit <strong>Rebuild</strong> to apply all at once. Ctrl-click again to undo a pending selection. <strong>Hover</strong> any region to see elevation, coordinates, temperature, precipitation, and climate classification.</p>
+                <p><strong>Click</strong> a cell to open its <strong>Almanac</strong> &mdash; a twelve-month climograph, a single day hour by hour with real sunrise and sunset times, and a week of simulated weather written out day by day. The weather is seeded from the planet code, so the same date in the same place reads the same every time you return.</p>
             </div>
             <div class="tutorial-step" data-step="3">
                 <h3>Visualize Your World</h3>
