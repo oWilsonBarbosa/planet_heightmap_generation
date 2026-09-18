@@ -120,23 +120,6 @@ try {
       stress:d.r_stress?.[i] ?? null
     }));
     return {
-      sliders: {
-        N: 2560000,
-        P: +document.getElementById('sP').value,
-        jitter: +document.getElementById('sJ').value,
-        nMag: +document.getElementById('sNs').value,
-        numContinents: +document.getElementById('sC').value,
-        continentSizeVariety: +document.getElementById('sCsv').value,
-        landCoverage: +document.getElementById('sLc').value,
-        terrainWarp: +document.getElementById('sTw').value,
-        smoothing: +document.getElementById('sSm').value,
-        glacialErosion: +document.getElementById('sGl').value,
-        hydraulicErosion: +document.getElementById('sHEr').value,
-        thermalErosion: +document.getElementById('sTEr').value,
-        ridgeSharpening: +document.getElementById('sRs').value,
-        temperatureOffset: +document.getElementById('sTmp').value,
-        precipitationOffset: +document.getElementById('sPrc').value
-      },
       seed:d.seed,
       regions:m.numRegions,
       triangles:m.numTriangles,
