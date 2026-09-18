@@ -70,6 +70,7 @@ function summarizeArray(a, stride=1) {
 const {server,port} = await startServer();
 const browser = await puppeteer.launch({
   headless:true,
+  protocolTimeout: 30 * 60 * 1000,
   args:[
     '--no-sandbox','--disable-setuid-sandbox',
     '--enable-webgl','--use-gl=angle','--use-angle=swiftshader-webgl',
