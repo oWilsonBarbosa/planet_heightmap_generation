@@ -41,7 +41,7 @@ async function generate(label, root, browser) {
       computeClimateViaWorker(null,()=>{clearTimeout(t);resolve();});
     });
   });
-  const r=await page.evaluate(({W,H,A,B})=>{
+  const r=await page.evaluate(async ({W,H,A,B})=>{
     const d=(await import('./js/state.js')).state.curData;
     const nPix=W*H;
     const count=new Uint32Array(nPix), land=new Uint32Array(nPix);
