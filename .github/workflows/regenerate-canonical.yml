@@ -26,10 +26,26 @@ jobs:
         run: npm install --no-save puppeteer@24.16.0
       - name: Run full-resolution canonical regeneration diagnostic
         run: node tuning/regenerate-canonical.mjs
+
+      - name: Prepare historical generator snapshot
+        run: |
+          git clone --no-checkout https://github.com/oWilsonBarbosa/planet_heightmap_generation.git /tmp/orogen-old
+          cd /tmp/orogen-old
+          git checkout f9bb081224ee80adea5bd1bb7c012d05786c4f9f
+
+      - name: Install PNG helper
+        run: npm install --no-save pngjs@7.0.0
+
+      - name: Compare historical and current global rasters
+        env:
+          OLD_ROOT: /tmp/orogen-old
+        run: node tuning/compare-global-rasters.mjs
       - name: Upload diagnostic
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: canonical-cc2662b4
-          path: tuning/results/canonical-cc2662b4.json
+          path: |
+            tuning/results/canonical-cc2662b4.json
+            tuning/results/global-raster-compare/
           if-no-files-found: error
