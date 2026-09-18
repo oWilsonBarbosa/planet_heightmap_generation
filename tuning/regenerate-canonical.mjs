@@ -100,6 +100,18 @@ try {
     } catch { return false; }
   }, {timeout:30*60*1000});
 
+  // At >300k regions the app intentionally skips climate on initial generation.
+  // Trigger the current generator's full climate pipeline explicitly.
+  await page.evaluate(async () => {
+    const {state} = await import('./js/state.js');
+    if (state.climateComputed) return;
+    const {computeClimateViaWorker} = await import('./js/generate.js');
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Climate computation timed out')), 30 * 60 * 1000);
+      computeClimateViaWorker(null, () => { clearTimeout(timer); resolve(); });
+    });
+  });
+
   result.observed = await page.evaluate(async () => {
     const {state} = await import('./js/state.js');
     const d=state.curData, m=d.mesh, e=d.r_elevation;
@@ -112,6 +124,14 @@ try {
     const metrics = window.__terrainMetrics || null;
     const debugKeys = d.debugLayers ? Object.keys(d.debugLayers).sort() : [];
     const sampleIdx=[0,1,2,3,10,100,1000,10000,100000,500000,1000000,1500000,2000000,2500000,2559999,2560000].filter(i=>i<e.length);
+    function stats(a) {
+      if (!a) return null;
+      let min=Infinity,max=-Infinity,sum=0,n=0,nan=0;
+      for (let i=0;i<a.length;i++) { const v=a[i]; if(!Number.isFinite(v)){nan++;continue;} if(v<min)min=v;if(v>max)max=v;sum+=v;n++; }
+      return {length:a.length,min,max,mean:n?sum/n:null,nan};
+    }
+    const koppenCounts = {};
+    if (d.debugLayers?.koppen) for (const k of d.debugLayers.koppen) koppenCounts[k]=(koppenCounts[k]||0)+1;
     const samples=sampleIdx.map(i=>({
       i,
       xyz:[d.r_xyz[3*i],d.r_xyz[3*i+1],d.r_xyz[3*i+2]],
@@ -131,6 +151,16 @@ try {
       oceanPlateCount:d.plateIsOcean?.size ?? null,
       elev:{min:elevMin,max:elevMax,mean:sum/e.length},
       climateComputed:state.climateComputed,
+      climate: {
+        windSpeedSummer: stats(d.debugLayers?.windSpeedSummer),
+        windSpeedWinter: stats(d.debugLayers?.windSpeedWinter),
+        precipSummer: stats(d.r_precip_summer),
+        precipWinter: stats(d.r_precip_winter),
+        tempSummer: stats(d.r_temperature_summer),
+        tempWinter: stats(d.r_temperature_winter),
+        tempContinentality: stats(d.debugLayers?.tempContinentality),
+        koppenCounts
+      },
       debugKeys,
       metrics,
       samples
