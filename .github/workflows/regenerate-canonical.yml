@@ -1,0 +1,35 @@
+name: Regenerate canonical planet
+
+on:
+  push:
+    branches:
+      - chatgpt/regenerate-cc2662b4
+    paths:
+      - 'tuning/regenerate-canonical.mjs'
+      - '.github/workflows/regenerate-canonical.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chatgpt/regenerate-cc2662b4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Puppeteer
+        run: npm install --no-save puppeteer@24.16.0
+      - name: Run full-resolution canonical regeneration diagnostic
+        run: node tuning/regenerate-canonical.mjs
+      - name: Upload diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-cc2662b4
+          path: tuning/results/canonical-cc2662b4.json
+          if-no-files-found: error
