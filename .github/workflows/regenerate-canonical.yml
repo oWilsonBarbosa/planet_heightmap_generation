@@ -8,6 +8,7 @@ on:
       - 'tuning/regenerate-canonical.mjs'
       - 'tuning/table5-v4.mjs'
       - 'tuning/continents-islands-coasts-v4.mjs'
+      - 'tuning/marine-topology-v4.mjs'
       - '.github/workflows/regenerate-canonical.yml'
 
 permissions:
@@ -33,6 +34,9 @@ jobs:
       - name: Measure v4 continents islands and coastlines
         run: node tuning/continents-islands-coasts-v4.mjs
 
+      - name: Detect native marine basins and constrictions
+        run: node tuning/marine-topology-v4.mjs
+
       - name: Upload diagnostic
         if: always()
         uses: actions/upload-artifact@v4
@@ -41,4 +45,5 @@ jobs:
           path: |
             tuning/results/table5-v4-native.json
             tuning/results/continents-islands-coasts-v4.json
+            tuning/results/marine-topology-v4-native.json
           if-no-files-found: error
