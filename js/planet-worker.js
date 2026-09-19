@@ -442,6 +442,11 @@ function handleGenerate(data) {
             plateIsOcean: Array.from(plateIsOcean),
             originalPlateIsOcean: Array.from(originalPlateIsOcean),
             plateDensity, plateDensityLand, plateDensityOcean,
+            // Instrumentation-only: expose exact superplate state used by elevation.
+            numSuperPlates: superPlateData ? superPlateData.numSuperPlates : 0,
+            superPlateVec: superPlateData ? superPlateData.superPlateVec : null,
+            superPlateIsOcean: superPlateData ? Array.from(superPlateData.superPlateIsOcean) : [],
+            superPlateDensity: superPlateData ? superPlateData.superPlateDensity : null,
             prePostElev,
             r_elevation, t_elevation,
             mountain_r: Array.from(mountain_r),
