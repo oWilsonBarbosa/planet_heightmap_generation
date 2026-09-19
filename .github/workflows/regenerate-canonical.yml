@@ -14,6 +14,7 @@ on:
       - 'tuning/major-boundary-systems-v4.mjs'
       - 'tuning/tectonic-rasters-v4.mjs'
       - 'tuning/volcanism-v4.mjs'
+      - 'tuning/mean-temperature-v4.mjs'
       - 'js/elevation.js'
       - 'js/planet-worker.js'
       - 'js/generate.js'
@@ -36,13 +37,13 @@ jobs:
       - name: Install Puppeteer
         run: npm install --no-save puppeteer@24.16.0
 
-      - name: Extract and render native volcanism
-        run: node tuning/volcanism-v4.mjs
+      - name: Measure and render native mean planetary temperature
+        run: node tuning/mean-temperature-v4.mjs
 
       - name: Upload diagnostic
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: canonical-cc2662b4
-          path: tuning/results/volcanism-v4/
+          path: tuning/results/mean-temperature-v4/
           if-no-files-found: error
