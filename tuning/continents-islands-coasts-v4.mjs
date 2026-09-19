@@ -29,7 +29,7 @@ try{
 
    // exact native connected land components
    const comp=new Int32Array(N);comp.fill(-1);
-   const q=new Int32Array(N), sizes=[], sx=[],sy=[],sz=[], elevSum=[];
+   const q=new Int32Array(N), sizes=[], sx=[],sy=[],sumZ=[], elevSum=[];
    let cid=0;
    for(let i=0;i<N;i++){
      if(e[i]<=0||comp[i]>=0)continue;
@@ -40,13 +40,13 @@ try{
          const nb=adjList[j]; if(e[nb]>0&&comp[nb]<0){comp[nb]=cid;q[t++]=nb;}
        }
      }
-     sizes.push(sz);sx.push(ax);sy.push(ay);sz.push(az);elevSum.push(eh);cid++;
+     sizes.push(sz);sx.push(ax);sy.push(ay);sumZ.push(az);elevSum.push(eh);cid++;
    }
    const order=[...sizes.keys()].sort((a,b)=>sizes[b]-sizes[a]);
    const continentIds=order.slice(0,4), isCont=new Uint8Array(sizes.length); for(const id of continentIds)isCont[id]=1;
 
    function compSummary(id){
-     const m=Math.hypot(sx[id],sy[id],sz[id])||1, x=sx[id]/m,y=sy[id]/m,z=sz[id]/m;
+     const m=Math.hypot(sx[id],sy[id],sumZ[id])||1, x=sx[id]/m,y=sy[id]/m,z=sumZ[id]/m;
      return {id,cells:sizes[id],areaKm2:sizes[id]*AREA,landShare:sizes[id]/N,meanNativeHeightKm:elevSum[id]/sizes[id],centroidLat:Math.asin(y)*180/Math.PI,centroidLon:Math.atan2(x,z)*180/Math.PI};
    }
    const continents=continentIds.map(compSummary);
