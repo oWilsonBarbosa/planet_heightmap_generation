@@ -52,7 +52,7 @@ try{
  const page=await browser.newPage();page.setDefaultTimeout(30*60*1000);
  await page.goto(`http://127.0.0.1:${port}/#${CODE}`,{waitUntil:'domcontentloaded',timeout:120000});
  await page.waitForFunction(async()=>{try{const {state}=await import('./js/state.js');return !!state.curData?.r_elevation;}catch{return false;}},{timeout:30*60*1000});
- const result=await page.evaluate(({faces,CELL_AREA})=>{
+ const result=await page.evaluate(async ({faces,CELL_AREA})=>{
    const {state}=await import('./js/state.js');
    const d=state.curData,n=d.r_elevation.length,mesh=d.mesh,e=d.r_elevation,xyz=d.r_xyz;
    // Global native land connected components.
