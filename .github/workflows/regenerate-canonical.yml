@@ -6,6 +6,7 @@ on:
       - chatgpt/regenerate-cc2662b4
     paths:
       - 'tuning/regenerate-canonical.mjs'
+      - 'tuning/table5-v4.mjs'
       - '.github/workflows/regenerate-canonical.yml'
 
 permissions:
@@ -25,6 +26,9 @@ jobs:
       - name: Install Puppeteer
         run: npm install --no-save puppeteer@24.16.0
 
+      - name: Compute Guidebook Table 5 from v4 native mesh
+        run: node tuning/table5-v4.mjs
+
       - name: Prepare historical generator snapshot
         run: |
           git clone --no-checkout https://github.com/oWilsonBarbosa/planet_heightmap_generation.git /tmp/orogen-old
@@ -43,5 +47,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: canonical-cc2662b4
-          path: tuning/results/global-raster-compare/
+          path: |
+            tuning/results/global-raster-compare/
+            tuning/results/table5-v4-native.json
           if-no-files-found: error
