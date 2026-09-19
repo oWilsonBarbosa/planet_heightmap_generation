@@ -1661,6 +1661,8 @@ function applyCoastalDetail(mesh, r_xyz, r_elevation, tect, sf, noise, noiseMag,
     const { r_stress, maxStress, scaleFactor } = tect;
     const { r_isOcean, dBdry, coastStressMax, coastSubductMax, coastConvergent } = sf;
     const dl_coastal = debugLayers.coastal;
+    const dl_islandArc = debugLayers.islandArc;
+    const dl_islandArcOrigin = debugLayers.islandArcOrigin;
 
     const coastRoughenDist = Math.max(8, Math.round(COAST_ROUGHEN_BASE * scaleFactor));
     const cNoise  = new SimplexNoise(seed + 77);
@@ -1794,6 +1796,7 @@ function applyIslandArcs(mesh, r_xyz, r_elevation, tect, sf, r_plate, seed, debu
         arcOrigins.push(c);
     }
     for (const o of arcOrigins) {
+        dl_islandArcOrigin[o.r] = 1;
         arcSeeds.push(o.r);
         arcDist[o.r] = 0;
         arcStress[o.r] = o.stressNorm;
@@ -1851,6 +1854,7 @@ function applyIslandArcs(mesh, r_xyz, r_elevation, tect, sf, r_plate, seed, debu
             }
             r_elevation[r] += uplift;
             dl_coastal[r] += uplift;
+            dl_islandArc[r] += uplift;
 
             arcCellsBumped++;
             arcUpliftSum += uplift;
@@ -1864,6 +1868,8 @@ function applyVolcanicArcs(mesh, r_xyz, r_elevation, tect, seed, debugLayers) {
     const { numRegions } = mesh;
     const { r_boundaryType, r_subductFactor, r_stress, r_hasOcean, maxStress } = tect;
     const dl_hotspot = debugLayers.hotspot;
+    const dl_volcanicArc = debugLayers.volcanicArc;
+    const dl_volcanicArcOrigin = debugLayers.volcanicArcOrigin;
 
     const arcVolcNoise = new SimplexNoise(seed + 713);
     const VOLC_MIN_SPACING_SQ = VOLC_MIN_SPACING * VOLC_MIN_SPACING;
@@ -1895,6 +1901,7 @@ function applyVolcanicArcs(mesh, r_xyz, r_elevation, tect, seed, debugLayers) {
         const height = VOLC_HEIGHT_BASE * (0.5 + c.stressLocal) * heightVar;
         const sigmaVar = VOLC_SIGMA_VAR_BASE + VOLC_SIGMA_VAR_RANGE * arcVolcNoise.noise3D(c.x * 5 + 17.3, c.y * 5 + 9.1, c.z * 5 + 4.7);
         volcPositions.push({ x: c.x, y: c.y, z: c.z, height, sigma: VOLC_SIGMA_BASE * sigmaVar });
+        dl_volcanicArcOrigin[c.r] = 1;
     }
 
     for (let vi = 0; vi < volcPositions.length; vi++) {
@@ -1943,6 +1950,7 @@ function applyVolcanicArcs(mesh, r_xyz, r_elevation, tect, seed, debugLayers) {
         if (volcUplift > 0.001) {
             r_elevation[r] += volcUplift;
             dl_hotspot[r] += volcUplift;
+            dl_volcanicArc[r] += volcUplift;
         }
     }
 }
@@ -1953,6 +1961,9 @@ function applyHotspotsAndLIPs(mesh, r_xyz, r_elevation, tect, sf, plateVec, r_pl
     const { r_isOcean } = sf;
     const dl_hotspot = debugLayers.hotspot;
     const dl_lip = debugLayers.lip;
+    const dl_hotspotChain = debugLayers.hotspotChain;
+    const dl_hotspotOrigin = debugLayers.hotspotOrigin;
+    const dl_lipOrigin = debugLayers.lipOrigin;
 
     const hsRng = makeRng(seed + 999);
     const hsNoise  = new SimplexNoise(seed + 501);
@@ -2037,6 +2048,7 @@ function applyHotspotsAndLIPs(mesh, r_xyz, r_elevation, tect, sf, plateVec, r_pl
             hz = cosPhiVal;
         }
         const centerR = findNearestR(hx, hy, hz);
+        dl_hotspotOrigin[centerR] = 1;
         const plate = r_plate[centerR];
         const pv = plateVec[plate];
         if (!pv) continue;
@@ -2128,6 +2140,7 @@ function applyHotspotsAndLIPs(mesh, r_xyz, r_elevation, tect, sf, plateVec, r_pl
         // LIP at chain tail (oldest end)
         {
             const lipR = findNearestR(cx, cy, cz);
+            dl_lipOrigin[lipR] = 1;
             const upwelling = r_mantleNorm ? Math.max(0, r_mantleNorm[lipR]) : 0.5;
             const landBoost = r_isOcean[lipR] ? 0.6 : 1.0;
             const baseLipStr = LIP_HEIGHT * (0.5 + hsRng()) * (0.5 + upwelling) * landBoost;
@@ -2316,6 +2329,7 @@ function applyHotspotsAndLIPs(mesh, r_xyz, r_elevation, tect, sf, plateVec, r_pl
             const uplift = totalSwellUplift + Math.max(0, totalUplift) * volc;
             r_elevation[r] += uplift;
             dl_hotspot[r] = uplift;
+            dl_hotspotChain[r] += uplift;
         }
     }
 
@@ -2528,6 +2542,14 @@ export function assignElevation(mesh, r_xyz, plateIsOcean, r_plate, plateVec, pl
         ocean:          new Float32Array(numRegions),
         hotspot:        new Float32Array(numRegions),
         lip:            new Float32Array(numRegions),
+        // Instrumentation-only volcanic mechanism layers.
+        islandArc:      new Float32Array(numRegions),
+        volcanicArc:    new Float32Array(numRegions),
+        hotspotChain:   new Float32Array(numRegions),
+        islandArcOrigin:new Float32Array(numRegions),
+        volcanicArcOrigin:new Float32Array(numRegions),
+        hotspotOrigin:  new Float32Array(numRegions),
+        lipOrigin:      new Float32Array(numRegions),
         tecActivity:    new Float32Array(numRegions),
         margins:        new Float32Array(numRegions),
         backArc:        new Float32Array(numRegions),
