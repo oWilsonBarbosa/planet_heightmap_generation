@@ -11,6 +11,7 @@ on:
       - 'tuning/marine-topology-v4.mjs'
       - 'tuning/major-plates-v4.mjs'
       - 'tuning/mountain-rifts-v4.mjs'
+      - 'tuning/major-boundary-systems-v4.mjs'
       - 'js/elevation.js'
       - 'js/planet-worker.js'
       - 'js/generate.js'
@@ -33,13 +34,13 @@ jobs:
       - name: Install Puppeteer
         run: npm install --no-save puppeteer@24.16.0
 
-      - name: Catalog native mountain chains and rifts
-        run: node tuning/mountain-rifts-v4.mjs
+      - name: Aggregate corrected major mountain and rift systems
+        run: node tuning/major-boundary-systems-v4.mjs
 
       - name: Upload diagnostic
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: canonical-cc2662b4
-          path: tuning/results/mountain-rifts-v4-native.json
+          path: tuning/results/major-boundary-systems-v4-native.json
           if-no-files-found: error
