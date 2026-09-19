@@ -1746,6 +1746,8 @@ function applyIslandArcs(mesh, r_xyz, r_elevation, tect, sf, r_plate, seed, debu
     const { r_boundaryType, r_subductFactor, r_stress, r_bothOcean, maxStress, scaleFactor } = tect;
     const { r_isOcean } = sf;
     const dl_coastal = debugLayers.coastal;
+    const dl_islandArc = debugLayers.islandArc;
+    const dl_islandArcOrigin = debugLayers.islandArcOrigin;
 
     const arcNoise = new SimplexNoise(seed + 307);
     const arcMacroNoise = new SimplexNoise(seed + 911);
