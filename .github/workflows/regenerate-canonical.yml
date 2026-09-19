@@ -7,6 +7,7 @@ on:
     paths:
       - 'tuning/regenerate-canonical.mjs'
       - 'tuning/table5-v4.mjs'
+      - 'tuning/continents-islands-coasts-v4.mjs'
       - '.github/workflows/regenerate-canonical.yml'
 
 permissions:
@@ -29,10 +30,15 @@ jobs:
       - name: Compute Guidebook Table 5 from v4 native mesh
         run: node tuning/table5-v4.mjs
 
+      - name: Measure v4 continents islands and coastlines
+        run: node tuning/continents-islands-coasts-v4.mjs
+
       - name: Upload diagnostic
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: canonical-cc2662b4
-          path: tuning/results/table5-v4-native.json
+          path: |
+            tuning/results/table5-v4-native.json
+            tuning/results/continents-islands-coasts-v4.json
           if-no-files-found: error
