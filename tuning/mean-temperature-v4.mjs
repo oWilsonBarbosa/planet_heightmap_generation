@@ -15,7 +15,17 @@ const browser=await puppeteer.launch({headless:true,protocolTimeout:30*60*1000,a
 try{
  const page=await browser.newPage();page.setDefaultTimeout(30*60*1000);
  await page.goto(`http://127.0.0.1:${port}/#${CODE}`,{waitUntil:'domcontentloaded',timeout:120000});
- await page.waitForFunction(async()=>{try{const {state}=await import('./js/state.js');const d=state.curData;return !!(d?.r_temperature_summer&&d?.r_temperature_winter&&d?.r_elevation&&d?.r_xyz);}catch{return false;}},{timeout:30*60*1000});
+ await page.waitForFunction(async()=>{try{const {state}=await import('./js/state.js');const d=state.curData;return !!(d?.r_elevation&&d?.r_xyz);}catch{return false;}},{timeout:30*60*1000});
+ await page.evaluate(async()=>{
+   const {state}=await import('./js/state.js');
+   if(!state.climateComputed){
+     const {computeClimateViaWorker}=await import('./js/generate.js');
+     await new Promise((resolve,reject)=>{
+       const timer=setTimeout(()=>reject(new Error('Climate computation timed out')),30*60*1000);
+       computeClimateViaWorker(null,()=>{clearTimeout(timer);resolve();});
+     });
+   }
+ });
  const result=await page.evaluate(({W,H,TMIN,TRANGE})=>{
    const d=window.__dummy;
    return import('./js/state.js').then(({state})=>{
