@@ -9,6 +9,9 @@ on:
       - 'tuning/table5-v4.mjs'
       - 'tuning/continents-islands-coasts-v4.mjs'
       - 'tuning/marine-topology-v4.mjs'
+      - 'tuning/major-plates-v4.mjs'
+      - 'js/planet-worker.js'
+      - 'js/generate.js'
       - '.github/workflows/regenerate-canonical.yml'
 
 permissions:
@@ -28,13 +31,13 @@ jobs:
       - name: Install Puppeteer
         run: npm install --no-save puppeteer@24.16.0
 
-      - name: Detect native marine basins and constrictions
-        run: node tuning/marine-topology-v4.mjs
+      - name: Extract exact v4 major superplates
+        run: node tuning/major-plates-v4.mjs
 
       - name: Upload diagnostic
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: canonical-cc2662b4
-          path: tuning/results/marine-topology-v4-native.json
+          path: tuning/results/major-plates-v4-native.json
           if-no-files-found: error
