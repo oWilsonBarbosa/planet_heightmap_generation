@@ -72,7 +72,7 @@ try{
    const sx=new Float64Array(N),sy=new Float64Array(N),sz=new Float64Array(N),depthSum=new Float64Array(N);
    function find(a){let x=a;while(parent[x]!==x)x=parent[x];while(parent[a]!==a){const p=parent[a];parent[a]=x;a=p;}return x;}
    const events=[];
-   function summary(root,death,mergeInto){
+   function summary(root,death,mergeInto,edgeA,edgeB){
      const m=Math.hypot(sx[root],sy[root],sz[root])||1,x=sx[root]/m,y=sy[root]/m,z=sz[root]/m;
      return {
        root,
@@ -84,7 +84,10 @@ try{
        centroidLat:Math.asin(y)*DEG,
        centroidLon:Math.atan2(x,z)*DEG,
        meanNativeOceanDepthKm:size[root]?(-10*depthSum[root]/size[root]):0,
-       mergeInto
+       mergeInto,
+       gatewayEdge:[edgeA,edgeB],
+       gatewayLat:(()=>{const x=xyz[3*edgeA]+xyz[3*edgeB],y=xyz[3*edgeA+1]+xyz[3*edgeB+1],z=xyz[3*edgeA+2]+xyz[3*edgeB+2],m=Math.hypot(x,y,z)||1;return Math.asin(y/m)*DEG;})(),
+       gatewayLon:(()=>{const x=xyz[3*edgeA]+xyz[3*edgeB],y=xyz[3*edgeA+1]+xyz[3*edgeB+1],z=xyz[3*edgeA+2]+xyz[3*edgeB+2];return Math.atan2(x,z)*DEG;})()
      };
    }
    // Activate from widest ocean interiors down toward coasts. On merge, keep the
@@ -102,7 +105,7 @@ try{
          // elder = larger; tie by earlier birth then smaller index for determinism
          let keep=a,lose=c;
          if(size[c]>size[a] || (size[c]===size[a] && (birth[c]>birth[a] || (birth[c]===birth[a]&&c<a)))){keep=c;lose=a;}
-         if(size[lose]*AREA>=5000 && birth[lose]-level>=1)events.push(summary(lose,level,keep));
+         if(size[lose]*AREA>=5000 && birth[lose]-level>=1)events.push(summary(lose,level,keep,r,nb));
          parent[lose]=keep;size[keep]+=size[lose];sx[keep]+=sx[lose];sy[keep]+=sy[lose];sz[keep]+=sz[lose];depthSum[keep]+=depthSum[lose];birth[keep]=Math.max(birth[keep],birth[lose]);
        }
      }
