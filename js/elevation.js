@@ -2603,6 +2603,16 @@ export function assignElevation(mesh, r_xyz, plateIsOcean, r_plate, plateVec, pl
         debugLayers.superPlates = new Float32Array(superPlateData.r_superPlate);
     }
 
+    // Instrumentation-only tectonic diagnostics. These arrays are already
+    // computed above and do not participate in any subsequent terrain stage.
+    debugLayers.boundaryType = new Float32Array(tect.r_boundaryType);
+    debugLayers.subductFactor = new Float32Array(tect.r_subductFactor);
+    debugLayers.bothOceanBoundary = new Float32Array(tect.r_bothOcean);
+    debugLayers.hasOceanBoundary = new Float32Array(tect.r_hasOcean);
+    debugLayers.riftDistance = new Float32Array(sf.riftDist);
+    debugLayers.ridgeDistance = new Float32Array(sf.ridgeDist);
+    debugLayers.fractureDistance = new Float32Array(sf.fractureDist);
+
     return {
         r_elevation,
         mountain_r:  tect.mountain_r,
