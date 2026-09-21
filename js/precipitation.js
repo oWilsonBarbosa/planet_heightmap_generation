@@ -11,6 +11,52 @@ import { smoothField, makeItczLookup, percentile } from './climate-util.js';
 
 const DEG = Math.PI / 180;
 
+// ── Clausius-Clapeyron moisture ceiling ──────────────────────────────────────
+// Saturation vapour pressure roughly doubles per 10 °C, so cold air physically
+// cannot carry much water. That single fact is why polar regions are deserts on
+// Earth, and nothing else here expresses it: moisture is seeded from ocean
+// "warmth" (a current-direction proxy) and blended with a zonal curve, neither
+// of which knows the absolute temperature.
+//
+// Precipitation runs before temperature exists, so a first-order air
+// temperature is reconstructed from latitude and elevation using the same curve
+// temperature.js uses for its flat (non-ITCZ) reference. That is enough here:
+// the ceiling only bites at high latitude, and temperature.js has itself
+// blended fully onto the flat curve by 90°.
+//
+// Scale invariance: every quantity below is in physical units (°C, degrees of
+// latitude, km of elevation), so this is per-cell arithmetic independent of
+// numRegions.
+
+// Saturation vapour pressure over water, kPa — FAO-56 (Allen et al. 1998) eq. 11
+function satVapourPressureKPa(tC) {
+    return 0.6108 * Math.exp((17.27 * tC) / (tC + 237.3));
+}
+
+// First-order surface air temperature (°C) from latitude and elevation alone,
+// mirroring the T_flat branch of computeTemperature in temperature.js.
+function firstOrderAirTempC(latRad, elevation, isSummer) {
+    const hw = CLIMATE.TEMP_TROPICAL_PLATEAU_DEG;
+    const maxDist = 90 - hw;
+    const flatItczLatDeg = isSummer ? 5 : -5;
+    const dist = Math.abs(latRad / DEG - flatItczLatDeg);
+    const t = Math.max(0, dist - hw) / maxDist;
+    let T = CLIMATE.TEMP_PEAK_C - CLIMATE.TEMP_POLEWARD_RANGE_C * Math.pow(t, CLIMATE.TEMP_POLEWARD_EXP);
+    if (elevation > 0) T -= CLIMATE.TEMP_MOIST_LAPSE_C_PER_KM * elevToHeightKm(elevation);
+    return T;
+}
+
+// Fraction of precipitation the air can actually sustain at this cell's
+// temperature. 1 at the reference temperature and above, falling off with the
+// vapour-pressure curve as it gets colder.
+function moistureCeiling(latRad, elevation, isSummer, esRef) {
+    const strength = CLIMATE.PRECIP_CC_STRENGTH;
+    if (strength <= 0) return 1;
+    const T = firstOrderAirTempC(latRad, elevation, isSummer);
+    const cc = Math.min(1, satVapourPressureKPa(T) / esRef);
+    return (1 - strength) + strength * Math.max(CLIMATE.PRECIP_CC_FLOOR, cc);
+}
+
 // ── Wind convergence ─────────────────────────────────────────────────────────
 // Compute per-region convergence of the wind field. Negative divergence means
 // winds are piling into a region (frontal zone / ITCZ-like uplift). We measure
@@ -713,8 +759,17 @@ export function computePrecipitation(mesh, r_xyz, r_elevation, windResult, ocean
         const complex = result[`r_precip_${seasonName}`];
         const heur = heuristic[`r_precip_${seasonName}`];
         const blended = new Float32Array(numRegions);
+        // Apply the moisture ceiling to the blended field rather than to either
+        // model alone: both the advection model and the heuristic zonal curve
+        // supply moisture without reference to absolute temperature, so the
+        // limit has to sit downstream of both. It runs before the percentile
+        // normalization, which is dominated by tropical cells the ceiling
+        // barely touches, so the normalization does not undo it.
+        const esRef = satVapourPressureKPa(CLIMATE.PRECIP_CC_REF_C);
+        const isSummerSeason = seasonName === 'summer';
         for (let r = 0; r < numRegions; r++) {
             blended[r] = CLIMATE.PRECIP_MODEL_BLEND * complex[r] + (1 - CLIMATE.PRECIP_MODEL_BLEND) * heur[r];
+            blended[r] *= moistureCeiling(r_lat[r], r_elevation[r], isSummerSeason, esRef);
         }
 
         // 95th-percentile normalization on blended result

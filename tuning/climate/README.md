@@ -25,6 +25,24 @@ excluded (and reported separately as `landAgreement`).
 Ground-truth codes are mapped onto the app's class set (`As` → `Aw`, the standard
 merge). Ground truth lives in `data/ascii/Koeppen-Geiger-ASCII.txt`.
 
+## Zonal precipitation check
+
+`evaluate.mjs` scores Köppen *classification*, which is largely insensitive to
+the precipitation profile being uniformly too flat — a world where the poles
+are four times too wet can still classify them as polar. `zonal-check.mjs`
+measures that amplitude directly, comparing simulated zonal-mean precipitation
+on the imported Earth against approximate observed values.
+
+```bash
+node tuning/climate/zonal-check.mjs
+node tuning/climate/zonal-check.mjs --params '{"PRECIP_CC_STRENGTH":0}'   # ceiling off
+```
+
+It reports `mean |ln(sim/obs)|` (0 is perfect, 0.69 is a typical factor of two),
+the polar-to-tropical contrast, and the Köppen group balance against Earth's
+land shares. It does **not** need the ground-truth ASCII grid, so it runs
+without the third-party download.
+
 ## Usage
 
 ```bash
@@ -53,6 +71,7 @@ because the simulation is scale-invariant by design, but always validate at
 
 ```
 evaluate.mjs        score one parameter set, print report, optional PNG maps
+zonal-check.mjs     zonal precipitation amplitude vs observed Earth (no ground truth needed)
 optimize.mjs        coordinate descent + stochastic hill-climb over param-space
 apply-params.mjs    write tuned values back into js/climate-config.js
 param-space.mjs     min/max range + high-impact flag for every parameter

@@ -111,6 +111,16 @@ export const CLIMATE_DEFAULTS = Object.freeze({
     // ── Precipitation: blending & interior cap ──
     PRECIP_MODEL_BLEND: 0.3433,              // weight of complex model (1 − w on heuristic)
     PRECIP_CONT_CAP_FADE_START: 0.6231,      // continentality where interior precip cap fades in
+
+    // ── Clausius-Clapeyron moisture ceiling ──
+    // Saturation vapour pressure roughly doubles per 10 °C, so cold air cannot
+    // physically carry much water — the reason polar regions are deserts on
+    // Earth. Nothing else in the model expresses this: moisture is seeded from
+    // ocean "warmth" (a current-direction proxy, not a temperature) and from a
+    // zonal curve, neither of which knows the absolute temperature.
+    PRECIP_CC_STRENGTH: 0.55,                // 0 = ceiling off, 1 = full Clausius-Clapeyron scaling
+    PRECIP_CC_REF_C: 26,                     // temperature at which the ceiling is 1 (no reduction)
+    PRECIP_CC_FLOOR: 0.05,                   // never scale precipitation below this fraction
     PRECIP_CONT_CAP_MAX_REDUCTION: 0.884,  // interior cap reduction at continentality 1
     PRECIP_SEASON_CONTRAST: 1.7754,          // wet/dry season contrast exaggeration (1 = off; never compress)
 

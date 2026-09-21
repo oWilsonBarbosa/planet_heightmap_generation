@@ -86,6 +86,15 @@ export const PARAM_SPACE = {
     PRECIP_COAST_CUTOFF_END_KM:       { min: 2500, max: 4500 },
     PRECIP_MODEL_BLEND:               { min: 0.2,  max: 0.8,  high: true },
     PRECIP_CONT_CAP_FADE_START:       { min: 0.3,  max: 0.7 },
+
+    // ── Clausius-Clapeyron moisture ceiling ──
+    // Strength is high-impact: it sets the whole pole-to-equator precipitation
+    // amplitude. Full strength (1.0) over-corrects — it drives the
+    // polar/tropical contrast below Earth's and wrecks the D/E balance — so the
+    // useful range stops well short of it.
+    PRECIP_CC_STRENGTH:               { min: 0,    max: 0.85, high: true },
+    PRECIP_CC_REF_C:                  { min: 20,   max: 30 },
+    PRECIP_CC_FLOOR:                  { min: 0.02, max: 0.20 },
     PRECIP_CONT_CAP_MAX_REDUCTION:    { min: 0.6,  max: 0.95, high: true },
     PRECIP_SEASON_CONTRAST:           { min: 1.0,  max: 1.9,  high: true },  // floored at 1 (never compress); ceiling lowered to rein in Mediterranean over-pull
 

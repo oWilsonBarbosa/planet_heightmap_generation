@@ -109,7 +109,11 @@ function loadEarthGrayscale(pngPath = EARTH_PNG) {
  * Build the full evaluation context.
  * @param {object} opts { N: region count, seed, jitter }
  */
-export function buildEarthContext({ N = 40000, seed = 1234, jitter = 0.75 } = {}) {
+// groundTruth: false builds the terrain and plates only, skipping the
+// Köppen-Geiger grid. Scoring needs it; checks that only measure the
+// simulation against itself (zonal-check.mjs) do not, and the ASCII grid is
+// third-party data that is not redistributed with this repository.
+export function buildEarthContext({ N = 40000, seed = 1234, jitter = 0.75, groundTruth = true } = {}) {
     const t0 = performance.now();
     const rng = makeRng(seed);
     const { mesh, r_xyz } = buildSphere(N, jitter, rng);
@@ -155,10 +159,13 @@ export function buildEarthContext({ N = 40000, seed = 1234, jitter = 0.75 } = {}
     }
 
     // Ground truth per region
-    const truthGrid = loadGroundTruth();
     const r_truth = new Uint8Array(numRegions).fill(NO_DATA);
-    for (let r = 0; r < numRegions; r++) {
-        r_truth[r] = truthAt(truthGrid, r_lat[r], r_lon[r]);
+    let truthGrid = null;
+    if (groundTruth) {
+        truthGrid = loadGroundTruth();
+        for (let r = 0; r < numRegions; r++) {
+            r_truth[r] = truthAt(truthGrid, r_lat[r], r_lon[r]);
+        }
     }
 
     // Scoring mask: sim says land AND truth has data. Report mask agreement too.
