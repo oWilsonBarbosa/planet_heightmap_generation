@@ -80,6 +80,7 @@ probe.mjs           parameter sensitivity: swing each lever, flag inert ones
 probe-nindia.mjs    root-cause probe for the monsoon region
 probe-desert.mjs    which lever controls the subtropical desert glut
 probe-tier01.mjs    wiring check for the Tier 0/1 levers
+shp-to-ascii.py     rebuild the ground-truth grid from the Köppen shapefile (fallback)
 lib/earth-context.mjs   Earth mesh + heightmap sampling + ground-truth mapping
 lib/score.mjs           climate chain runner + metrics (objective weights here)
 lib/koppen-distance.mjs climatic-distance model for graded scoring
@@ -115,6 +116,38 @@ curl.exe -L -o tuning/climate/data/Koeppen-Geiger-ASCII.zip `
   https://web.archive.org/web/2023id_/https://koeppen-geiger.vu-wien.ac.at/data/Koeppen-Geiger-ASCII.zip
 Expand-Archive tuning/climate/data/Koeppen-Geiger-ASCII.zip tuning/climate/data/ascii
 ```
+
+### Fallback: rebuild it from the shapefile
+
+Where neither the Vienna server nor the Wayback mirror is reachable, the same
+1976–2000 classification is also published as an ESRI shapefile (`c1976_2000`),
+and `shp-to-ascii.py` rasterises that back to the 0.5° `Lat Lon Cls` grid:
+
+```bash
+pip install pyshp numpy matplotlib
+python3 tuning/climate/shp-to-ascii.py path/to/c1976_2000.shp \
+  tuning/climate/data/ascii/Koeppen-Geiger-ASCII.txt
+```
+
+The shapefile stores an integer `GRIDCODE` and its metadata documents only that
+it came from `RasterToPolygon` — **the legend is not in the file**. So the script
+hypothesises the Rubel & Kottek two-digit encoding (first digit the main group,
+second the subtype) and then *verifies* it against twenty places whose Köppen
+class is not in dispute — Sahara, Moscow, Antarctica, southern Spain, central
+Siberia and so on. If any anchor disagrees it writes nothing and exits non-zero.
+Do not relax that check to get a file out: a silently wrong legend would corrupt
+every score downstream while still looking like a plausible number.
+
+Expect ~92,000 land cells (35.5% of the globe). Checked cell-by-cell against the
+downloaded ASCII grid, a reconstruction agrees on **91.8% of cells exactly and
+97.3% at major-group level**, and a majority-vote audit confirms 28 of the 31
+`GRIDCODE` values outright. The three that differ — 47, 48 and 52, the rare
+`Ds`/`Dwd` subtypes — differ because the shapefile and the ASCII grid are not the
+same publication: the shapefile carries real polygon area for `Dsd`, which the
+2006 ASCII grid does not contain at all. Treat a reconstructed grid as good
+enough to *compare* parameter sets and not as a substitute when the real file is
+available; absolute scores shift by a few thousandths of the objective between
+the two.
 
 ## How parameters flow
 

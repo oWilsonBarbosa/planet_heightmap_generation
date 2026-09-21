@@ -118,9 +118,19 @@ export const CLIMATE_DEFAULTS = Object.freeze({
     // Earth. Nothing else in the model expresses this: moisture is seeded from
     // ocean "warmth" (a current-direction proxy, not a temperature) and from a
     // zonal curve, neither of which knows the absolute temperature.
-    PRECIP_CC_STRENGTH: 0.55,                // 0 = ceiling off, 1 = full Clausius-Clapeyron scaling
-    PRECIP_CC_REF_C: 26,                     // temperature at which the ceiling is 1 (no reduction)
-    PRECIP_CC_FLOOR: 0.05,                   // never scale precipitation below this fraction
+    // Strength is a compromise between two measurements that disagree. The
+    // zonal profile (zonal-check.mjs) — what the ceiling was added to fix —
+    // improves monotonically with it: polar/tropical precipitation contrast
+    // 0.64 → 0.50 → 0.45 → 0.34 at strength 0 / .25 / .35 / .55, against an
+    // observed 0.12. The Köppen objective (evaluate.mjs) is flat to ~0.35 and
+    // then falls off a cliff: 0.6734 / 0.6739 / 0.6649 at 0 / .35 / .55,
+    // averaged over five mesh seeds. So 0.35 buys a third of the polar
+    // over-wetness back for no measurable Köppen cost, and 0.55 — the value
+    // this shipped at first — is a clear regression.
+    PRECIP_CC_STRENGTH: 0.35,                // 0 = ceiling off, 1 = full Clausius-Clapeyron scaling
+    PRECIP_CC_REF_C: 28,                     // temperature at which the ceiling is 1 (no reduction)
+    PRECIP_CC_FLOOR: 0.05,                   // clamp on the CC ratio, so the multiplier bottoms
+                                             // out at (1 − strength) + strength × floor ≈ 0.67
     PRECIP_CONT_CAP_MAX_REDUCTION: 0.884,  // interior cap reduction at continentality 1
     PRECIP_SEASON_CONTRAST: 1.7754,          // wet/dry season contrast exaggeration (1 = off; never compress)
 
