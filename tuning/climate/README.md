@@ -62,6 +62,7 @@ probe-nindia.mjs    root-cause probe for the monsoon region
 probe-desert.mjs    which lever controls the subtropical desert glut
 probe-tier01.mjs    wiring check for the Tier 0/1 levers
 probe-currents.mjs  do the ocean currents close into gyres? (poleward west edge, equatorward east edge)
+probe-coldrain.mjs  land rain by latitude band and Köppen class (is the far north too wet?) + the Köppen objective
 lib/earth-context.mjs   Earth mesh + heightmap sampling + ground-truth mapping
 lib/score.mjs           climate chain runner + metrics (objective weights here)
 lib/koppen-distance.mjs climatic-distance model for graded scoring
@@ -100,6 +101,17 @@ basin-wide ocean rows have a poleward western edge and an equatorward eastern ed
 subtropical gyre; reversed poleward of ~50°), plus the sign of ten named boundary currents
 (Gulf Stream, Kuroshio, Brazil, East Australian, Agulhas, Canary, California, Humboldt,
 Benguela, West Australian). A resolution-free property: it should read the same at 160K and 2.5M.
+
+Köppen scoring is likewise nearly blind to *how much* rain falls on cold land (the polar and
+boreal classes are set by temperature), so rainfall amounts have their own probe:
+
+```bash
+node tuning/climate/probe-coldrain.mjs --n 160000 [--params FILE]
+```
+
+Mean annual land rain by latitude band and for ET / Dfc / Dwc, in mm. Earth for scale: Arctic
+tundra roughly 150–250 mm a year (a few hundred at most, more in uplands), boreal forest
+200–750 mm, Russia as a whole ~460 mm (FAO AQUASTAT).
 
 ## Re-downloading ground truth
 

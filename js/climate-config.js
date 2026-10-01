@@ -107,6 +107,8 @@ export const CLIMATE_DEFAULTS = Object.freeze({
     PRECIP_CONT_DRYNESS: 0.8,            // max continentality drying (complex model)
     PRECIP_COAST_CUTOFF_START_KM: 2060.0355,   // distance where hard moisture cutoff begins
     PRECIP_COAST_CUTOFF_END_KM: 3161.3364,     // distance of near-total moisture loss
+    PRECIP_COLD_CAPACITY_PER_C: 0.07,          // fraction of rain lost per °C of annual mean below the reference (cold air holds little vapour; 0 = off)
+    PRECIP_COLD_CAPACITY_REF_C: 10,            // annual mean temperature below which precipitation is thinned
 
     // ── Precipitation: blending & interior cap ──
     PRECIP_MODEL_BLEND: 0.3433,              // weight of complex model (1 − w on heuristic)

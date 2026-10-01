@@ -8,8 +8,12 @@ import { computeGradients } from './wind.js';
 import { elevToHeightKm } from './color-map.js';
 import { computeHeuristicPrecipitation, computeHeuristicWindField } from './heuristic-precip.js';
 import { smoothField, makeItczLookup, percentile } from './climate-util.js';
+import { annualBaseTemperatureC } from './temperature.js';
 
 const DEG = Math.PI / 180;
+
+// Moisture capacity never falls below this fraction of the warm-air value (polar desert, not zero)
+const COLD_CAPACITY_FLOOR = 0.25;
 
 // ── Wind convergence ─────────────────────────────────────────────────────────
 // Compute per-region convergence of the wind field. Negative divergence means
@@ -740,6 +744,32 @@ export function computePrecipitation(mesh, r_xyz, r_elevation, windResult, ocean
         }
 
         result[`r_precip_${seasonName}`] = blended;
+    }
+
+    // ── Step 4b: Cold-air moisture capacity ──
+    // Neither model above knows that cold air holds little water vapour (saturation
+    // vapour pressure falls ~7 % per °C), so left alone the far north is nearly as
+    // wet as the temperate belt: on the Earth heightmap ~1,000 mm a year over land at
+    // 60–70° (Russia as a whole averages ~460 mm) and ~1,000 mm on tundra (a few
+    // hundred observed). Thin the rain below a reference annual temperature,
+    // exponentially. The temperature is the base-curve estimate (the full field is
+    // computed after precipitation and depends on it), applied after the
+    // 95th-percentile normalisation so the wet tropics, which set that scale, are
+    // untouched.
+    {
+        const k = CLIMATE.PRECIP_COLD_CAPACITY_PER_C;
+        if (k > 0) {
+            const T0 = CLIMATE.PRECIP_COLD_CAPACITY_REF_C;
+            const r_tProxy = annualBaseTemperatureC(windResult, r_elevation);
+            const ps = result.r_precip_summer;
+            const pw = result.r_precip_winter;
+            for (let r = 0; r < numRegions; r++) {
+                if (r_tProxy[r] >= T0) continue;
+                const capacity = Math.max(COLD_CAPACITY_FLOOR, Math.exp(k * (r_tProxy[r] - T0)));
+                ps[r] *= capacity;
+                pw[r] *= capacity;
+            }
+        }
     }
 
     // ── Step 5: Seasonal contrast exaggeration ──

@@ -11,6 +11,44 @@ import { smoothField, makeItczLookup } from './climate-util.js';
 
 const DEG = Math.PI / 180;
 
+// ── Base temperature curve ──────────────────────────────────────────────────
+// Sea-level temperature at an angular distance (degrees) from the thermal equator: a
+// flat tropical plateau, then a power-law fall to the pole.
+
+function baseCurveC(distDeg) {
+    const hw = CLIMATE.TEMP_TROPICAL_PLATEAU_DEG;
+    return CLIMATE.TEMP_PEAK_C
+        - CLIMATE.TEMP_POLEWARD_RANGE_C * Math.pow(Math.max(0, distDeg - hw) / (90 - hw), CLIMATE.TEMP_POLEWARD_EXP);
+}
+
+/**
+ * Annual-mean temperature (°C) per region from the base curve alone, less a mid-range
+ * lapse on land. A cheap stand-in for the full temperature field for modules that run
+ * BEFORE it (precipitation): it ignores seasonal swing, continentality and ocean
+ * currents, so it tracks the real annual mean to ~4 °C on land.
+ */
+export function annualBaseTemperatureC(windResult, r_elevation) {
+    const { r_lat, r_lon, r_isLand } = windResult;
+    const n = r_lat.length;
+    const itczSummer = makeItczLookup(windResult.itczLons, windResult.itczLatsSummer);
+    const itczWinter = makeItczLookup(windResult.itczLons, windResult.itczLatsWinter);
+    const lapse = CLIMATE.TEMP_MOIST_LAPSE_C_PER_KM + 0.5 * CLIMATE.TEMP_DRY_LAPSE_EXTRA_C_PER_KM;
+    const T = new Float32Array(n);
+    for (let r = 0; r < n; r++) {
+        const lat = r_lat[r], lon = r_lon[r];
+        const blend = smoothstep(45, 90, Math.abs(lat) / DEG);
+        // Same two-curve blend as computeTemperature: the real ITCZ in the tropics, a fixed one at the poles
+        let t = 0;
+        for (const [itczLat, flatLat] of [[itczSummer(lon), 5 * DEG], [itczWinter(lon), -5 * DEG]]) {
+            t += baseCurveC(Math.abs(lat - itczLat) / DEG) * (1 - blend) + baseCurveC(Math.abs(lat - flatLat) / DEG) * blend;
+        }
+        t /= 2;
+        if (r_isLand[r] && r_elevation[r] > 0) t -= lapse * elevToHeightKm(r_elevation[r]);
+        T[r] = t;
+    }
+    return T;
+}
+
 // ── BFS through land cells only ─────────────────────────────────────────────
 
 function bfsLandDist(mesh, r_isLand, seeds) {
@@ -848,20 +886,16 @@ export function computeTemperature(mesh, r_xyz, r_elevation, windResult, oceanRe
             //  - T_flat: based on distance from a fixed ITCZ at ±5° (ocean default)
             // Near the tropics the real ITCZ matters; at high latitudes the
             // ITCZ position is irrelevant and a stable zonal baseline takes over.
-            const tropicalHW = CLIMATE.TEMP_TROPICAL_PLATEAU_DEG;  // flat plateau half-width (degrees)
-            const maxDist = 90 - tropicalHW;
 
             // Actual ITCZ curve
             const itczLat = itczLookup(lon);
             const distItcz = Math.abs(lat - itczLat) / DEG;
-            const tItcz = Math.max(0, distItcz - tropicalHW) / maxDist;
-            const T_itcz = CLIMATE.TEMP_PEAK_C - CLIMATE.TEMP_POLEWARD_RANGE_C * Math.pow(tItcz, CLIMATE.TEMP_POLEWARD_EXP);
+            const T_itcz = baseCurveC(distItcz);
 
             // Flat reference curve (ITCZ at 5° in summer hemisphere)
             const flatItczLat = (name === 'summer' ? 5 : -5) * DEG;
             const distFlat = Math.abs(lat - flatItczLat) / DEG;
-            const tFlat = Math.max(0, distFlat - tropicalHW) / maxDist;
-            const T_flat = CLIMATE.TEMP_PEAK_C - CLIMATE.TEMP_POLEWARD_RANGE_C * Math.pow(tFlat, CLIMATE.TEMP_POLEWARD_EXP);
+            const T_flat = baseCurveC(distFlat);
 
             // Blend: ITCZ curve dominates tropics, flat curve dominates poles
             const absLatDeg = Math.abs(lat) / DEG;
@@ -931,10 +965,8 @@ export function computeTemperature(mesh, r_xyz, r_elevation, windResult, oceanRe
                 const winItczLat = itczLookupWinter(lon);
                 const distSummer = Math.abs(lat - sumItczLat) / DEG;
                 const distWinter = Math.abs(lat - winItczLat) / DEG;
-                const tS = Math.max(0, distSummer - tropicalHW) / maxDist;
-                const tW = Math.max(0, distWinter - tropicalHW) / maxDist;
-                const T_summer = CLIMATE.TEMP_PEAK_C - CLIMATE.TEMP_POLEWARD_RANGE_C * Math.pow(tS, CLIMATE.TEMP_POLEWARD_EXP);
-                const T_winter = CLIMATE.TEMP_PEAK_C - CLIMATE.TEMP_POLEWARD_RANGE_C * Math.pow(tW, CLIMATE.TEMP_POLEWARD_EXP);
+                const T_summer = baseCurveC(distSummer);
+                const T_winter = baseCurveC(distWinter);
                 const itczAmplitude = Math.abs(T_summer - T_winter) / 2;
 
                 const extraAmplitude = Math.max(0, tableAmplitude - itczAmplitude) * CLIMATE.TEMP_EXTRA_SWING_FACTOR;

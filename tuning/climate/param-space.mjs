@@ -81,6 +81,8 @@ export const PARAM_SPACE = {
     PRECIP_MONSOON_REACH_DEG:         { min: 12,   max: 30,   high: true },
     PRECIP_POLAR_BASE_ADD:            { min: 0.03, max: 0.25 },
     PRECIP_POLAR_COASTAL_ADD:         { min: 0.05, max: 0.4 },
+    PRECIP_COLD_CAPACITY_PER_C:       { min: 0,    max: 0.12 },  // 0 = off; ~0.07 is the Clausius–Clapeyron rate
+    PRECIP_COLD_CAPACITY_REF_C:       { min: 4,    max: 16 },
     PRECIP_CONT_DRYNESS:              { min: 0.3,  max: 0.8,  high: true },
     PRECIP_COAST_CUTOFF_START_KM:     { min: 1500, max: 3000, high: true },
     PRECIP_COAST_CUTOFF_END_KM:       { min: 2500, max: 4500 },
