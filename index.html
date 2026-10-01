@@ -472,30 +472,37 @@
             <button id="whatsNewClose">&times;</button>
             <div class="whatsnew-step" data-step="0">
                 <h3>What's New in World Orogen</h3>
-                <p>The climate view is more believable. Ocean currents now close into real gyres, and the far north is as dry as it should be.</p>
-                <p class="whatsnew-warn"><strong>Heads up:</strong> Saved planet codes still load. This update changes climate only, so terrain and plates are untouched &mdash; but currents and polar rainfall will look different, and K&ouml;ppen zones and temperatures in cold regions can shift slightly.</p>
+                <p>A lot has changed since your last visit: more believable terrain, plates that move for real reasons, and a climate checked against the real Earth.</p>
+                <p class="whatsnew-warn"><strong>Heads up:</strong> Saved planet codes still load, but your worlds will look different. Terrain, plates, currents and rainfall have all been reworked, so coastlines, mountains and climate zones will shift.</p>
             </div>
             <div class="whatsnew-step" data-step="1">
-                <h3>Ocean Currents That Close Into Gyres</h3>
+                <h3>Terrain &amp; Plates</h3>
                 <ul class="whatsnew-list">
-                    <li><strong>Cold return flow on the east</strong> &mdash; Currents now run toward the equator along the eastern edge of each basin, like the Canary, California, Humboldt and Benguela. Before, both edges flowed poleward.</li>
-                    <li><strong>Warm currents on the west</strong> &mdash; Fast, warm currents still hug the western edge and carry water poleward, Gulf Stream and Kuroshio style.</li>
-                    <li><strong>Subpolar gyres turn the other way</strong> &mdash; At about 50&ndash;65&deg; the circulation reverses: cold Labrador-style currents run equatorward on the west, warm Norwegian-style ones poleward on the east.</li>
+                    <li><strong>Mountains with character</strong> &mdash; Wider ranges with peaks and saddles, ridges running across the direction of compression, and wide shelves on passive margins against narrow ones on active margins.</li>
+                    <li><strong>Volcanoes where they belong</strong> &mdash; Arcs of cones along subduction zones, hotspot island chains that sink with age, Yellowstone-style plateaus and flood-basalt provinces.</li>
+                    <li><strong>Plates that move for real reasons</strong> &mdash; Continents drag, small plates move faster, slabs pull, ridges push and mantle cells steer. Explore it under <strong>Inspect &rarr; Plate Physics</strong>.</li>
                 </ul>
-                <p>Switch them on under <strong>Inspect &rarr; Ocean</strong>.</p>
             </div>
             <div class="whatsnew-step" data-step="2">
-                <h3>A Drier Far North</h3>
+                <h3>Climate Tuned to Earth</h3>
                 <ul class="whatsnew-list">
-                    <li><strong>Cold air holds less water</strong> &mdash; Rain now thins out below about 10&nbsp;&deg;C. Tundra and taiga get several hundred millimetres a year instead of nearly a thousand, and ice caps are very dry.</li>
-                    <li><strong>Cold mountain tops too</strong> &mdash; High, chilly peaks catch less rain than before.</li>
-                    <li><strong>A little drier overall</strong> &mdash; Land rainfall averages lower now. For a wetter world, nudge the <strong>Precipitation</strong> slider up.</li>
+                    <li><strong>Checked against the real K&ouml;ppen map</strong> &mdash; Run on Earth's heightmap, the simulated climate group now matches reality on about 72% of land, up from 56%. Temperature has five continentality zones, from Hyperoceanic to Hypercontinental.</li>
+                    <li><strong>Ocean currents close into gyres</strong> &mdash; Warm currents run poleward on the west of each basin and cold ones toward the equator on the east, like the Gulf Stream and the Canary Current. See them under <strong>Inspect &rarr; Ocean</strong>.</li>
+                    <li><strong>A drier far north</strong> &mdash; Rain thins out below about 10&nbsp;&deg;C, so tundra and taiga get several hundred millimetres a year, not nearly a thousand. For a wetter world, nudge the <strong>Precipitation</strong> slider up.</li>
+                </ul>
+            </div>
+            <div class="whatsnew-step" data-step="3">
+                <h3>Exports &amp; Defaults</h3>
+                <ul class="whatsnew-list">
+                    <li><strong>16-bit heightmaps</strong> &mdash; The <strong>Heightmap</strong> and <strong>Land Heightmap</strong> exports are smooth 16-bit grayscale PNGs, without the stepped hex look: a standard format for terrain tools.</li>
+                    <li><strong>Mixed continent sizes by default</strong> &mdash; Continent Size Variety now starts at 0.35, so new worlds mix big continents with smaller landmasses.</li>
                 </ul>
             </div>
             <div class="tutorial-dots">
                 <span class="dot active" data-dot="0"></span>
                 <span class="dot" data-dot="1"></span>
                 <span class="dot" data-dot="2"></span>
+                <span class="dot" data-dot="3"></span>
             </div>
             <div class="tutorial-nav">
                 <button id="whatsNewBack" class="btn-ghost" disabled>Back</button>
