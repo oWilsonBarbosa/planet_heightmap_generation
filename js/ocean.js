@@ -1,6 +1,10 @@
 // Ocean current simulation: rule-based geographic approach with wind-belt-driven gyres.
 // Wind belts drive zonal currents; continental shelves deflect them into gyres.
 // Warmth is classified geographically: western coasts = warm, eastern coasts = cold.
+//
+// Gyres. A subtropical gyre turns poleward along a basin's WESTERN edge (strong: Gulf
+// Stream, Kuroshio) and equatorward along its EASTERN edge (weaker, broad: Canary,
+// California, Humboldt, Benguela); a subpolar gyre is the reverse. See gyreSense().
 
 console.log('[ocean.js] Module loaded');
 import { smoothstep } from './wind.js';
@@ -11,7 +15,7 @@ const DEG = Math.PI / 180;
 // ── Coast distance & classification via BFS ─────────────────────────────────
 
 function computeCoastFields(mesh, r_xyz, r_isOcean,
-    r_eastX, r_eastY, r_eastZ) {
+    r_eastX, r_eastY, r_eastZ, ballHops) {
     const { adjOffset, adjList, numRegions } = mesh;
 
     const westSeeds = [];
@@ -58,7 +62,9 @@ function computeCoastFields(mesh, r_xyz, r_isOcean,
     // Reuses a single queue array (capacity allocated once) across all three passes.
     const bfsQueue = new Int32Array(numRegions);
 
-    function bfsDistance(seeds) {
+    // `carry` (optional, one value per region, set on the seeds) is handed on to every
+    // water cell from the neighbour it was reached through, i.e. from its nearest seed.
+    function bfsDistance(seeds, carry) {
         const dist = new Int32Array(numRegions);
         dist.fill(-1);
         let qLen = 0;
@@ -75,6 +81,7 @@ function computeCoastFields(mesh, r_xyz, r_isOcean,
                 const nb = adjList[ni];
                 if (r_isOcean[nb] && dist[nb] === -1) {
                     dist[nb] = d;
+                    if (carry) carry[nb] = carry[r];
                     bfsQueue[qLen++] = nb;
                 }
             }
@@ -82,11 +89,59 @@ function computeCoastFields(mesh, r_xyz, r_isOcean,
         return dist;
     }
 
-    const r_coastDist = bfsDistance(allCoastSeeds);
+    // Which way does the land lie, as seen from the water beside it? Each coast seed
+    // averages the east component of the direction to every land cell within ballHops,
+    // so a cove or a fjord facing west on an east-facing shore cannot flip it: the
+    // continent behind it decides. +1 = land due east (the basin's eastern boundary),
+    // −1 = land due west, 0 = land to the north or south, or on both sides. A seed's
+    // value passes to the water out to the edge of the coast window as it is reached.
+    // (Classifying every seed by its own two or three land neighbours, as the warm/cold
+    // seeds above do, flips with every notch in the shore, so most coastal water ends up
+    // with both kinds of coast a few cells away.)
+    const r_landEast = new Float32Array(numRegions);
+    {
+        const stamp = new Int32Array(numRegions);
+        const hops = new Uint8Array(numRegions);
+        let mark = 0;
+        for (const s of allCoastSeeds) {
+            mark++;
+            const sx = r_xyz[3 * s], sy = r_xyz[3 * s + 1], sz = r_xyz[3 * s + 2];
+            const ex = r_eastX[s], ey = r_eastY[s], ez = r_eastZ[s];
+            let head = 0, qLen = 1, cosSum = 0, landN = 0;
+            bfsQueue[0] = s; stamp[s] = mark; hops[s] = 0;
+            while (head < qLen) {
+                const c = bfsQueue[head++];
+                if (!r_isOcean[c]) {
+                    const dx = r_xyz[3 * c] - sx, dy = r_xyz[3 * c + 1] - sy, dz = r_xyz[3 * c + 2] - sz;
+                    cosSum += (dx * ex + dy * ey + dz * ez) / Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    landN++;
+                }
+                if (hops[c] >= ballHops) continue;
+                const end = adjOffset[c + 1];
+                for (let ni = adjOffset[c]; ni < end; ni++) {
+                    const nb = adjList[ni];
+                    if (stamp[nb] !== mark) {
+                        stamp[nb] = mark;
+                        hops[nb] = hops[c] + 1;
+                        bfsQueue[qLen++] = nb;
+                    }
+                }
+            }
+            // Mean cosine is 2/π for land filling one half-plane: scale so a straight
+            // north–south shore reads ±1. A shore with little land behind it (an islet:
+            // a few percent of the ball against ~half for a continent) drives no
+            // boundary current, so it fades out.
+            r_landEast[s] = landN
+                ? Math.max(-1, Math.min(1, (Math.PI / 2) * cosSum / landN)) * smoothstep(0.08, 0.3, landN / qLen)
+                : 0;
+        }
+    }
+
+    const r_coastDist = bfsDistance(allCoastSeeds, r_landEast);
     const r_westCoastDist = bfsDistance(westSeeds);
     const r_eastCoastDist = bfsDistance(eastSeeds);
 
-    return { r_coastDist, r_westCoastDist, r_eastCoastDist };
+    return { r_coastDist, r_westCoastDist, r_eastCoastDist, r_landEast };
 }
 
 // ── Circumpolar channel detection ───────────────────────────────────────────
@@ -111,6 +166,23 @@ function hasCircumpolarChannel(r_lat, r_lon, r_isOcean, numRegions, targetLat, b
         if (!binHasOcean[i]) return false;
     }
     return true;
+}
+
+// ── Gyre sense ──────────────────────────────────────────────────────────────
+// +1: the subtropical sense (poleward on a basin's western edge, equatorward on its
+// eastern edge); −1: the subpolar sense, the reverse. Earth's subtropical gyres reach
+// ~45° (the Gulf Stream and Kuroshio run poleward to ~40–45°, the California and
+// Canary currents equatorward from ~45°) and its subpolar gyres sit at ~50–65°
+// (Labrador and Oyashio equatorward, Alaska and Norwegian currents poleward). The
+// polar cell goes back to the subtropical sense. bandLatDeg is the season-shifted
+// latitude, as for the wind bands.
+
+function gyreSense(bandLatDeg) {
+    if (bandLatDeg < 40) return 1;
+    if (bandLatDeg < 50) return 1 - 2 * smoothstep(40, 50, bandLatDeg);
+    if (bandLatDeg < 60) return -1;
+    if (bandLatDeg < 70) return -1 + 2 * smoothstep(60, 70, bandLatDeg);
+    return 1;
 }
 
 // ── Geographic heat classification ──────────────────────────────────────────
@@ -234,10 +306,12 @@ export function computeOceanCurrents(mesh, r_xyz, r_elevation, windResult) {
 
     // Step 1: Coast distance & classification (shared between seasons)
     t0 = performance.now();
-    const { r_coastDist, r_westCoastDist, r_eastCoastDist } =
+    // Coast orientation is read over ~175 km, so a notch in the shore does not flip it
+    const coastBallHops = Math.max(3, Math.round(175 / avgEdgeKm));
+    const { r_coastDist, r_westCoastDist, r_eastCoastDist, r_landEast } =
         computeCoastFields(mesh, r_xyz, r_isOcean,
-            r_eastX, r_eastY, r_eastZ);
-    timing.push({ stage: 'Ocean: coast BFS (3 passes)', ms: performance.now() - t0 });
+            r_eastX, r_eastY, r_eastZ, coastBallHops);
+    timing.push({ stage: 'Ocean: coast BFS (3 passes) + coast orientation', ms: performance.now() - t0 });
 
     // Step 2: Circumpolar channel detection
     t0 = performance.now();
@@ -306,24 +380,22 @@ export function computeOceanCurrents(mesh, r_xyz, r_elevation, windResult) {
             currentE[r] = baseE;
             currentN[r] = 0;
 
-            // Step 4: Coast deflection
-            const wDist = r_westCoastDist[r];
-            const eDist = r_eastCoastDist[r];
-
-            // Near western coast: strong poleward deflection (warm current)
-            if (wDist >= 0 && wDist < coastThreshold) {
-                const t = 1 - wDist / coastThreshold;
-                const strength = t * t * 2.0; // western intensification ×2
-                currentN[r] += hemisphereSign * strength; // poleward
-                currentE[r] *= (1 - t * t * 0.7);
-            }
-
-            // Near eastern coast: moderate equatorward deflection (cold current)
-            if (eDist >= 0 && eDist < coastThreshold) {
-                const t = 1 - eDist / coastThreshold;
-                const strength = t * t * 0.8; // eastern weaker ×0.8
-                currentN[r] -= hemisphereSign * strength; // equatorward
-                currentE[r] *= (1 - t * t * 0.5);
+            // Step 4: Coast deflection, by the orientation of the nearest coast. Beside a
+            // western boundary the flow turns along the shore, strongly (western
+            // intensification ×2); beside an eastern boundary it turns the other way,
+            // weaker and broader (×0.8). Coasts running mostly east–west deflect little.
+            // (An earlier version added a western and an eastern term at once, each from
+            // the nearest seed of its own kind; ragged shores have both within a few
+            // cells, and the stronger western term won beside every east coast, so the
+            // eastern boundary flowed poleward like the western one.)
+            const cDist = r_coastDist[r];
+            if (cDist >= 0 && cDist < coastThreshold) {
+                const t = 1 - cDist / coastThreshold;
+                const landEast = r_landEast[r];               // +1 land due east … −1 land due west
+                const westFrac = smoothstep(0.15, 0.6, -landEast);   // western boundary of a basin
+                const eastFrac = smoothstep(0.15, 0.6, landEast);    // eastern boundary
+                currentN[r] += hemisphereSign * gyreSense(bandLatDeg) * t * t * (2.0 * westFrac - 0.8 * eastFrac);
+                currentE[r] *= 1 - t * t * (0.7 * westFrac + 0.5 * eastFrac);
             }
 
             // Circumpolar override (55–75° with open channel)

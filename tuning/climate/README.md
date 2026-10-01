@@ -61,6 +61,7 @@ probe.mjs           parameter sensitivity: swing each lever, flag inert ones
 probe-nindia.mjs    root-cause probe for the monsoon region
 probe-desert.mjs    which lever controls the subtropical desert glut
 probe-tier01.mjs    wiring check for the Tier 0/1 levers
+probe-currents.mjs  do the ocean currents close into gyres? (poleward west edge, equatorward east edge)
 lib/earth-context.mjs   Earth mesh + heightmap sampling + ground-truth mapping
 lib/score.mjs           climate chain runner + metrics (objective weights here)
 lib/koppen-distance.mjs climatic-distance model for graded scoring
@@ -86,6 +87,19 @@ lever that does nothing means the fault is elsewhere.
 
 The diff map colors: green = exact match, yellow = major group match,
 red = wrong group, dark = not scored (ocean or mask disagreement).
+
+Köppen scoring cannot see the ocean current *vectors* (only warmth and speed reach the
+climate), so they have their own check:
+
+```bash
+node tuning/climate/probe-currents.mjs --n 640000 [--dump FILE]
+```
+
+It runs wind + currents on the Earth heightmap and reports, for latitude bands, how many
+basin-wide ocean rows have a poleward western edge and an equatorward eastern edge (a
+subtropical gyre; reversed poleward of ~50°), plus the sign of ten named boundary currents
+(Gulf Stream, Kuroshio, Brazil, East Australian, Agulhas, Canary, California, Humboldt,
+Benguela, West Australian). A resolution-free property: it should read the same at 160K and 2.5M.
 
 ## Re-downloading ground truth
 
