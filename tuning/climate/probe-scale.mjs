@@ -4,7 +4,8 @@
  * Runs the climate chain on the Earth heightmap at several mesh sizes and prints, per size, the
  * Köppen objective and area shares, and the mean annual land temperature and rain by latitude band.
  * The terrain is the same at every size, so anything that moves is the simulation. The climate code
- * is meant to be scale-invariant (see CLAUDE.md) and the defaults were tuned at 160K cells.
+ * is meant to be scale-invariant (see CLAUDE.md) and the defaults were validated at 160K cells.
+ * The README ("Reference scores") has what it shows and why.
  *
  *   node tuning/climate/probe-scale.mjs [--n 40000,160000,640000] [--params FILE]
  *
