@@ -47,9 +47,10 @@ node tuning/climate/evaluate.mjs --params tuning/results/climate/<label>-best.js
 node tuning/climate/apply-params.mjs tuning/results/climate/<label>-best.json
 ```
 
-Default mesh resolution is `--n 40000` (fast, ~seconds per evaluation). Temperature carries
-across mesh sizes; precipitation does not quite (see *Reference scores*). So validate at ≥160K,
-where the defaults were tuned, and again at 640K before applying.
+Default mesh resolution is `--n 40000` (fast, ~seconds per evaluation). Temperature and rain carry
+across mesh sizes from 160K up to within a few percent, and the score is a little lower and
+noisier below that (see *Reference scores*). So tune at 160K, where the defaults were tuned, and
+validate at 640K before applying.
 
 ## Reference scores
 
@@ -62,10 +63,16 @@ ground truth reproduces the last row on the current code.
 | + ocean-gyre fix (de62a3c) | 0.6779 | 0.6683 | 0.6578 | – |
 | + cold-land rain (623d7fd) | 0.6769 | 0.6682 | 0.6594 | 0.6537 |
 | + occupancy-grid fix, old temperature parameters | 0.6660 | 0.6602 | 0.6581 | 0.6532 |
-| + temperature parameters re-tuned (current defaults) | 0.6793 | 0.6790 | 0.6743 | 0.6674 |
+| + temperature parameters re-tuned | 0.6793 | 0.6790 | 0.6743 | 0.6674 |
+| + rain shadow on a fixed mesh, old precipitation parameters (e198262) | 0.6743 | 0.6778 | 0.6789 | 0.6771 |
+| + precipitation parameters re-tuned, coastal fades in km (current defaults) | 0.6820 | 0.6838 | 0.6796 | 0.6769 |
 
-At the app's default Detail (204K) the current defaults read 0.6795 and match the real Köppen
-group on 74 % of scored land (73.7 % at 160K, against 71.7 % before).
+At the app's default Detail (204K) the current defaults read 0.6814 and match the real Köppen
+group on 74.4 % of scored land (74.3 % at 160K, against 71.7 % before the gyre and cold-rain
+changes). The group match is 74.1–74.4 % at every size from 160K to 2.56M. Below that the objective
+scatters by about ±0.004 from one mesh size to the next, with no trend (18 sizes between 30K and
+150K read 0.6720–0.6837: 0.6720 at 50K, 0.6742 at 80K, 0.6825 at 85K), because the exact-class and
+watchlist terms change with the mesh; the group match there is 73.1–74.6 %.
 
 **Temperature now holds across sizes.** Until the occupancy-grid fix the climate was not
 scale-invariant: northern land at 50–60° had a winter-season mean of −7 °C at 160K and −16 °C
@@ -80,7 +87,8 @@ the continental share flat but too high (28–29 % against Earth's 22 %), becaus
 tuning had absorbed the artifact: `TEMP_CONT_WINTER_COOL_C`, added to fix a continental deficit,
 stood at 12.6 °C per unit continentality. The temperature parameters were then re-tuned at 160K
 (three seeded optimizer runs over ten `TEMP_*` knobs, 300 evaluations each; `TEMP_CONT_WINTER_COOL_C`
-now 2.9). `probe-scale.mjs`, cold-land rain off, % of scored land:
+now 2.9). `probe-scale.mjs`, cold-land rain off, % of scored land, as of that fix (the precipitation
+work below moved A, B and C by up to 1.7 points and D and E by up to 0.3):
 
 | mesh cells | 40K | 160K | 640K | 2.56M | Earth |
 |---|---:|---:|---:|---:|---:|
@@ -93,18 +101,66 @@ now 2.9). `probe-scale.mjs`, cold-land rain off, % of scored land:
 Land temperature by latitude band now agrees to within 0.7 °C from 40K to 2.56M, and to within
 0.2 °C from 160K up (it was 3.5–4 °C colder at 50–70° at 2.56M).
 
-**Precipitation still drifts**, which is what moves C, B and A: land at 20–40° is 10–12 % drier
-at 2.56M than at 160K. It is in the advection ("complex") model, not the zonal heuristic
-(heuristic-only rain is stable to 3 % from 160K to 640K; advection-only rain falls 7–12 % at
-10–40°), and within it in the rain-shadow propagation (steps 2b/2c of precipitation.js). Before
-that step the mean complex-model rain over land is within 5 % across sizes (0.863 at 40K, 0.827 at
-2.56M); after it 0.561 and 0.411 (−27 %). The shadow seeds barely change with size (28 % of land
-is above 0.8 km at every size, 4–6 % of land is seeded as lee slope), but the propagated front
-covers more land per km on finer meshes: after 1000 km it has shadowed 62 % of land at 160K and
-73 % at 640K, 78 % and 90 % of land in the end at 40K and 2.56M. Not the cause (each checked): the
-terrain (identical at every size), the cap on the advection hop count (`maxHops`, at most 20:
-removing it, at a 1000 km reach, moved band rain by under 1 % at 10–50° and 3 % at most elsewhere),
-and the reach of the precipitation smoothing passes. Not fixed.
+**Precipitation now holds across sizes from 160K up, to within a few percent.** Until the
+rain-shadow fix it did not: land at 20–40° was 10–12 % drier at 2.56M than at 160K, and the arid
+(B) share of land grew from 22.9 to 30.2 % between 40K and 2.56M. The cause was the rain shadow
+(steps 2b/2c of precipitation.js), not the zonal heuristic (stable to 3 % from 160K to 640K) and not
+the rest of the advection ("complex") model (before step 2b its mean rain over land is within 5 %
+across sizes). The shadow is seeded where the wind blows down the slope of terrain above 0.8 km.
+"Down the slope" is the sign of wind · elevation gradient, multiplied by 18–20 and clipped at 1
+while typical values are about 3 per radian, so it is a binary test. Where the slope along the wind
+is small the sign flips at the scale of a cell, and a finer mesh breaks the seed region into more,
+smaller patches (clusters 427 → 4172, seed boundary 339 → 1014 Mm from 160K to 2.56M), each of which
+casts a full-length shadow. The seeded area and the propagation of a fixed seed region do not depend
+on the mesh, but the front these patches make covers more land per km (after 1000 km 62 % of land
+at 160K and 73 % at 640K), so 78 % of land ended up shadowed at 40K and 90 % at 2.56M, and the
+complex model's land-mean rain after step 2c fell 27 % (0.561 → 0.411). Smoothing the elevation or
+adding a slope threshold on the planet's own mesh did not stop it. Not the cause (each checked): the
+terrain (identical at every size), the Stage A zone shares, the ocean-warmth and zone smoothing
+reach, wind noise, weak seeds, the per-axis versus least-squares gradient, and coastline edges in the
+seed boundary.
+
+From 160K regions up the field is now computed on a fixed 160K-cell reference mesh: the planet's
+elevation and wind are averaged over each reference cell, smoothed, run through the unchanged seed
+and propagation code, and interpolated back onto the planet's land cells (below 160K the planet's
+own mesh is used, with the smoothing passes scaled by (reference edge / edge)²). The share of land
+under a shadow is 73 % at every size from 160K to 2.56M (70 % at 40K), and the complex model's
+land-mean rain after step 2c falls 13 % from 40K to 2.56M and 9 % from 160K (it fell 27 % from 40K).
+The six `PRECIP_RS_*` and `PRECIP_ORO_*` parameters were then re-tuned at 160K (three seeded
+optimizer runs, 300 evaluations each; `PRECIP_RS_SHADOW_PROP_KM` 3363 → 2458 km;
+`PRECIP_RS_APPLY_WINDWARD_ADD` ended at or next to its range maximum, 2, in all three runs). The
+polar-front coastal term and the summer-monsoon supply also faded over `maxHops` hops, which is
+capped at 20: 1000 km at 160K but 250 km at 2.56M. They now fade over `PRECIP_COAST_FADE_KM`
+(1000 km), which leaves 160K as it was. `probe-scale.mjs`, cold-land rain off, % of scored land and
+mean land rain in mm a year:
+
+| mesh cells | 40K | 160K | 640K | 2.56M | 160K → 2.56M, now | before the fix | Earth |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| tropical (A) | 22.1 | 20.8 | 20.2 | 19.8 | −1.0 | −1.9 | 20.7 |
+| arid (B) | 24.5 | 26.7 | 27.9 | 28.5 | +1.8 | +3.5 | 26.9 |
+| temperate (C) | 15.6 | 14.1 | 13.2 | 12.9 | −1.2 | −2.1 | 14.9 |
+| continental (D) | 22.0 | 22.8 | 22.5 | 22.5 | −0.3 | | 22.0 |
+| polar (E) | 15.9 | 15.7 | 16.2 | 16.3 | +0.6 | | 15.6 |
+| rain 0–10° | 1235 | 1252 | 1269 | 1279 | +2.2 % | +1.0 % | |
+| rain 10–20° | 747 | 727 | 733 | 732 | +0.7 % | −4.4 % | |
+| rain 20–30° | 394 | 377 | 356 | 356 | −5.6 % | −12.6 % | |
+| rain 30–40° | 423 | 401 | 401 | 395 | −1.5 % | −10.1 % | |
+| rain 40–50° | 642 | 637 | 651 | 646 | +1.4 % | −0.2 % | |
+| rain 50–60° | 840 | 876 | 893 | 878 | +0.2 % | −0.2 % | |
+| rain 60–70° | 1012 | 1013 | 1001 | 1009 | −0.4 % | −10.5 % | |
+| rain 70–90° | 678 | 663 | 642 | 640 | −3.5 % | −9.2 % | |
+
+What is left (160K to 2.56M) is half or less of what there was, and has two known sources. The
+shadow field at 20–40° is 10 % stronger at 2.56M, and the difference comes from the wind, not the
+elevation: recomputing it on the reference mesh from the 160K and 2.56M inputs in all four
+combinations gives −0.157 with the 160K wind and −0.172 with the 2.56M wind, whichever elevation
+feeds it. So the wind module's own output differs between mesh sizes in the subtropics (the
+reference-mesh winds correlate at 0.92); that is not investigated. And the moisture advection runs a
+capped 20 hops, so its reach falls from 1000 km at 160K to 250 km at 2.56M and the moisture it
+carries over land falls by about 60 %. Making the reach a fixed 1000 km changed neither the objective (within
+0.0002) nor the shares, because the advected moisture is about a tenth of the complex model's rain:
+the additive terms (ITCZ, orographic uplift, polar front) carry the rest. It is left capped, which
+keeps 2.56M fast.
 
 ## Files
 
@@ -173,14 +229,14 @@ tundra roughly 150–250 mm a year (a few hundred at most, more in uplands), bor
 
 The objective barely sees the strength of the cold-land rain factor
 (`PRECIP_COLD_CAPACITY_PER_C`, `PRECIP_COLD_CAPACITY_REF_C`). On the Kottek file at 160K it reads
-0.6786–0.6790 over k = 0.03–0.07 at T0 = 6–10 °C (0.6787 with the factor off) and falls off only
-for the strongest settings (0.6642 at k = 0.12, T0 = 14 °C). At T0 = 10 °C, polar-tundra rain falls
-from 440 mm (k = 0.07, the default) to 342 (0.09) and 301 (0.12) at an objective cost of 0.0003 and
-0.0014 at 160K (0.0002 and 0.0016 at 640K). Earth is 150–250 mm, so beyond k = 0.07 the choice is
-a trade between the score and the rain.
+0.6835–0.6838 over k = 0.03–0.07 at T0 = 6–10 °C (0.6834 with the factor off) and falls off only
+for the strongest settings (0.6718 at k = 0.12, T0 = 14 °C). At T0 = 10 °C, polar-tundra rain falls
+from 426 mm (k = 0.07, the default) to 332 (0.09) and 291 (0.12) at an objective change of +0.0001
+and −0.0009 at 160K (−0.0001 and −0.0008 at 640K). Earth is 150–250 mm, so k = 0.09 would cost
+nothing in the score and sit nearer Earth; the default stays at the Clausius–Clapeyron rate.
 
-The climate should read the same at every mesh size. Temperature does; precipitation does not
-quite (see *Reference scores*). This probe shows both:
+The climate should read the same at every mesh size. Temperature and rain do from 160K up, to within
+a few percent (see *Reference scores*). This probe shows both:
 
 ```bash
 node --max-old-space-size=7000 tuning/climate/probe-scale.mjs --n 40000,160000,640000,2560000 [--params FILE]
@@ -199,8 +255,8 @@ Expand-Archive tuning/climate/data/Koeppen-Geiger-ASCII.zip tuning/climate/data/
 Where neither host can be reached (a sandbox with an egress allowlist blocks both), any copy of
 the file does: three columns `Lat Lon Cls`, 92,416 land rows, LF or CRLF line endings. The copy
 behind *Reference scores* has SHA-1 `7ef140fc294ea704e611afa4eebfe1aebd4026fa`. With it,
-`evaluate.mjs --n 160000` on the current defaults prints objective 0.6790 and area shares
-A 21.2 / B 26.9 / C 13.8 / D 21.8 / E 16.3 %.
+`evaluate.mjs --n 160000` on the current defaults prints objective 0.6838 and area shares
+A 20.8 / B 26.8 / C 14.1 / D 22.1 / E 16.2 %.
 
 ## How parameters flow
 

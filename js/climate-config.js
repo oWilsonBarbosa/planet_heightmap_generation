@@ -82,12 +82,12 @@ export const CLIMATE_DEFAULTS = Object.freeze({
     PRECIP_WARM_CURRENT_BOOST: 0.0267,         // warm-current coastal rain boost strength (0 = off)
 
     // ── Precipitation: orographic & rain shadow ──
-    PRECIP_ORO_UPLIFT_ADD: 1.013,           // max additive windward rain
-    PRECIP_ORO_SHADOW_MAX_SUPPRESS: 0.9186, // max local foehn suppression
-    PRECIP_RS_SHADOW_PROP_KM: 3363.1799,       // downwind shadow propagation distance
-    PRECIP_RS_APPLY_STRENGTH_SCALE: 2.4002, // propagated shadow → suppression multiplier
-    PRECIP_RS_APPLY_MAX_SUPPRESS: 0.9782,   // max suppression in propagated shadow
-    PRECIP_RS_APPLY_WINDWARD_ADD: 1.7675,    // additive windward boost from propagated field
+    PRECIP_ORO_UPLIFT_ADD: 0.7026,           // max additive windward rain
+    PRECIP_ORO_SHADOW_MAX_SUPPRESS: 0.7106, // max local foehn suppression
+    PRECIP_RS_SHADOW_PROP_KM: 2458.2952,       // downwind shadow propagation distance
+    PRECIP_RS_APPLY_STRENGTH_SCALE: 3.8705, // propagated shadow → suppression multiplier
+    PRECIP_RS_APPLY_MAX_SUPPRESS: 0.7578,   // max suppression in propagated shadow
+    PRECIP_RS_APPLY_WINDWARD_ADD: 2,    // additive windward boost from propagated field
 
     // ── Precipitation: subtropical high / Mediterranean / monsoon ──
     PRECIP_SUBTROP_CENTER_SUMMER_DEG: 37.738, // suppression band center in local summer
