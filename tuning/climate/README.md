@@ -20,7 +20,10 @@ excluded (and reported separately as `landAgreement`).
 - `macroF1` — unweighted mean F1 across classes present in the truth, so rare
   but important classes (Mediterranean Csa/Csb, monsoon Cwa/Dwa…) aren't drowned
   out by large deserts and subarctic zones
-- **objective = 0.5·exactAcc + 0.5·macroF1** — what the optimizer maximizes
+- **objective** — what the optimizer maximizes (weights in `lib/score.mjs`):
+  0.60 · graded accuracy (per-cell climatic similarity: a rainforest scored as desert counts ~0,
+  a neighbouring class ~0.8) + 0.12 · macroF1 + 0.15 · group balance (1 − ½·Σ|sim − truth| over the
+  A/B/C/D/E area shares) + 0.13 · F1 on the Mediterranean and monsoon subtypes
 
 Ground-truth codes are mapped onto the app's class set (`As` → `Aw`, the standard
 merge). Ground truth lives in `data/ascii/Koeppen-Geiger-ASCII.txt`.
@@ -45,9 +48,33 @@ node tuning/climate/apply-params.mjs tuning/results/climate/<label>-best.json
 ```
 
 Default mesh resolution is `--n 40000` (fast, ~seconds per evaluation).
-Tuning results are exchangeable across resolutions to a good approximation
-because the simulation is scale-invariant by design, but always validate at
-≥160K before applying.
+Tuning results carry across resolutions only roughly (see *Reference scores*
+below), so always validate at ≥160K, where the defaults were tuned, before applying.
+
+## Reference scores
+
+Köppen objective against the Kottek file (seed 1234, `evaluate.mjs --n N`). A good copy of the
+ground truth reproduces the last row on the current code.
+
+| mesh cells | 40K | 160K | 640K | 2.56M |
+|---|---:|---:|---:|---:|
+| before the gyre and cold-rain changes (cc2662b) | 0.6778 | 0.6683 | 0.6578 | 0.6526 |
+| ocean-gyre fix only (de62a3c) | 0.6779 | 0.6683 | 0.6578 | — |
+| current defaults (cold-land rain on) | 0.6769 | 0.6682 | 0.6594 | 0.6537 |
+
+The climate is **not** quite scale-invariant. The score falls as the mesh gets finer and the area
+shares drift away from Earth's, although the terrain is identical at every size (`probe-scale.mjs`,
+cold-land rain off, % of scored land):
+
+| mesh cells | 40K | 160K | 640K | 2.56M | Earth |
+|---|---:|---:|---:|---:|---:|
+| temperate (C) | 17.9 | 12.4 | 10.6 | 9.5 | 14.9 |
+| continental (D) | 20.8 | 24.1 | 28.2 | 28.3 | 22.0 |
+| arid (B) | 22.7 | 25.3 | 27.4 | 28.9 | 26.9 |
+
+Land at 50–70° is 3.5–4 °C colder at 2.56M than at 160K, and subtropical land 10–12 % drier. The
+defaults were validated at 160K, where the shares come closest to Earth's. The stage responsible
+has not been found.
 
 ## Files
 
@@ -63,6 +90,7 @@ probe-desert.mjs    which lever controls the subtropical desert glut
 probe-tier01.mjs    wiring check for the Tier 0/1 levers
 probe-currents.mjs  do the ocean currents close into gyres? (poleward west edge, equatorward east edge)
 probe-coldrain.mjs  land rain by latitude band and Köppen class (is the far north too wet?) + the Köppen objective
+probe-scale.mjs     does the climate hold still as the mesh gets finer? (Köppen shares, land temperature and rain by band, per mesh size)
 lib/earth-context.mjs   Earth mesh + heightmap sampling + ground-truth mapping
 lib/score.mjs           climate chain runner + metrics (objective weights here)
 lib/koppen-distance.mjs climatic-distance model for graded scoring
@@ -113,6 +141,20 @@ Mean annual land rain by latitude band and for ET / Dfc / Dwc, in mm. Earth for 
 tundra roughly 150–250 mm a year (a few hundred at most, more in uplands), boreal forest
 200–750 mm, Russia as a whole ~460 mm (FAO AQUASTAT).
 
+The objective cannot choose the strength of the cold-land rain factor
+(`PRECIP_COLD_CAPACITY_PER_C`, `PRECIP_COLD_CAPACITY_REF_C`). On the Kottek file at 160K it reads
+0.6677–0.6683 over a grid of k = 0.03–0.12 and T0 = 6, 10, 14 °C (0.6683 with the factor off),
+except one cliff at k = 0.12, T0 = 14 °C (0.6603). At T0 = 10 °C, polar-tundra rain falls
+from 461 mm (k = 0.07, the default) to 364 (0.09) and 306 (0.12) while the objective stays within
+0.0006 of the default at 40K, 160K and 640K. Earth is 150–250 mm, so the choice rests on the rain.
+
+The climate should read the same at every mesh size. It currently does not (see *Reference
+scores*); this probe shows by how much:
+
+```bash
+node --max-old-space-size=7000 tuning/climate/probe-scale.mjs --n 40000,160000,640000,2560000 [--params FILE]
+```
+
 ## Re-downloading ground truth
 
 The Vienna server can be unreachable; the Wayback Machine mirror works:
@@ -122,6 +164,12 @@ curl.exe -L -o tuning/climate/data/Koeppen-Geiger-ASCII.zip `
   https://web.archive.org/web/2023id_/https://koeppen-geiger.vu-wien.ac.at/data/Koeppen-Geiger-ASCII.zip
 Expand-Archive tuning/climate/data/Koeppen-Geiger-ASCII.zip tuning/climate/data/ascii
 ```
+
+Where neither host can be reached (a sandbox with an egress allowlist blocks both), any copy of
+the file does: three columns `Lat Lon Cls`, 92,416 land rows, LF or CRLF line endings. The copy
+behind *Reference scores* has SHA-1 `7ef140fc294ea704e611afa4eebfe1aebd4026fa`. With it,
+`evaluate.mjs --n 160000` on the current defaults prints objective 0.6682 and area shares
+A 20.7 / B 25.4 / C 12.4 / D 23.6 / E 18.0 %.
 
 ## How parameters flow
 
