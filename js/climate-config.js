@@ -105,6 +105,7 @@ export const CLIMATE_DEFAULTS = Object.freeze({
     PRECIP_POLAR_BASE_ADD: 0.25,          // baseline polar-front precip
     PRECIP_POLAR_COASTAL_ADD: 0.203,       // coastal polar-front enhancement
     PRECIP_CONT_DRYNESS: 0.8,            // max continentality drying (complex model)
+    PRECIP_COAST_FADE_KM: 1000,                // inland distance over which the coastal terms (polar-front coastal enhancement, monsoon supply and relief) fade
     PRECIP_COAST_CUTOFF_START_KM: 2060.0355,   // distance where hard moisture cutoff begins
     PRECIP_COAST_CUTOFF_END_KM: 3161.3364,     // distance of near-total moisture loss
     PRECIP_COLD_CAPACITY_PER_C: 0.07,          // fraction of rain lost per °C of annual mean below the reference (cold air holds little vapour; 0 = off)

@@ -569,12 +569,16 @@ export function computePrecipitation(mesh, r_xyz, r_elevation, windResult, ocean
         r_eastX, r_eastY, r_eastZ,
         r_northX, r_northY, r_northZ } = windResult;
 
-    // Scale-dependent hop count: ~2000 km reach.
     // Average edge length ≈ π / sqrt(numRegions) radians ≈ (π * 6371) / sqrt(N) km
-    // hops ≈ 2000 / edgeLengthKm
     const avgEdgeKm = (Math.PI * 6371) / Math.sqrt(numRegions);
     const avgEdgeRad = Math.PI / Math.sqrt(numRegions);
+    // Iterations of the moisture advection. Capped at 20 for speed, so the reach is about 1000 km at 160K
+    // regions and shorter on finer meshes (250 km at 2.56M); lengthening it to a fixed 1000 km moved neither
+    // the rain nor the Köppen shares (the advected moisture is a tenth of the rain), so it is left capped.
     const maxHops = Math.max(8, Math.min(20, Math.round(CLIMATE.PRECIP_ADVECT_REACH_KM / avgEdgeKm)));
+    // The inland fade of the coastal terms below, in hops. In km, so a finer mesh does not shorten it (it used
+    // to be maxHops, which is capped, so it fell from 1000 km at 160K to 250 km at 2.56M).
+    const fadeHops = CLIMATE.PRECIP_COAST_FADE_KM / avgEdgeKm;
 
     // Coast distance through land — reuse BFS already computed by wind.js
     const r_coastDistLand = windResult.r_coastDistLand;
@@ -763,8 +767,8 @@ export function computePrecipitation(mesh, r_xyz, r_elevation, windResult, ocean
             if (isLand && inLocalSummer) {
                 const polewardWind = lat >= 0 ? r_windN[r] : -r_windN[r];
                 if (polewardWind > 0) {
-                    const coastDist = r_coastDistLand[r] >= 0 ? r_coastDistLand[r] : maxHops;
-                    const coastProximity = 1 - smoothstep(0, maxHops * 0.4, coastDist);
+                    const coastDist = r_coastDistLand[r] >= 0 ? r_coastDistLand[r] : fadeHops;
+                    const coastProximity = 1 - smoothstep(0, fadeHops * 0.4, coastDist);
                     const monsoonRelief = smoothstep(0, 0.15, polewardWind) * coastProximity;
                     subtropPeak *= (1 - monsoonRelief * CLIMATE.PRECIP_MONSOON_RELIEF_MAX);
                 }
@@ -816,8 +820,8 @@ export function computePrecipitation(mesh, r_xyz, r_elevation, windResult, ocean
                 const poleward = (lat >= 0 ? (lat - mItczLat) : (mItczLat - lat)) / DEG;
                 if (poleward > 0 && poleward < CLIMATE.PRECIP_MONSOON_REACH_DEG) {
                     const band = smoothstep(CLIMATE.PRECIP_MONSOON_REACH_DEG, 0, poleward);
-                    const cd = r_coastDistLand[r] >= 0 ? r_coastDistLand[r] : maxHops;
-                    const supply = 1 - smoothstep(0, maxHops, cd);  // ocean moisture within reach
+                    const cd = r_coastDistLand[r] >= 0 ? r_coastDistLand[r] : fadeHops;
+                    const supply = 1 - smoothstep(0, fadeHops, cd);  // ocean moisture within reach
                     p += CLIMATE.PRECIP_MONSOON_ADD * band * supply;
                 }
             }
@@ -830,8 +834,8 @@ export function computePrecipitation(mesh, r_xyz, r_elevation, windResult, ocean
             // activity, even deep inland, plus a stronger coastal component.
             if (absLatDeg > 40) {
                 const polarStrength = smoothstep(40, 70, absLatDeg);
-                const coastDist = r_coastDistLand[r] < 0 ? maxHops : r_coastDistLand[r];
-                const inlandFade = 1 - smoothstep(0, maxHops, coastDist);
+                const coastDist = r_coastDistLand[r] < 0 ? fadeHops : r_coastDistLand[r];
+                const inlandFade = 1 - smoothstep(0, fadeHops, coastDist);
                 // Base: always present regardless of coast distance
                 const polarBase = polarStrength * CLIMATE.PRECIP_POLAR_BASE_ADD;
                 // Coastal enhancement: fades inland
