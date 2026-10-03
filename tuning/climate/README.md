@@ -65,13 +65,14 @@ ground truth reproduces the last row on the current code.
 | + occupancy-grid fix, old temperature parameters | 0.6660 | 0.6602 | 0.6581 | 0.6532 |
 | + temperature parameters re-tuned | 0.6793 | 0.6790 | 0.6743 | 0.6674 |
 | + rain shadow on a fixed mesh, old precipitation parameters (e198262) | 0.6743 | 0.6778 | 0.6789 | 0.6771 |
-| + precipitation parameters re-tuned, coastal fades in km (current defaults) | 0.6820 | 0.6838 | 0.6796 | 0.6769 |
+| + precipitation parameters re-tuned, coastal fades in km | 0.6820 | 0.6838 | 0.6796 | 0.6769 |
+| + cold-land rain factor 0.07 → 0.09 (current defaults) | 0.6818 | 0.6839 | 0.6795 | 0.6767 |
 
-At the app's default Detail (204K) the current defaults read 0.6814 and match the real Köppen
-group on 74.4 % of scored land (74.3 % at 160K, against 71.7 % before the gyre and cold-rain
-changes). The group match is 74.1–74.4 % at every size from 160K to 2.56M. Below that the objective
-scatters by about ±0.004 from one mesh size to the next, with no trend (18 sizes between 30K and
-150K read 0.6720–0.6837: 0.6720 at 50K, 0.6742 at 80K, 0.6825 at 85K), because the exact-class and
+At the app's default Detail (204K) the current defaults read 0.6808 and match the real Köppen
+group on 74.3 % of scored land (74.3 % at 160K, against 71.7 % before the gyre and cold-rain
+changes). The group match is 74.2–74.3 % at every size from 160K to 2.56M. Below that the objective
+scatters by about ±0.004 from one mesh size to the next, with no trend (19 sizes between 30K and
+150K read 0.6719–0.6835: 0.6719 at 50K, 0.6740 at 80K, 0.6823 at 85K), because the exact-class and
 watchlist terms change with the mesh; the group match there is 73.1–74.6 %.
 
 **Temperature now holds across sizes.** Until the occupancy-grid fix the climate was not
@@ -229,11 +230,13 @@ tundra roughly 150–250 mm a year (a few hundred at most, more in uplands), bor
 
 The objective barely sees the strength of the cold-land rain factor
 (`PRECIP_COLD_CAPACITY_PER_C`, `PRECIP_COLD_CAPACITY_REF_C`). On the Kottek file at 160K it reads
-0.6835–0.6838 over k = 0.03–0.07 at T0 = 6–10 °C (0.6834 with the factor off) and falls off only
+0.6835–0.6839 over k = 0.03–0.09 at T0 = 6–10 °C (0.6834 with the factor off) and falls off only
 for the strongest settings (0.6718 at k = 0.12, T0 = 14 °C). At T0 = 10 °C, polar-tundra rain falls
-from 426 mm (k = 0.07, the default) to 332 (0.09) and 291 (0.12) at an objective change of +0.0001
-and −0.0009 at 160K (−0.0001 and −0.0008 at 640K). Earth is 150–250 mm, so k = 0.09 would cost
-nothing in the score and sit nearer Earth; the default stays at the Clausius–Clapeyron rate.
+from 426 mm (k = 0.07, the Clausius–Clapeyron rate of about 7 % per °C) to 332 (0.09, the default)
+and 291 (0.12) at an objective change of +0.0001 and −0.0009 at 160K (−0.0001 and −0.0008 at 640K).
+Earth is 150–250 mm, so the default was raised from 0.07 to 0.09: across mesh sizes that moved the
+objective by −0.0001 to −0.0002, +0.0001 at 160K and −0.0006 at 204K, well inside the mesh-to-mesh
+scatter, and left the group match at 74.2–74.3 %.
 
 The climate should read the same at every mesh size. Temperature and rain do from 160K up, to within
 a few percent (see *Reference scores*). This probe shows both:
@@ -255,8 +258,8 @@ Expand-Archive tuning/climate/data/Koeppen-Geiger-ASCII.zip tuning/climate/data/
 Where neither host can be reached (a sandbox with an egress allowlist blocks both), any copy of
 the file does: three columns `Lat Lon Cls`, 92,416 land rows, LF or CRLF line endings. The copy
 behind *Reference scores* has SHA-1 `7ef140fc294ea704e611afa4eebfe1aebd4026fa`. With it,
-`evaluate.mjs --n 160000` on the current defaults prints objective 0.6838 and area shares
-A 20.8 / B 26.8 / C 14.1 / D 22.1 / E 16.2 %.
+`evaluate.mjs --n 160000` on the current defaults prints objective 0.6839 and area shares
+A 20.8 / B 26.9 / C 14.0 / D 22.0 / E 16.3 %.
 
 ## How parameters flow
 
