@@ -73,8 +73,23 @@ cold-land rain off, % of scored land):
 | arid (B) | 22.7 | 25.3 | 27.4 | 28.9 | 26.9 |
 
 Land at 50–70° is 3.5–4 °C colder at 2.56M than at 160K, and subtropical land 10–12 % drier. The
-defaults were validated at 160K, where the shares come closest to Earth's. The stage responsible
-has not been found.
+defaults were validated at 160K, where the shares come closest to Earth's.
+
+The temperature drift is nearly all winter: northern land at 50–60° has a winter-season mean of
+−7 °C at 160K and −16 °C at 640K (summer 19 → 22 °C). The cause is in `computeTempContinentality`
+(temperature.js). Its coast "shaves" ask whether a bin of a fixed-angle occupancy grid
+(`scLonBins*`, `nsOcc*`, `bandLonBins`; 0.5–1° of longitude) is ocean, and a bin counts as ocean
+when no cell *centre* falls in it. When the mesh is sparser than the bins, interior bins read as
+ocean (about 3 % of the 1° bins inside the northern continents at 50–69° at 160K, 0.1 % at 640K),
+the interior is treated as coast, and its continentality is erased. Marking every bin that a cell's
+footprint (±`avgEdgeKm`/2) touches, instead of the one holding its centre, removes the drift in a
+scratch patch: winter at 50–60° is −17.7 / −16.4 / −17.6 °C at 160K / 640K / 2.56M. It also exposes
+how much the shipped tuning leans on the artifact: the objective then reads 0.6710 /
+0.6604 / 0.6581 / 0.6536 at 40K / 160K / 640K / 2.56M, and continental land is 27–29 % at every size
+(Earth 22 %). The fix needs a re-tune of the continental winter cooling with it. Not applied. Not
+the cause (each checked): the terrain (identical at every size), the Stage A zone shares (the same
+at every size), and the reach of the ocean-warmth and zone smoothing (holding either at its 160K
+reach changed nothing).
 
 ## Files
 
