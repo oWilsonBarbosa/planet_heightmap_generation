@@ -173,6 +173,34 @@ const ZONE_SC = 0.5;    // Subcontinental
 const ZONE_CO = 0.75;   // Continental
 const ZONE_HC = 1.0;    // Hypercontinental
 
+// ── Land occupancy grids ────────────────────────────────────────────────────
+// The coast shaves below ask a fixed-angle grid "is this bin ocean?", so a bin has to
+// count as land whenever any land cell touches it. Marking only the bin that holds a
+// cell's centre makes the answer depend on the mesh: a 1° bin holds ~3 cell centres at
+// 160K cells and often none when the cells are coarser, so interior bins read as ocean,
+// the shaves take whole continents for coast and erase their continentality (the winter
+// at 50-60°N came out ~9 °C warmer at 160K than at 640K, where the bins are dense). Each
+// cell instead marks every bin its footprint overlaps. Neighbouring cells sit ~1.2 ×
+// avgEdgeKm apart, so a footprint reaches ~0.6 × avgEdgeKm from the centre.
+
+const FOOTPRINT_PER_EDGE = 0.6;
+const KM_PER_DEG = 6371 * DEG;
+
+function markFootprint(grid, id, numLat, numLon, latBandDeg, absLatDeg, lonDeg, latRad, avgEdgeKm) {
+    const halfLatDeg = FOOTPRINT_PER_EDGE * avgEdgeKm / KM_PER_DEG;
+    const halfLonDeg = halfLatDeg / Math.max(0.2, Math.cos(latRad));
+    const lat0 = Math.max(0, Math.floor((absLatDeg - halfLatDeg) / latBandDeg));
+    const lat1 = Math.min(numLat - 1, Math.floor((absLatDeg + halfLatDeg) / latBandDeg));
+    const lon0 = Math.floor((lonDeg - halfLonDeg) * numLon / 360);
+    const lon1 = Math.floor((lonDeg + halfLonDeg) * numLon / 360);
+    const base = id * numLat * numLon;
+    for (let li = lat0; li <= lat1; li++) {
+        for (let lj = lon0; lj <= lon1; lj++) {
+            grid[base + li * numLon + ((lj % numLon) + numLon) % numLon] = 1;
+        }
+    }
+}
+
 function computeTempContinentality(
     mesh, r_xyz, r_isLand, r_lat, r_lon,
     r_eastX, r_eastY, r_eastZ, r_northX, r_northY, r_northZ,
@@ -383,15 +411,8 @@ function computeTempContinentality(
             const latDeg = r_lat[r] / DEG;
             const absLatDeg = Math.abs(latDeg);
             if (absLatDeg < 35) continue;
-            const id = r_label[r];
-            const latIdx = Math.min(SC_NUM_LAT - 1, Math.floor(absLatDeg / SC_LAT_BAND));
-            const lonNorm = (r_lon[r] + Math.PI) / (2 * Math.PI);
-            const lonBin = Math.min(SC_LON_BINS - 1, Math.floor(lonNorm * SC_LON_BINS));
-            if (latDeg >= 0) {
-                scLonBinsN[id * SC_NUM_LAT * SC_LON_BINS + latIdx * SC_LON_BINS + lonBin] = 1;
-            } else {
-                scLonBinsS[id * SC_NUM_LAT * SC_LON_BINS + latIdx * SC_LON_BINS + lonBin] = 1;
-            }
+            markFootprint(latDeg >= 0 ? scLonBinsN : scLonBinsS, r_label[r], SC_NUM_LAT, SC_LON_BINS,
+                SC_LAT_BAND, absLatDeg, (r_lon[r] + Math.PI) / DEG, r_lat[r], avgEdgeKm);
         }
 
         // Compute per-lat-band E-W width
@@ -451,15 +472,8 @@ function computeTempContinentality(
             if (!r_isLand[r]) continue;
             const latDeg = r_lat[r] / DEG;
             const absLatDeg = Math.abs(latDeg);
-            const id = r_label[r];
-            const latIdx = Math.min(NS_NUM_LAT - 1, Math.floor(absLatDeg / NS_LAT_BAND));
-            const lonNorm = (r_lon[r] + Math.PI) / (2 * Math.PI);
-            const lonBin = Math.min(NS_LON_BINS - 1, Math.floor(lonNorm * NS_LON_BINS));
-            if (latDeg >= 0) {
-                nsOccN[id * NS_NUM_LAT * NS_LON_BINS + latIdx * NS_LON_BINS + lonBin] = 1;
-            } else {
-                nsOccS[id * NS_NUM_LAT * NS_LON_BINS + latIdx * NS_LON_BINS + lonBin] = 1;
-            }
+            markFootprint(latDeg >= 0 ? nsOccN : nsOccS, r_label[r], NS_NUM_LAT, NS_LON_BINS,
+                NS_LAT_BAND, absLatDeg, (r_lon[r] + Math.PI) / DEG, r_lat[r], avgEdgeKm);
         }
 
         const nsShaveKm = 250;
@@ -535,11 +549,8 @@ function computeTempContinentality(
         if (!r_isLand[r]) continue;
         const absLatDeg = Math.abs(r_lat[r]) / DEG;
         if (absLatDeg < 30 || absLatDeg > 65) continue;
-        const id = r_label[r];
-        const latBand = Math.min(NUM_LAT_BANDS - 1, Math.floor(absLatDeg / LAT_BAND_DEG));
-        const lonNorm = (r_lon[r] + Math.PI) / (2 * Math.PI);
-        const lonBin = Math.min(SHAVE_LON_BINS - 1, Math.floor(lonNorm * SHAVE_LON_BINS));
-        bandLonBins[id * NUM_LAT_BANDS * SHAVE_LON_BINS + latBand * SHAVE_LON_BINS + lonBin] = 1;
+        markFootprint(bandLonBins, r_label[r], NUM_LAT_BANDS, SHAVE_LON_BINS, LAT_BAND_DEG,
+            absLatDeg, (r_lon[r] + Math.PI) / DEG, r_lat[r], avgEdgeKm);
     }
 
     const shaveBinWidthRad = 2 * Math.PI / SHAVE_LON_BINS;

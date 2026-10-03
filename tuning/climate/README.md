@@ -47,9 +47,9 @@ node tuning/climate/evaluate.mjs --params tuning/results/climate/<label>-best.js
 node tuning/climate/apply-params.mjs tuning/results/climate/<label>-best.json
 ```
 
-Default mesh resolution is `--n 40000` (fast, ~seconds per evaluation).
-Tuning results carry across resolutions only roughly (see *Reference scores*
-below), so always validate at ≥160K, where the defaults were tuned, before applying.
+Default mesh resolution is `--n 40000` (fast, ~seconds per evaluation). Temperature carries
+across mesh sizes; precipitation does not quite (see *Reference scores*). So validate at ≥160K,
+where the defaults were tuned, and again at 640K before applying.
 
 ## Reference scores
 
@@ -59,37 +59,52 @@ ground truth reproduces the last row on the current code.
 | mesh cells | 40K | 160K | 640K | 2.56M |
 |---|---:|---:|---:|---:|
 | before the gyre and cold-rain changes (cc2662b) | 0.6778 | 0.6683 | 0.6578 | 0.6526 |
-| ocean-gyre fix only (de62a3c) | 0.6779 | 0.6683 | 0.6578 | — |
-| current defaults (cold-land rain on) | 0.6769 | 0.6682 | 0.6594 | 0.6537 |
+| + ocean-gyre fix (de62a3c) | 0.6779 | 0.6683 | 0.6578 | – |
+| + cold-land rain (623d7fd) | 0.6769 | 0.6682 | 0.6594 | 0.6537 |
+| + occupancy-grid fix, old temperature parameters | 0.6660 | 0.6602 | 0.6581 | 0.6532 |
+| + temperature parameters re-tuned (current defaults) | 0.6793 | 0.6790 | 0.6743 | 0.6674 |
 
-The climate is **not** quite scale-invariant. The score falls as the mesh gets finer and the area
-shares drift away from Earth's, although the terrain is identical at every size (`probe-scale.mjs`,
-cold-land rain off, % of scored land):
+At the app's default Detail (204K) the current defaults read 0.6795 and match the real Köppen
+group on 74 % of scored land (73.7 % at 160K, against 71.7 % before).
+
+**Temperature now holds across sizes.** Until the occupancy-grid fix the climate was not
+scale-invariant: northern land at 50–60° had a winter-season mean of −7 °C at 160K and −16 °C
+at 640K, and the continental (D) share of land went 20.8 → 28.3 % from 40K to 2.56M. The cause was
+in `computeTempContinentality` (temperature.js). Its coast "shaves" ask whether a bin of a
+fixed-angle occupancy grid (`scLonBins*`, `nsOcc*`, `bandLonBins`; 0.5–1° of longitude) is ocean,
+and a bin counted as ocean when no cell *centre* fell in it. When the mesh is sparser than the
+bins, interior bins read as ocean (about 3 % of the 1° bins inside the northern continents at
+50–69° at 160K, 0.1 % at 640K), the interior was treated as coast, and its continentality was
+erased. Each cell now marks every bin its footprint (0.6 × `avgEdgeKm`) touches. That alone made
+the continental share flat but too high (28–29 % against Earth's 22 %), because the shipped
+tuning had absorbed the artifact: `TEMP_CONT_WINTER_COOL_C`, added to fix a continental deficit,
+stood at 12.6 °C per unit continentality. The temperature parameters were then re-tuned at 160K
+(three seeded optimizer runs over ten `TEMP_*` knobs, 300 evaluations each; `TEMP_CONT_WINTER_COOL_C`
+now 2.9). `probe-scale.mjs`, cold-land rain off, % of scored land:
 
 | mesh cells | 40K | 160K | 640K | 2.56M | Earth |
 |---|---:|---:|---:|---:|---:|
-| temperate (C) | 17.9 | 12.4 | 10.6 | 9.5 | 14.9 |
-| continental (D) | 20.8 | 24.1 | 28.2 | 28.3 | 22.0 |
-| arid (B) | 22.7 | 25.3 | 27.4 | 28.9 | 26.9 |
+| continental (D) | 22.0 | 22.5 | 22.4 | 22.4 | 22.0 |
+| polar (E) | 16.0 | 15.8 | 16.3 | 16.4 | 15.6 |
+| temperate (C) | 16.5 | 13.8 | 12.5 | 11.7 | 14.9 |
+| arid (B) | 22.9 | 26.7 | 28.8 | 30.2 | 26.9 |
+| tropical (A) | 22.6 | 21.2 | 20.0 | 19.3 | 20.7 |
 
-Land at 50–70° is 3.5–4 °C colder at 2.56M than at 160K, and subtropical land 10–12 % drier. The
-defaults were validated at 160K, where the shares come closest to Earth's.
+Land temperature by latitude band now agrees to within 0.7 °C from 40K to 2.56M, and to within
+0.2 °C from 160K up (it was 3.5–4 °C colder at 50–70° at 2.56M).
 
-The temperature drift is nearly all winter: northern land at 50–60° has a winter-season mean of
-−7 °C at 160K and −16 °C at 640K (summer 19 → 22 °C). The cause is in `computeTempContinentality`
-(temperature.js). Its coast "shaves" ask whether a bin of a fixed-angle occupancy grid
-(`scLonBins*`, `nsOcc*`, `bandLonBins`; 0.5–1° of longitude) is ocean, and a bin counts as ocean
-when no cell *centre* falls in it. When the mesh is sparser than the bins, interior bins read as
-ocean (about 3 % of the 1° bins inside the northern continents at 50–69° at 160K, 0.1 % at 640K),
-the interior is treated as coast, and its continentality is erased. Marking every bin that a cell's
-footprint (±`avgEdgeKm`/2) touches, instead of the one holding its centre, removes the drift in a
-scratch patch: winter at 50–60° is −17.7 / −16.4 / −17.6 °C at 160K / 640K / 2.56M. It also exposes
-how much the shipped tuning leans on the artifact: the objective then reads 0.6710 /
-0.6604 / 0.6581 / 0.6536 at 40K / 160K / 640K / 2.56M, and continental land is 27–29 % at every size
-(Earth 22 %). The fix needs a re-tune of the continental winter cooling with it. Not applied. Not
-the cause (each checked): the terrain (identical at every size), the Stage A zone shares (the same
-at every size), and the reach of the ocean-warmth and zone smoothing (holding either at its 160K
-reach changed nothing).
+**Precipitation still drifts**, which is what moves C, B and A: land at 20–40° is 10–12 % drier
+at 2.56M than at 160K. It is in the advection ("complex") model, not the zonal heuristic
+(heuristic-only rain is stable to 3 % from 160K to 640K; advection-only rain falls 7–12 % at
+10–40°), and within it in the rain-shadow propagation (steps 2b/2c of precipitation.js). Before
+that step the mean complex-model rain over land is within 5 % across sizes (0.863 at 40K, 0.827 at
+2.56M); after it 0.561 and 0.411 (−27 %). The shadow seeds barely change with size (28 % of land
+is above 0.8 km at every size, 4–6 % of land is seeded as lee slope), but the propagated front
+covers more land per km on finer meshes: after 1000 km it has shadowed 62 % of land at 160K and
+73 % at 640K, 78 % and 90 % of land in the end at 40K and 2.56M. Not the cause (each checked): the
+terrain (identical at every size), the cap on the advection hop count (`maxHops`, at most 20:
+removing it, at a 1000 km reach, moved band rain by under 1 % at 10–50° and 3 % at most elsewhere),
+and the reach of the precipitation smoothing passes. Not fixed.
 
 ## Files
 
@@ -156,15 +171,16 @@ Mean annual land rain by latitude band and for ET / Dfc / Dwc, in mm. Earth for 
 tundra roughly 150–250 mm a year (a few hundred at most, more in uplands), boreal forest
 200–750 mm, Russia as a whole ~460 mm (FAO AQUASTAT).
 
-The objective cannot choose the strength of the cold-land rain factor
+The objective barely sees the strength of the cold-land rain factor
 (`PRECIP_COLD_CAPACITY_PER_C`, `PRECIP_COLD_CAPACITY_REF_C`). On the Kottek file at 160K it reads
-0.6677–0.6683 over a grid of k = 0.03–0.12 and T0 = 6, 10, 14 °C (0.6683 with the factor off),
-except one cliff at k = 0.12, T0 = 14 °C (0.6603). At T0 = 10 °C, polar-tundra rain falls
-from 461 mm (k = 0.07, the default) to 364 (0.09) and 306 (0.12) while the objective stays within
-0.0006 of the default at 40K, 160K and 640K. Earth is 150–250 mm, so the choice rests on the rain.
+0.6786–0.6790 over k = 0.03–0.07 at T0 = 6–10 °C (0.6787 with the factor off) and falls off only
+for the strongest settings (0.6642 at k = 0.12, T0 = 14 °C). At T0 = 10 °C, polar-tundra rain falls
+from 440 mm (k = 0.07, the default) to 342 (0.09) and 301 (0.12) at an objective cost of 0.0003 and
+0.0014 at 160K (0.0002 and 0.0016 at 640K). Earth is 150–250 mm, so beyond k = 0.07 the choice is
+a trade between the score and the rain.
 
-The climate should read the same at every mesh size. It currently does not (see *Reference
-scores*); this probe shows by how much:
+The climate should read the same at every mesh size. Temperature does; precipitation does not
+quite (see *Reference scores*). This probe shows both:
 
 ```bash
 node --max-old-space-size=7000 tuning/climate/probe-scale.mjs --n 40000,160000,640000,2560000 [--params FILE]
@@ -183,8 +199,8 @@ Expand-Archive tuning/climate/data/Koeppen-Geiger-ASCII.zip tuning/climate/data/
 Where neither host can be reached (a sandbox with an egress allowlist blocks both), any copy of
 the file does: three columns `Lat Lon Cls`, 92,416 land rows, LF or CRLF line endings. The copy
 behind *Reference scores* has SHA-1 `7ef140fc294ea704e611afa4eebfe1aebd4026fa`. With it,
-`evaluate.mjs --n 160000` on the current defaults prints objective 0.6682 and area shares
-A 20.7 / B 25.4 / C 12.4 / D 23.6 / E 18.0 %.
+`evaluate.mjs --n 160000` on the current defaults prints objective 0.6790 and area shares
+A 21.2 / B 26.9 / C 13.8 / D 21.8 / E 16.3 %.
 
 ## How parameters flow
 

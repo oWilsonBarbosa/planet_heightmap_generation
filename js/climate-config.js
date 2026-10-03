@@ -49,20 +49,20 @@ export const CLIMATE_DEFAULTS = Object.freeze({
 
     // ── Temperature: ocean current warmth ──
     TEMP_OCEAN_WARMTH_DIFFUSE_KM: 443.6723,   // physical reach of ocean-warmth diffusion onto land
-    TEMP_SST_CURRENT_SHIFT_C: 8.8086,         // max SST shift from warm/cold currents
-    TEMP_COASTAL_WARMTH_SHIFT_C: 17.9628,      // max coastal land temp shift from diffused warmth
+    TEMP_SST_CURRENT_SHIFT_C: 9.6322,         // max SST shift from warm/cold currents
+    TEMP_COASTAL_WARMTH_SHIFT_C: 8.5118,      // max coastal land temp shift from diffused warmth
 
     // ── Temperature: seasonal swing ──
-    TEMP_SWING_SCALE: 1.0723,                // global multiplier on the SWING_TABLE amplitudes
-    TEMP_EXTRA_SWING_FACTOR: 0.8005,         // fraction of (table − ITCZ-implied) swing applied
-    TEMP_SWING_WINTER_SHARE: 0.7055,         // fraction of extra swing taken by winter (0.5 = symmetric)
-    TEMP_CONT_WINTER_COOL_C: 12.6435,             // extra °C of local-winter cooling per unit continentality (0 = off)
-    TEMP_WINTER_COOL_WEST_RELIEF: 0.6,        // fraction the winter cooling is reduced on maritime WEST coasts (0 = off)
+    TEMP_SWING_SCALE: 0.9352,                // global multiplier on the SWING_TABLE amplitudes
+    TEMP_EXTRA_SWING_FACTOR: 0.4847,         // fraction of (table − ITCZ-implied) swing applied
+    TEMP_SWING_WINTER_SHARE: 0.6365,         // fraction of extra swing taken by winter (0.5 = symmetric)
+    TEMP_CONT_WINTER_COOL_C: 2.8799,             // extra °C of local-winter cooling per unit continentality (0 = off)
+    TEMP_WINTER_COOL_WEST_RELIEF: 0.8653,        // fraction the winter cooling is reduced on maritime WEST coasts (0 = off)
     TEMP_OCEANIC_WARMING_MAX_C: 2,        // max year-round warming for oceanic mid/high-lat land
 
     // ── Temperature: cloud moderation ──
-    TEMP_CLOUD_MOD_STRENGTH: 0.05,        // max pull toward 0 under full cloud cover
-    TEMP_CLEARSKY_AMP_STRENGTH: 0.2745,     // max amplification of extremes under clear skies
+    TEMP_CLOUD_MOD_STRENGTH: 0.0648,        // max pull toward 0 under full cloud cover
+    TEMP_CLEARSKY_AMP_STRENGTH: 0.1255,     // max amplification of extremes under clear skies
 
     // ── Precipitation: moisture & advection ──
     PRECIP_OCEAN_MOISTURE_BASE: 0.4508,      // base moisture of ocean cells
