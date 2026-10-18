@@ -1,6 +1,7 @@
 // Entry point — wires UI controls, animation loop, and kicks off initial generation.
 
 import * as THREE from 'three';
+import { tickAtlas } from './atlas-ui.js';
 import { renderer, scene, camera, ctrl, waterMesh, atmosMesh, starsMesh,
          mapCamera, updateMapCameraFrustum, mapCtrl, canvas,
          tickZoom, tickMapZoom } from './scene.js';
@@ -1125,6 +1126,7 @@ function animate() {
         if (state.oceanCurrentArrowGroup) state.oceanCurrentArrowGroup.rotation.y = state.planetMesh.rotation.y;
         if (state.globeGridMesh) state.globeGridMesh.rotation.y = state.planetMesh.rotation.y;
     }
+    tickAtlas();
     renderer.render(scene, state.mapMode ? mapCamera : camera);
 }
 
@@ -1366,6 +1368,7 @@ window.takePreview = function(width = 1200, height = 630) {
     camera.aspect = savedAspect;
     camera.updateProjectionMatrix();
     for (const { el, prev } of hiddenEls) el.style.display = prev;
+    tickAtlas();
     renderer.render(scene, state.mapMode ? mapCamera : camera);
     console.log('preview.png downloaded!');
 };

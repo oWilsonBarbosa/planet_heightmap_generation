@@ -43,3 +43,7 @@ https://orogen.studio/
 - Braun-Willett stream power erosion, Barnes et al. pit-filling algorithm
 - Dual-model precipitation (advection simulation + zonal heuristic)
 - Fully client-side — no server, no data collection
+
+Optional experimental world atlas: persistent H3 cell identity independent of simulation
+Detail, globe/map selection, two approximate cartographic scales, and physical sampling.
+No atlas editing or persistence yet. Rainfall is shown as a normalized index.
