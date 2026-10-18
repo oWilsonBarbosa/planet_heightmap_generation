@@ -1007,3 +1007,17 @@ button#generate.generating {
     .cg label { font-size: 14px; }
     .section summary { font-size: 13px; }
 }
+
+/* Optional atlas fits the existing desktop sidebar and mobile bottom sheet. */
+.atlas-panel { padding: 12px; }
+.atlas-panel label { display: block; margin-top: 8px; }
+.atlas-panel select { width: 100%; min-height: 44px; }
+.atlas-panel input { min-width: 24px; min-height: 44px; vertical-align: middle; }
+.atlas-panel output { display: block; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.6; }
+.atlas-panel p { font-size: 12px; }
+.atlas-panel { width: 230px; max-width: 100%; }
+@media (max-width: 768px) {
+    .atlas-panel { width: 100%; }
+    .atlas-panel summary { min-height: 44px; padding-block: 12px; }
+    .atlas-panel label { min-height: 44px; }
+}
