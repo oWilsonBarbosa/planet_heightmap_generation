@@ -132,7 +132,7 @@ ground (the Terrain view's density and colouring). One map saves as a PNG, sever
 1024 to 16384 px (4096 on phones): up to the finished picture's own (4096, 8192 at 10M, 2048 on phones) drawn from its
 detail, narrower ones averaged down; wider ones enlarged for use downstream (developer, 2026-10-17) — heights by a clamped
 bicubic, coasts, lakes and climate zones by the weighted majority of the nearest pixels, satellite colours blended — then
-painted at the full width. Every map is centred on the map view's Center Longitude and can be drawn in any of nine
+painted at the full width. Every map is centred on the map view's Center Longitude and can be drawn in any of ten
 projections (the inverse per pixel; the same inverses in GLSL, `js/view/projection-glsl.js`, draw the map view itself
 in the projection chosen beside Center Longitude).
 

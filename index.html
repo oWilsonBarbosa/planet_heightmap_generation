@@ -51,7 +51,7 @@
             "Interactive plate editing",
             "Equirectangular heightmap import with automatic climate simulation",
             "Tectonic history simulation: watch continents break up and collide, then sculpt any moment in detail",
-            "Map export up to 65536px: every map as colour or 16-bit data, in nine projections (equirectangular, Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, orthographic, azimuthal equidistant), one PNG or a ZIP with a README",
+            "Map export up to 65536px: every map as colour or 16-bit data, in ten projections (equirectangular, Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, orthographic, azimuthal equidistant, Van der Grinten), one PNG or a ZIP with a README",
             "Multiple visualization modes (terrain, satellite with summer and winter, climate, heightmap)",
             "Shareable planet codes"
         ],
@@ -83,7 +83,7 @@
                 "name": "Can I use the exported maps in my own projects?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "Yes. World Orogen exports maps up to 65,536px wide in nine projections (equirectangular, Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, orthographic, azimuthal equidistant): every map as colour — terrain, satellite, Köppen climate zones, each climate layer — or as 16-bit data on fixed, documented scales — heightmaps, a hillshade, temperature, rain, pressure, winds, currents, ice, the Köppen class index — one file as a PNG or several as a ZIP with a README. Everything is free to use in your own projects."
+                    "text": "Yes. World Orogen exports maps up to 65,536px wide in ten projections (equirectangular, Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, orthographic, azimuthal equidistant, Van der Grinten): every map as colour — terrain, satellite, Köppen climate zones, each climate layer — or as 16-bit data on fixed, documented scales — heightmaps, a hillshade, temperature, rain, pressure, winds, currents, ice, the Köppen class index — one file as a PNG or several as a ZIP with a README. Everything is free to use in your own projects."
                 }
             },
             {
@@ -138,7 +138,7 @@
             <li>Temperature and precipitation controls that work through the climate: cool a planet and its ice spreads, warm it and it grows wetter</li>
             <li>Multiple visualization modes: terrain, a satellite view in summer and winter, climate, and heightmap</li>
             <li>Detailed inspection layers for geology and climate — pressure and wind, ocean currents, upwelling, sea ice, temperature, precipitation, aridity, growing season and more, for the year, January or July</li>
-            <li>Map export up to 65,536px wide: every map as colour or as 16-bit data on documented scales (heightmaps, hillshade, temperature, rain, winds, currents, ice, Köppen classes), in nine map projections, one PNG or a ZIP with a README</li>
+            <li>Map export up to 65,536px wide: every map as colour or as 16-bit data on documented scales (heightmaps, hillshade, temperature, rain, winds, currents, ice, Köppen classes), in ten map projections, one PNG or a ZIP with a README</li>
             <li>Shareable planet codes — copy a code to share your exact planet with others</li>
         </ul>
         <h2>Use Cases</h2>
@@ -417,7 +417,7 @@
             <div class="tutorial-step" data-step="4">
                 <h3>Save &amp; Share</h3>
                 <p>Every planet gets a unique <strong>planet code</strong> shown below the Build button &mdash; including any plates you've edited. <strong>Copy</strong> it to share with others, or <strong>paste</strong> a code and click <strong>Load</strong> to recreate someone else's world. You can also share the URL directly.</p>
-                <p>Use <strong>Export Map</strong> to save any map the page draws &mdash; the terrain, satellite, climate zones, every climate layer, heightmaps, a hillshade, plates &mdash; as <strong>Colour</strong> (as shown) or as <strong>Data</strong> (16-bit greyscales on fixed scales, for other tools), for the year, January or July, in nine map projections, centred where you like. One map saves as a PNG; several as a ZIP with a README that explains every file.</p>
+                <p>Use <strong>Export Map</strong> to save any map the page draws &mdash; the terrain, satellite, climate zones, every climate layer, heightmaps, a hillshade, plates &mdash; as <strong>Colour</strong> (as shown) or as <strong>Data</strong> (16-bit greyscales on fixed scales, for other tools), for the year, January or July, in ten map projections, centred where you like. One map saves as a PNG; several as a ZIP with a README that explains every file.</p>
             </div>
             <div class="tutorial-dots">
                 <span class="dot active" data-dot="0"></span>
@@ -470,9 +470,9 @@
                 </ul>
             </div>
             <div class="whatsnew-step" data-step="2">
-                <h3>Nine Map Projections</h3>
+                <h3>Ten Map Projections</h3>
                 <ul class="whatsnew-list">
-                    <li><strong>In the export</strong> &mdash; Equirectangular, Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, the globe as two hemispheres and an azimuthal (polar) map &mdash; each with its own options, centred on any longitude.</li>
+                    <li><strong>In the export</strong> &mdash; Equirectangular, Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, the globe as two hemispheres, an azimuthal (polar) map and Van der Grinten&rsquo;s world in a circle &mdash; each with its own options, centred on any longitude.</li>
                     <li><strong>In Evolution's map view</strong> &mdash; A Projection picker beside Center Longitude shows the planet in any of them, live.</li>
                 </ul>
             </div>

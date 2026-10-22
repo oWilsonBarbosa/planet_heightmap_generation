@@ -1,11 +1,11 @@
-// The projections' inverses in GLSL (the same nine as projections.js), for Evolution's map view: the map is a full-screen
+// The projections' inverses in GLSL (the same ten as projections.js), for Evolution's map view: the map is a full-screen
 // quad whose fragment shader asks, for each pixel, which longitude and latitude it shows, and samples the planet's
 // equirectangular texture there. `projectionUniforms(id, opts)` gives the uniforms the shader reads; `PROJECTION_GLSL`
 // is the function `bool projInverse(vec2 xy, out vec2 lonLat)` (xy in the projection's map space, lonLat in radians).
 
 import { P } from './projections.js';
 
-const IDS = ['equirect', 'mercator', 'robinson', 'equalearth', 'mollweide', 'hammer', 'winkel', 'ortho', 'azeq'];
+const IDS = ['equirect', 'mercator', 'robinson', 'equalearth', 'mollweide', 'hammer', 'winkel', 'ortho', 'azeq', 'vdg'];
 export const PROJECTION_INDEX = Object.fromEntries(IDS.map((id, i) => [id, i]));
 
 /** The uniforms for a projection and its options (degrees in, radians out): { uProj, uBounds, uOpt }. */
@@ -103,6 +103,18 @@ bool projInverse(vec2 xy, out vec2 ll) {
     if (uProj == 8) {
         float lim = mod(uOpt.w, 100.0) >= 10.0 ? PI : HALF, r = length(xy); if (r > lim) return false;
         ll = azInverse(xy, r, r, uOpt.z); return true;
+    }
+    if (uProj == 9) {
+        // Van der Grinten (Snyder 29-7 … 29-16): the world in a circle
+        float X = x / PI, Y = y / PI, X2 = X * X, Y2 = Y * Y; if (X2 + Y2 > 1.0) return false;
+        if (abs(Y) < 1e-6) { if (abs(X) > 1.0) return false; ll = vec2(x, 0.0); return true; }
+        float c1 = -abs(Y) * (1.0 + X2 + Y2), c2 = c1 - 2.0 * Y2 + X2, c3 = -2.0 * c1 + 1.0 + 2.0 * Y2 + (X2 + Y2) * (X2 + Y2);
+        float d = Y2 / c3 + (2.0 * c2 * c2 * c2 / (c3 * c3 * c3) - 9.0 * c1 * c2 / (c3 * c3)) / 27.0, a1 = (c1 - c2 * c2 / (3.0 * c3)) / c3, m1 = 2.0 * sqrt(-a1 / 3.0);
+        float t1 = acos(clamp(3.0 * d / (a1 * m1), -1.0, 1.0)) / 3.0;
+        float p = PI * (-m1 * cos(t1 + PI / 3.0) - c2 / (3.0 * c3)) * sign(Y);
+        float l = abs(X) < 1e-6 ? 0.0 : PI * (X2 + Y2 - 1.0 + sqrt(1.0 + 2.0 * (X2 - Y2) + (X2 + Y2) * (X2 + Y2))) / (2.0 * X);
+        if (abs(l) > PI) return false;
+        ll = vec2(l, clamp(p, -HALF, HALF)); return true;
     }
     return false;
 }

@@ -105,6 +105,29 @@ export const P = {
             const r = Math.hypot(x, y); if (r > 1) return null;
             const [l, p] = azimuthalInverse(x, y, r, Math.asin(r), p0); return [wrap(l + h * PI), p];
         } },
+    vdg: { label: 'Van der Grinten', note: 'the whole world in a circle, the old atlas look',
+        bounds: () => [-PI, PI, -PI, PI],
+        fwd: (l, p) => {
+            // (Snyder 1987, 29-6a … 29-6e)
+            if (Math.abs(p) < 1e-9) return [l, 0];
+            const th = Math.asin(clamp(2 * Math.abs(p) / PI, 0, 1));
+            if (Math.abs(l) < 1e-9 || Math.abs(Math.abs(p) - HALF) < 1e-9) return [0, Math.sign(p) * PI * Math.tan(th / 2)];
+            const A = Math.abs(PI / l - l / PI) / 2, G = Math.cos(th) / (Math.sin(th) + Math.cos(th) - 1), P = G * (2 / Math.sin(th) - 1), Q = A * A + G, P2 = P * P, A2 = A * A;
+            const x = Math.sign(l) * PI * (A * (G - P2) + Math.sqrt(Math.max(0, A2 * (G - P2) ** 2 - (P2 + A2) * (G * G - P2)))) / (P2 + A2);
+            const y = Math.sign(p) * PI * (P * Q - A * Math.sqrt(Math.max(0, (A2 + 1) * (P2 + A2) - Q * Q))) / (P2 + A2);
+            return [x, y];
+        },
+        inv: (x, y) => {
+            // (Snyder 1987, 29-7 … 29-16)
+            const X = x / PI, Y = y / PI, X2 = X * X, Y2 = Y * Y; if (X2 + Y2 > 1) return null;
+            if (Math.abs(Y) < 1e-12) return Math.abs(X) > 1 ? null : [x, 0];
+            const c1 = -Math.abs(Y) * (1 + X2 + Y2), c2 = c1 - 2 * Y2 + X2, c3 = -2 * c1 + 1 + 2 * Y2 + (X2 + Y2) ** 2;
+            const d = Y2 / c3 + (2 * c2 ** 3 / c3 ** 3 - 9 * c1 * c2 / (c3 * c3)) / 27, a1 = (c1 - c2 * c2 / (3 * c3)) / c3, m1 = 2 * Math.sqrt(-a1 / 3);
+            const t1 = Math.acos(clamp(3 * d / (a1 * m1), -1, 1)) / 3;
+            const p = PI * (-m1 * Math.cos(t1 + PI / 3) - c2 / (3 * c3)) * Math.sign(Y);
+            const l = Math.abs(X) < 1e-12 ? 0 : PI * (X2 + Y2 - 1 + Math.sqrt(1 + 2 * (X2 - Y2) + (X2 + Y2) ** 2)) / (2 * X);
+            return Math.abs(l) > PI + 1e-9 ? null : [l, clamp(p, -HALF, HALF)];
+        } },
     azeq: { label: 'Azimuthal equidistant', note: 'true distance and bearing from the centre; polar when centred on a pole',
         bounds: (o) => { const r = (o.extent ?? 'world') === 'world' ? PI : HALF; return [-r, r, -r, r]; },
         fwd: (l, p, o) => {
@@ -121,7 +144,7 @@ export const P = {
 };
 
 /** The projections offered, in order. */
-export const PROJECTIONS = ['equirect', 'mercator', 'robinson', 'equalearth', 'mollweide', 'hammer', 'winkel', 'ortho', 'azeq'].map(id => ({ id, label: P[id].label, note: P[id].note }));
+export const PROJECTIONS = ['equirect', 'mercator', 'robinson', 'equalearth', 'mollweide', 'hammer', 'winkel', 'ortho', 'azeq', 'vdg'].map(id => ({ id, label: P[id].label, note: P[id].note }));
 /** Each projection's own options (the centre longitude is shared by all): select or range. */
 export const PROJECTION_OPTIONS = {
     mercator: [{ id: 'maxLat', label: 'Max latitude', type: 'select', values: [[85, '85°'], [80, '80°'], [75, '75°'], [70, '70°']], def: 85 }],
