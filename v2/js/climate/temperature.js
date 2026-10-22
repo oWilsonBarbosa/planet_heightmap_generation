@@ -55,7 +55,8 @@ const WEAK_SUN = SOLAR_CONSTANT / 8;        // W/m² — half the planet's mean 
 /**
  * The temperature stage. Options: { tiltDeg = 23.44 }.
  * Returns stage(ctx, winds, init?) → { T (K anchors × G, °C at reference height), monthly (12 × G, same), monthlySL
- * (12 × G, sea level), iceFrac (G, share of the year a cell is snow- or ice-covered), state, timing }.
+ * (12 × G, sea level), iceFrac (G, share of the year a cell is snow- or ice-covered), domeKm (G, km an ice sheet's
+ * surface stands at least), lapse (G, °C/km the surface is colder per km of its reference height), state, timing }.
  * init: a previous run's `state` (same settings) to start from — used when temperature and winds are iterated
  * together; it then needs fewer outer iterations. qflux: the ocean's heating of the sea surface (W/m², core grid).
  * rain: monthly rain (12 × G, mm/month, core grid) from the rain stage, or null — then clouds shade rainy land and
@@ -641,7 +642,7 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
             return (drawn = { seaSL, seaIceOpen, domeDraw });
         };
         const state = { step: g.step, c0, c1r, c1i, c2r, c2i, snowYear, perennial };
-        const out = { T, monthly, monthlySL, iceFrac: iceCore, domeKm: domeCore, inversion, state, solverStats: stats, profile: prof, ms: performance.now() - t0, source: 'energy balance' };
+        const out = { T, monthly, monthlySL, iceFrac: iceCore, domeKm: domeCore, lapse: lapseCore, inversion, state, solverStats: stats, profile: prof, ms: performance.now() - t0, source: 'energy balance' };
         return Object.defineProperties(out, {
             seaIce: { get: seaIceOf, enumerable: true },
             seaIceOpen: { get: () => drawnOf().seaIceOpen, enumerable: true },

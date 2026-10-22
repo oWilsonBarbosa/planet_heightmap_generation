@@ -82,7 +82,9 @@ export function saturatedColumn(T, vapourHeightKm) {
  * speed √(U² + (s·σL)²), σ the Eady rate, L the storms' size. factor = e^{β·clamp(w / 0.1 m/s, −2, 2) + κ·rise − λ·drop}
  * (rise and drop in km, each saturating at the vapour scale height).
  * Rain is moved, not made: the factor is normalised over all within RAIN_OROG_SPREAD_KM (sea too), weighted by the rain —
- * windward slopes take it from the lee, so whole regions behind a range are dry.
+ * windward slopes take it from the lee, so whole regions behind a range are dry. That bounds the region's rain, not its
+ * wettest cell's: a steep windward cell amid sea and lowland (whose factor is ≈ 1) would take many times the rain it
+ * had, so no cell takes more than RAIN_OROG_MULT_MAX times it.
  */
 function orographicRain(ctx, core, g, ratio, uA, vA, shareCoarse, eadyK, Pout, K, tA) {
     const P_ = PARAMS;
@@ -169,7 +171,7 @@ function orographicRain(ctx, core, g, ratio, uA, vA, shareCoarse, eadyK, Pout, K
                 const c = j * w + i;
                 const a = Math.max(0, j - nr), b = Math.min(h - 1, j + nr);
                 const sb = preB[b + 1] - preB[a];
-                if (sb > 0) Pout[off + c] *= f[c] * sb / (pre[b + 1] - pre[a]);
+                if (sb > 0) Pout[off + c] *= Math.min(P_.RAIN_OROG_MULT_MAX, f[c] * sb / (pre[b + 1] - pre[a]));
             }
         }
     }
@@ -212,6 +214,20 @@ export function columnWaterRain() {
         const share = new Float64Array(G);
         for (let c = 0; c < G; c++) share[c] = winds.surfaceShareLand != null ? winds.surfaceShare + (winds.surfaceShareLand - winds.surfaceShare) * land[c]
             : winds.surfaceShare ?? 0.75 - 0.3 * land[c];
+        // The water the column holds over an ice sheet: its surface is colder per km of height (TEMP_ICE_LAPSE) than the
+        // free air above it — the extra cold is the near-surface inversion, which holds little of the column's water. So
+        // the column's temperature for its saturation is given back the surface's cooling beyond RAIN_COLUMN_LAPSE_MAX
+        // per km (the ice dome's height kept); else a cold high cell would hold less than the water that is carried up to
+        // it (β, below), sit near saturation and rain out what the winds and storms bring from the land around it.
+        const iceWarm = (() => {
+            const lap = temperature.lapse, dome = temperature.domeKm, href = ctx.surface.meanLandKm;
+            const warm = new Float32Array(core.size);
+            if (lap) for (let c = 0; c < core.size; c++) {
+                const h0 = href[c] === href[c] ? Math.max(0, href[c]) : 0, hr = Math.max(h0, dome ? dome[c] : 0);
+                warm[c] = Math.max(0, lap[c] - P_.RAIN_COLUMN_LAPSE_MAX) * hr;
+            }
+            return co(warm);
+        })();
 
         const solver = new HelmholtzSolver(g, 0, 0, { conservative: true });
         // Rising ground blocks the water. The solve is for the sea-level-equivalent column W* (the column over ground
@@ -389,8 +405,9 @@ export function columnWaterRain() {
                     p.lift[c] = stable * over * P_.RAIN_OROGRAPHIC * boost * Math.max(0, p.gu[c] * dhdx + p.gv[c] * dhdy) / Hv;
                     // saturated column (mm) and evaporation (kg m⁻² s⁻¹): the sea's, and the land's potential rate
                     // the column's temperature follows the surface only in part — the troposphere above a hot or frozen
-                    // surface stays nearer its latitude's temperature — and that sets how much water it holds
-                    p.Ws[c] = saturatedColumn(Tair[c] + (1 - P_.RAIN_COLUMN_LOCAL) * (Tzs[j] - Tsl[c]), P_.RAIN_VAPOUR_HEIGHT_KM);
+                    // surface stays nearer its latitude's temperature — and that sets how much water it holds (over an ice
+                    // sheet, as cold as its free air: iceWarm)
+                    p.Ws[c] = saturatedColumn(Tair[c] + iceWarm[c] + (1 - P_.RAIN_COLUMN_LOCAL) * (Tzs[j] - Tsl[c]), P_.RAIN_VAPOUR_HEIGHT_KM);
                     p.snow[c] = Math.min(1, Math.max(0, (2 - Tair[c]) / 4));            // share of the rain falling as snow
                     p.Tair[c] = Tair[c];
                     const bulk = RHO_AIR * P_.RAIN_EVAP_COEFF * Math.sqrt(u[c] * u[c] + v[c] * v[c] + gust2) * (1 - P_.RAIN_SURFACE_RH);

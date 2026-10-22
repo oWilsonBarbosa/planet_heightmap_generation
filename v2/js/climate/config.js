@@ -165,7 +165,10 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_OROG_SPREAD_KM: 600,   // km         windward / lee rain is moved within this distance, not made
     RAIN_SLOPE_FACTOR: 1.2,     // –          windward / lee rain on the 1° grid: × e^{β·(upslope speed / 0.1 m/s)}
     RAIN_OROGRAPHIC: 0.6,       // –          share of the water lifted by winds blowing up rising ground that rains out
-    RAIN_NEWTON: 30,            //            at most this many Newton steps per point in the year …
+    RAIN_OROG_MULT_MAX: 3,      // –          … and at most this many times its rain on any one 1° cell from the windward / lee step
+    RAIN_CELL_FACTOR_MAX: 1.5,  // –          a terrain cell's rain for its height above or below its surroundings: within × / ÷ this
+    RAIN_COLUMN_LAPSE_MAX: 6.5, // °C/km      the air column holds its water as if cooled with height by at most this (over ice sheets)
+    RAIN_NEWTON: 30,          //            at most this many Newton steps per point in the year …
     RAIN_TOL: 2e-3,             //            … stopping when the column water changes less than this (relative)
     RAIN_CYCLES: 4,             //            multigrid cycles per Newton step
     RAIN_POISSON_CYCLES: 6,     //            … for the wind's divergent part (each point starting from the last) …
@@ -292,6 +295,9 @@ export const PARAM_PRIORS = Object.freeze({
     RAIN_OROG_SPREAD_KM: { value: 600, min: 300, max: 1000, source: 'water wrung out on the windward side is missing downwind — the rain-shadow budget closes over a few hundred km' },
     RAIN_SLOPE_FACTOR:  { value: 1.0, min: 0.3, max: 1.5, source: 'orographic enhancement ≈ ×2–3 on windward slopes, ×0.3–0.6 in the lee at ≈ 0.1–0.2 m/s of forced ascent in storms (Roe 2005; Smith & Barstad 2004); moved within the spread distance, not made' },
     RAIN_OROGRAPHIC:    { value: 0.5, min: 0.1, max: 1.0, source: 'precipitation efficiency of orographic clouds ≈ 20–50 % (Jiang & Smith 2003)' },
+    RAIN_OROG_MULT_MAX: { value: 3, min: 2, max: 5, source: 'orographic enhancement ≈ ×2–3 on windward slopes (Roe 2005; Smith & Barstad 2004); observed 1° land rain peaks at ≈ 7,500 mm/yr (Beck et al. 2023)' },
+    RAIN_CELL_FACTOR_MAX: { value: 1.5, min: 1.25, max: 2.5, source: 'no direct literature value: windward rain grows ≈ 5–10 % per 100 m (Roe 2005), so the few hundred metres a terrain cell stands above or below its 1° surroundings make ≈ ×1.2–1.6' },
+    RAIN_COLUMN_LAPSE_MAX: { value: 6.5, min: 6.5, max: 10, source: 'the free troposphere cools ≈ 6.5 K/km (standard atmosphere); the ≈ 8 K/km of an ice-sheet surface (Fortuin & Oerlemans 1990) is its near-surface inversion, which holds little of the column\'s water' },
 });
 
 export function setParams(p) { Object.assign(PARAMS, p); }
