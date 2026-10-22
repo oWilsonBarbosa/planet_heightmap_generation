@@ -706,6 +706,8 @@ function openExport() {
         .map(({ w, enlarged }) => `<option value="${w}"${w === fin.raster.w ? ' selected' : ''}>${w}${enlarged ? ` · enlarged ×${w / fin.raster.w}` : w === fin.raster.w ? ' · as detailed' : ''}</option>`).join('');
     if ([...$('exportWidth').options].some(o => Number(o.value) === wasW)) $('exportWidth').value = String(wasW);
     $('exportMoment').textContent = `· ${frame.time.toFixed(0)} Myr`;
+    $('exportCentre').hidden = !view.centerLon;
+    $('exportCentre').textContent = view.centerLon ? `Centred on ${Math.abs(view.centerLon)}°${view.centerLon > 0 ? 'E' : 'W'}, as the map view (Center Longitude).` : '';
     exportDims();
     $('exportProgress').hidden = true;
     $('exportGo').disabled = false; $('exportAllGo').disabled = false;
@@ -723,11 +725,12 @@ async function runExport(all = false) {
     try {
         // (the colour map as the Terrain view shows it: the palette chosen, Rivers & Lakes as set; the rivers-and-lakes
         // layer with the same density and colouring)
-        const look = { lut: heightLutOf(view.palette), exaggeration: SHADING.exaggeration, water: view.water, riverQ: view.riverQ, byRegime: view.byRegime };
+        const look = { lut: heightLutOf(view.palette), exaggeration: SHADING.exaggeration, water: view.water, riverQ: view.riverQ, byRegime: view.byRegime,
+            shaded: $('chkExportShade').checked, centerLon: view.centerLon };
         const t0 = performance.now();
-        const blob = all ? await exportAll(ex.fin, W, look, t => exportFileName(ex.seed, ex.frame.time, t), onProgress)
+        const blob = all ? await exportAll(ex.fin, W, look, t => exportFileName(ex.seed, ex.frame.time, t, 'png', view.centerLon), onProgress)
             : await exportMap(type, ex.fin, W, look, onProgress);
-        const name = all ? exportFileName(ex.seed, ex.frame.time, null, 'zip') : exportFileName(ex.seed, ex.frame.time, type);
+        const name = all ? exportFileName(ex.seed, ex.frame.time, null, 'zip', view.centerLon) : exportFileName(ex.seed, ex.frame.time, type, 'png', view.centerLon);
         downloadBlob(blob, name);
         onProgress(1, `Saved ${name} · ${(blob.size / 2 ** 20).toFixed(1)} MB`);
         console.info(`[evolution] export ${name}: ${W} × ${W >> 1}, ${(blob.size / 2 ** 20).toFixed(1)} MB in ${((performance.now() - t0) / 1000).toFixed(1)} s`);

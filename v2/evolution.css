@@ -221,6 +221,7 @@
 .evo-tooltip[hidden] { display: none; }
 /* the export dialog (V1's #exportOverlay / #exportCard, styles.css): the moment, and the progress */
 .evo-export-moment { font-size: 13px; font-weight: 400; color: #9ab; margin-left: 6px; }
+.evo-export-note { font-size: 12px; color: #9ab; margin: 6px 0 0; }
 .evo-export-progress { margin-top: 12px; font-size: 12px; color: #9ab; }
 .evo-export-progress[hidden] { display: none; }
 .evo-export-progress .evo-finish-bar { margin: 0 0 4px; }

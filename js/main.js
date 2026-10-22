@@ -124,15 +124,15 @@ function initSliderTooltip(slider) {
         tip.style.left = thumbOffset + 'px';
     }
 
+    const label = document.getElementById(slider.id.replace('s', 'v'));
+    // (the label is written by the slider's own input handler, which may run after this one — Firefox showed the
+    // previous value, issue #34 — so the bubble reads it once every handler has run)
+    const show = () => { tip.textContent = label ? label.textContent : slider.value; positionTip(); };
     slider.addEventListener('pointerdown', () => {
-        tip.textContent = document.getElementById(slider.id.replace('s', 'v')).textContent;
-        positionTip();
+        show();
         tip.classList.add('visible');
     });
-    slider.addEventListener('input', () => {
-        tip.textContent = document.getElementById(slider.id.replace('s', 'v')).textContent;
-        positionTip();
-    });
+    slider.addEventListener('input', () => queueMicrotask(show));
     const hide = () => tip.classList.remove('visible');
     slider.addEventListener('pointerup', hide);
     slider.addEventListener('pointercancel', hide);
@@ -768,6 +768,10 @@ initSeasonPicker(state, () => {
     function openModal() {
         overlay.classList.remove('hidden');
         updateDims();
+        // (the export is centred as the Map view is turned — its Centre Longitude; issue #62)
+        const c = Math.round((state.mapCenterLon || 0) * 180 / Math.PI), note = document.getElementById('exportCentre');
+        note.hidden = !c;
+        note.textContent = c ? `Centred on ${Math.abs(c)}\u00B0${c > 0 ? 'E' : 'W'}, as the map view (Center Longitude).` : '';
         // Disable climate-dependent export types when climate isn't computed
         for (const opt of typeEl.options) {
             if (opt.value === 'biome' || opt.value === 'koppen') {

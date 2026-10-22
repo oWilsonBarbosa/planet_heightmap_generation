@@ -35,6 +35,28 @@ export const LAND_TOP_M = 9000;
 export const EXPORT_MAX = 16384, EXPORT_MAX_TOUCH = 4096;
 const KOPPEN_RGB = KOPPEN_CLASSES.map(k => k.color.map(v => Math.round(255 * v)));
 
+// ── the centre longitude: every map turned so that `look.centerLon` (degrees) is in the middle, as the map view is ──
+/** How many columns to roll a W-wide map for a centre longitude (0 … W−1). */
+export const rollShift = (W, centerLon) => ((Math.round(W * (centerLon || 0) / 360) % W) + W) % W;
+/** A map's rows rolled left by `shift` columns (`ch` values a pixel): what was at the centre longitude is now mid-row. */
+export function rollRows(arr, W, H, ch, shift) {
+    if (!shift) return arr;
+    const out = new arr.constructor(arr.length), rowLen = W * ch, s = shift * ch;
+    for (let y = 0; y < H; y++) {
+        const o = y * rowLen;
+        out.set(arr.subarray(o + s, o + rowLen), o);
+        out.set(arr.subarray(o, o + s), o + rowLen - s);
+    }
+    return out;
+}
+/** The rivers drawn onto a rolled map: once shifted left, and once more at the right edge for the lines that wrap. */
+function drawRiversRolled(ctx, W, k, shift, fin, look) {
+    const paths = riverPaths(fin, look.riverQ);
+    for (const dx of shift ? [-shift, W - shift] : [0]) {
+        ctx.save(); ctx.translate(dx, 0); ctx.scale(k, k); drawRivers(ctx, paths, look.byRegime); ctx.restore();
+    }
+}
+
 /** The maps a finished moment can give: the climate's only where it has its climate (and Satellite its colours). */
 export function exportTypes(fin) {
     const R = fin.climate?.raster;
@@ -53,53 +75,54 @@ export function exportWidths(r, maxW = EXPORT_MAX) {
 }
 
 /** A file's name: the planet's seed, the moment and the map — `orogen-evolution-12345-760Myr-heightmap.png`. */
-export function exportFileName(seed, timeMyr, type, ext = 'png') {
-    return `orogen-evolution-${seed}-${Math.round(timeMyr)}Myr${type ? `-${type}` : ''}.${ext}`;
+export function exportFileName(seed, timeMyr, type, ext = 'png', centerLon = 0) {
+    const c = Math.round(centerLon || 0), tag = c ? `-c${Math.abs(c)}${c > 0 ? 'E' : 'W'}` : '';
+    return `orogen-evolution-${seed}-${Math.round(timeMyr)}Myr${type ? `-${type}` : ''}${tag}.${ext}`;
 }
 
 /** The 16-bit heightmap, the sea floor included: −11 km black … +9 km white. */
-export function heightmap16(r, W) {
+export function heightmap16(r, W, centerLon = 0) {
     const { h } = rasterAt(r, W), [lo, hi] = HEIGHT_RANGE_M, out = new Uint16Array(h.length);
     for (let i = 0; i < h.length; i++) out[i] = Math.round(65535 * Math.min(1, Math.max(0, (1000 * h[i] - lo) / (hi - lo))));
-    return out;
+    return rollRows(out, W, W >> 1, 1, rollShift(W, centerLon));
 }
 
 /** The 16-bit land heightmap: the sea black, land 0…+9 km as 1…65535 (a lake's bed below sea level as 0 m). */
-export function landHeightmap16(r, W) {
+export function landHeightmap16(r, W, centerLon = 0) {
     const { h, sea } = rasterAt(r, W, { landOnly: true }), out = new Uint16Array(h.length);
     for (let i = 0; i < h.length; i++) out[i] = sea[i] ? 0 : 1 + Math.round(65534 * Math.min(1, Math.max(0, 1000 * h[i] / LAND_TOP_M)));
-    return out;
+    return rollRows(out, W, W >> 1, 1, rollShift(W, centerLon));
 }
 
 /** The land mask: land white (lakes are land), the sea black. */
-export function landMask8(r, W) {
+export function landMask8(r, W, centerLon = 0) {
     const { sea } = rasterAt(r, W), out = new Uint8Array(sea.length);
     for (let i = 0; i < sea.length; i++) out[i] = sea[i] ? 0 : 255;
-    return out;
+    return rollRows(out, W, W >> 1, 1, rollShift(W, centerLon));
 }
 
 /**
  * The colour map as the Terrain view shows it: the palette's colours hillshaded, the lakes and the rivers (with Rivers &
- * Lakes), no grid. `look`: { lut, exaggeration, water, riverQ, byRegime }.
+ * Lakes), no grid. `look`: { lut, exaggeration, water, riverQ, byRegime, shaded (the hillshade; default on), centerLon }.
  */
 export async function colorMap(fin, W, look) {
-    const H = W >> 1, image = new ImageData(W, H);
-    paintFinished(fin.raster, { width: W, image }, look.lut, { exaggeration: look.exaggeration, lakes: look.water });
-    if (!(look.water && fin.rivers)) return encodeRgbPng(W, H, image.data);
+    const H = W >> 1, image = new ImageData(W, H), shift = rollShift(W, look.centerLon);
+    paintFinished(fin.raster, { width: W, image }, look.lut, { exaggeration: look.exaggeration, lakes: look.water, shaded: look.shaded !== false });
+    const rgba = rollRows(image.data, W, H, 4, shift);
+    if (!(look.water && fin.rivers)) return encodeRgbPng(W, H, rgba);
     const canvas = canvasOf(W, H), ctx = canvas.getContext('2d');
-    ctx.putImageData(image, 0, 0);
+    ctx.putImageData(shift ? new ImageData(rgba, W, H) : image, 0, 0);
     // (the rivers' lines are drawn for a 2048-wide picture: as thick, relative to the map, at any width)
-    const k = W / 2048;
-    ctx.save(); ctx.scale(k, k); drawRivers(ctx, riverPaths(fin, look.riverQ), look.byRegime); ctx.restore();
+    drawRiversRolled(ctx, W, W / 2048, shift, fin, look);
     return canvasPng(canvas);
 }
 
 /** The Satellite view as shown, for the year, January or July: no grid, no glint (and, as on screen, no rivers' lines). */
 export async function satelliteMap(fin, W, season, look) {
     const H = W >> 1, image = new ImageData(W, H);
-    paintFinished(fin.raster, { width: W, image }, look.lut, { exaggeration: look.exaggeration * 1.25, lakes: true,
+    paintFinished(fin.raster, { width: W, image }, look.lut, { exaggeration: look.exaggeration * 1.25, lakes: true, shaded: look.shaded !== false,
         colorAt: finishedClimateColor('satellite', season, fin.climate, W, look.lut, fin) });
-    return encodeRgbPng(W, H, image.data);
+    return encodeRgbPng(W, H, rollRows(image.data, W, H, 4, rollShift(W, look.centerLon)));
 }
 
 /**
@@ -108,7 +131,7 @@ export async function satelliteMap(fin, W, season, look) {
  * weigh most by a cubic B-spline (smooth, positive weights: the zones' stair-stepped borders rounded into curves). Land the
  * climate picture marks as sea (a coast a pixel apart) takes the nearest zone.
  */
-export async function koppenMap(fin, W) {
+export async function koppenMap(fin, W, centerLon = 0) {
     const r = fin.raster, R = fin.climate.raster, H = W >> 1, { sea } = rasterAt(r, W), rgba = new Uint8ClampedArray(4 * W * H);
     const s = R.w / W, K = Math.max(1, Math.round(s)), votes = new Float32Array(KOPPEN_RGB.length), bx = [0, 0, 0, 0], by = [0, 0, 0, 0];
     const bspline = (t, w) => { const t2 = t * t, t3 = t2 * t, u = 1 - t; w[0] = u * u * u / 6; w[1] = (3 * t3 - 6 * t2 + 4) / 6; w[2] = (-3 * t3 + 3 * t2 + 3 * t + 1) / 6; w[3] = t3 / 6; };
@@ -133,7 +156,7 @@ export async function koppenMap(fin, W) {
         const c = KOPPEN_RGB[z];
         rgba[o] = c[0]; rgba[o + 1] = c[1]; rgba[o + 2] = c[2]; rgba[o + 3] = 255;
     }
-    return encodeRgbPng(W, H, rgba);
+    return encodeRgbPng(W, H, rollRows(rgba, W, H, 4, rollShift(W, centerLon)));
 }
 /** The nearest land zone to a climate-picture pixel (a ring at a time, up to 3 pixels out), or 0. */
 function nearestZone(R, cx, cy) {
@@ -152,15 +175,15 @@ function nearestZone(R, cx, cy) {
  * the rivers drawn as the Terrain view draws them (the density and the colouring chosen there).
  */
 export async function riversMap(fin, W, look) {
-    const H = W >> 1, { wat, sea } = rasterAt(fin.raster, W, { lakes: true }), image = new ImageData(W, H), d = image.data;
+    const H = W >> 1, { wat, sea } = rasterAt(fin.raster, W, { lakes: true }), image = new ImageData(W, H), d = image.data, shift = rollShift(W, look.centerLon);
     if (wat) for (let p = 0; p < W * H; p++) {
         if (!wat[p] || sea[p]) continue;
         const c = lakeColor(look.lut, wat[p]), o = 4 * p;
         d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
     }
     const canvas = canvasOf(W, H), ctx = canvas.getContext('2d');
-    ctx.putImageData(image, 0, 0);
-    if (fin.rivers) { const k = W / 2048; ctx.save(); ctx.scale(k, k); drawRivers(ctx, riverPaths(fin, look.riverQ), look.byRegime); ctx.restore(); }
+    ctx.putImageData(shift ? new ImageData(rollRows(d, W, H, 4, shift), W, H) : image, 0, 0);
+    if (fin.rivers) drawRiversRolled(ctx, W, W / 2048, shift, fin, look);
     return canvasPng(canvas);
 }
 
@@ -176,9 +199,10 @@ export async function exportMap(type, fin, W, look, onProgress = () => {}) {
     await tick();
     if (type === 'color') return colorMap(fin, W, look);
     if (type.startsWith('satellite-')) return satelliteMap(fin, W, type.slice(10), look);
-    if (type === 'koppen') return koppenMap(fin, W);
+    if (type === 'koppen') return koppenMap(fin, W, look.centerLon);
     if (type === 'rivers') return riversMap(fin, W, look);
-    const data = type === 'heightmap' ? heightmap16(r, W) : type === 'landheightmap' ? landHeightmap16(r, W) : type === 'landmask' ? landMask8(r, W) : null;
+    const c = look.centerLon || 0;
+    const data = type === 'heightmap' ? heightmap16(r, W, c) : type === 'landheightmap' ? landHeightmap16(r, W, c) : type === 'landmask' ? landMask8(r, W, c) : null;
     if (!data) throw new Error(`no such map: ${type}`);
     onProgress(0.5, 'Encoding PNG…');
     await tick();

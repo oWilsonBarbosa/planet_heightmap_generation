@@ -407,7 +407,7 @@
             </div>
             <div class="tutorial-step" data-step="2">
                 <h3>Explore &amp; Edit</h3>
-                <p><strong>Drag</strong> to rotate the globe. <strong>Scroll</strong> to zoom in and out. <strong>Ctrl-click</strong> plates to mark them for reshaping &mdash; select multiple, then hit <strong>Rebuild</strong> to apply all at once. Ctrl-click again to undo a pending selection. <strong>Hover</strong> any region to see elevation, coordinates, temperature, precipitation, and climate classification.</p>
+                <p><strong>Drag</strong> to rotate the globe. <strong>Scroll</strong> to zoom in and out. <strong>Ctrl-click</strong> plates (&#8984;-click on a Mac) to mark them for reshaping &mdash; select multiple, then hit <strong>Rebuild</strong> to apply all at once. Ctrl-click again to undo a pending selection. <strong>Hover</strong> any region to see elevation, coordinates, temperature, precipitation, and climate classification.</p>
             </div>
             <div class="tutorial-step" data-step="3">
                 <h3>Visualize Your World</h3>
@@ -460,6 +460,7 @@
                     <option value="65536">65536</option>
                 </select>
             </div>
+            <p class="export-note" id="exportCentre" hidden></p>
             <div class="export-actions">
                 <button id="exportCancel" class="btn-ghost">Cancel</button>
                 <button id="exportGo" class="btn-primary">Export</button>
@@ -537,7 +538,7 @@
         </div>
     </div>
 
-    <div id="topInfo">Drag to rotate &middot; Scroll to zoom &middot; Ctrl-click to reshape continents</div>
+    <div id="topInfo">Drag to rotate &middot; Scroll to zoom &middot; Ctrl-click (&#8984;-click on a Mac) to reshape continents</div>
     <button id="editToggle" class="edit-toggle" title="Toggle plate edit mode">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14.5 2.5l3 3L6 17H3v-3L14.5 2.5z"/>
@@ -556,7 +557,7 @@
         </svg>
         <span>Rebuild (0)</span>
     </button>
-    <div id="info">Drag to rotate &middot; Scroll to zoom &middot; Ctrl-click to reshape continents</div>
+    <div id="info">Drag to rotate &middot; Scroll to zoom &middot; Ctrl-click (&#8984;-click on a Mac) to reshape continents</div>
 
     <script type="importmap">
     {

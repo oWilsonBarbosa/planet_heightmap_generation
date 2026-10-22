@@ -214,6 +214,28 @@ function koppenColor(classId) {
     return c.color;
 }
 
+// The palettes' colours are display (sRGB) values, but three.js reads a vertex colour as linear light and encodes it to
+// sRGB on the way out, which brightens it (Köppen's #f5a600 came out #fbd300 on the map and in the export), and the
+// globe's lights tinted it on top (#c6b200). So the layers whose colours must match their legend — the climate's Inspect
+// layers, Köppen and the heightmaps — are turned to linear light first (so the screen and the export show the legend's
+// own colours) and are drawn unlit on the globe (issues #64 and #51).
+const toLinear3 = (c) => [srgbToLinear(c[0]), srgbToLinear(c[1]), srgbToLinear(c[2])];
+/** Whether a layer is drawn in its legend's exact colours (unlit, no gamma shift). */
+const isExactLayer = (debugLayer) => debugLayer === 'koppen' || debugLayer === 'heightmap' || debugLayer === 'landheightmap' || !!climateLayer(debugLayer);
+/** The globe's material for a layer: unlit for an exact layer, lit (with the mesh's own normals) otherwise. */
+function globeMaterial(exact) {
+    if (exact) return new THREE.MeshBasicMaterial({ vertexColors: true });
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+    mat.onBeforeCompile = (shader) => {
+        shader.vertexShader = shader.vertexShader.replace(
+            '#include <beginnormal_vertex>',
+            'vec3 objectNormal = normalize(position);'
+        );
+    };
+    mat.userData.exact = false;
+    return mat;
+}
+
 // Plate colours — green shades for land, blue for ocean.
 export function computePlateColors(plateSeeds, plateIsOcean) {
     state.plateColors = {};
@@ -292,20 +314,20 @@ export function buildMapMesh() {
         let c0r, c0g, c0b, c1r, c1g, c1b, c2r, c2g, c2b;
         if (isSmooth) {
             const colorFn = isLandHeightmap ? landHeightmapColor : heightmapColor;
-            const v0 = colorFn(t_elevation[it])[0];
-            const v1 = colorFn(t_elevation[ot])[0];
-            const v2 = colorFn(r_elevation[br])[0];
+            const v0 = srgbToLinear(colorFn(t_elevation[it])[0]);
+            const v1 = srgbToLinear(colorFn(t_elevation[ot])[0]);
+            const v2 = srgbToLinear(colorFn(r_elevation[br])[0]);
             c0r = c0g = c0b = v0;
             c1r = c1g = c1b = v1;
             c2r = c2g = c2b = v2;
         } else {
             let cr, cg, cb;
             if (climateColor) {
-                [cr, cg, cb] = climateColor(br);
+                [cr, cg, cb] = toLinear3(climateColor(br));
             } else if (isBiome && biomeSmoothed) {
                 cr = biomeSmoothed[br * 3]; cg = biomeSmoothed[br * 3 + 1]; cb = biomeSmoothed[br * 3 + 2];
             } else if (isKoppen && koppenArr) {
-                [cr, cg, cb] = koppenColor(koppenArr[br]);
+                [cr, cg, cb] = toLinear3(koppenColor(koppenArr[br]));
             } else if (dbgArr) {
                 [cr, cg, cb] = debugValueToColor(dbgArr[br], dbgMin, dbgMax);
             } else if (showPlates) {
@@ -701,9 +723,9 @@ export function buildMesh() {
         if (isSmooth) {
             // Smooth heightmap: per-vertex colors from averaged triangle elevations
             const colorFn = isLandHeightmap ? landHeightmapColor : heightmapColor;
-            const c0 = colorFn(t_elevation[it])[0];  // inner_t (vertex 0, never swapped)
-            const cOt = colorFn(t_elevation[ot])[0];  // outer_t
-            const cBr = colorFn(r_elevation[br])[0];  // begin_r
+            const c0 = srgbToLinear(colorFn(t_elevation[it])[0]);  // inner_t (vertex 0, never swapped)
+            const cOt = srgbToLinear(colorFn(t_elevation[ot])[0]);  // outer_t
+            const cBr = srgbToLinear(colorFn(r_elevation[br])[0]);  // begin_r
             // After winding fix, v1/v2 may have swapped (outer_t ↔ begin_r)
             const c1 = swapped ? cBr : cOt;
             const c2 = swapped ? cOt : cBr;
@@ -713,15 +735,15 @@ export function buildMesh() {
         } else {
             let cr, cg, cb;
             if (climateColor) {
-                [cr, cg, cb] = climateColor(br);
+                [cr, cg, cb] = toLinear3(climateColor(br));
             } else if (isBiome && biomeSmoothed) {
                 cr = biomeSmoothed[br * 3]; cg = biomeSmoothed[br * 3 + 1]; cb = biomeSmoothed[br * 3 + 2];
             } else if (isKoppen && koppenArr) {
-                [cr, cg, cb] = koppenColor(koppenArr[br]);
+                [cr, cg, cb] = toLinear3(koppenColor(koppenArr[br]));
             } else if (isLandHeightmap) {
-                [cr, cg, cb] = landHeightmapColor(r_elevation[br]);
+                [cr, cg, cb] = toLinear3(landHeightmapColor(r_elevation[br]));
             } else if (isHeightmap) {
-                [cr, cg, cb] = heightmapColor(r_elevation[br]);
+                [cr, cg, cb] = toLinear3(heightmapColor(r_elevation[br]));
             } else if (dbgArr) {
                 [cr, cg, cb] = debugValueToColor(dbgArr[br], dbgMin, dbgMax);
             } else if (showPlates) {
@@ -754,13 +776,8 @@ export function buildMesh() {
     state._koppenHoverBackup = null;
     state._sideSwapped = sideSwapped;
 
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
-    mat.onBeforeCompile = (shader) => {
-        shader.vertexShader = shader.vertexShader.replace(
-            '#include <beginnormal_vertex>',
-            'vec3 objectNormal = normalize(position);'
-        );
-    };
+    const mat = globeMaterial(isExactLayer(debugLayer));
+    mat.userData.exact = isExactLayer(debugLayer);
     state.planetMesh = new THREE.Mesh(geo, mat);
     scene.add(state.planetMesh);
 
@@ -861,11 +878,11 @@ export function updateMeshColors() {
 
     // Color helper — returns [r,g,b] for a given region
     const getRegionColor = (br) => {
-        if (climateColor) return climateColor(br);
+        if (climateColor) return toLinear3(climateColor(br));
         if (isBiome && biomeSmoothed) return [biomeSmoothed[br * 3], biomeSmoothed[br * 3 + 1], biomeSmoothed[br * 3 + 2]];
-        if (isKoppen && koppenArr) return koppenColor(koppenArr[br]);
-        if (isLandHeightmap) return landHeightmapColor(r_elevation[br]);
-        if (isHeightmap) return heightmapColor(r_elevation[br]);
+        if (isKoppen && koppenArr) return toLinear3(koppenColor(koppenArr[br]));
+        if (isLandHeightmap) return toLinear3(landHeightmapColor(r_elevation[br]));
+        if (isHeightmap) return toLinear3(heightmapColor(r_elevation[br]));
         if (dbgArr) return debugValueToColor(dbgArr[br], dbgMin, dbgMax);
         if (showPlates) {
             const pc = state.plateColors[r_plate[br]] || new THREE.Color(0.3,0.3,0.3);
@@ -883,6 +900,14 @@ export function updateMeshColors() {
         return elevationToColor(r_elevation[br] - waterLevel);
     };
 
+    // The globe's material follows the layer: unlit for an exact layer, lit otherwise
+    const exact = isExactLayer(debugLayer);
+    if (state.planetMesh.material.userData.exact !== exact) {
+        state.planetMesh.material.dispose();
+        state.planetMesh.material = globeMaterial(exact);
+        state.planetMesh.material.userData.exact = exact;
+    }
+
     // Update globe mesh colors in-place
     const colorAttr = state.planetMesh.geometry.getAttribute('color');
     const colors = colorAttr.array;
@@ -897,9 +922,9 @@ export function updateMeshColors() {
             const ot = mesh.s_outer_t(s);
             const br = mesh.s_begin_r(s);
             const colorFn = isLandHeightmap ? landHeightmapColor : heightmapColor;
-            const c0 = colorFn(t_elevation[it])[0];
-            const cOt = colorFn(t_elevation[ot])[0];
-            const cBr = colorFn(r_elevation[br])[0];
+            const c0 = srgbToLinear(colorFn(t_elevation[it])[0]);
+            const cOt = srgbToLinear(colorFn(t_elevation[ot])[0]);
+            const cBr = srgbToLinear(colorFn(r_elevation[br])[0]);
             const swapped = sideSwapped && sideSwapped[s];
             const c1 = swapped ? cBr : cOt;
             const c2 = swapped ? cOt : cBr;
@@ -935,9 +960,9 @@ export function updateMeshColors() {
                 const ot = mesh.s_outer_t(s);
                 const br = mesh.s_begin_r(s);
                 const colorFn = isLandHeightmap ? landHeightmapColor : heightmapColor;
-                const v0 = colorFn(t_elevation[it])[0];
-                const v1 = colorFn(t_elevation[ot])[0];
-                const v2 = colorFn(r_elevation[br])[0];
+                const v0 = srgbToLinear(colorFn(t_elevation[it])[0]);
+                const v1 = srgbToLinear(colorFn(t_elevation[ot])[0]);
+                const v2 = srgbToLinear(colorFn(r_elevation[br])[0]);
                 mapColors[off] = mapColors[off+1] = mapColors[off+2] = v0;
                 mapColors[off+3] = mapColors[off+4] = mapColors[off+5] = v1;
                 mapColors[off+6] = mapColors[off+7] = mapColors[off+8] = v2;
@@ -1802,6 +1827,7 @@ export async function exportMap(type, width, onProgress) {
     const posArr = new Float32Array(numSides * 18);
     const colArr = new Float32Array(numSides * 18);
     let triCount = 0;
+    const lonOf = exportLonOf();
 
     for (let s = 0; s < numSides; s++) {
         const it = mesh.s_inner_t(s);
@@ -1826,7 +1852,7 @@ export async function exportMap(type, width, onProgress) {
             } else if (type === 'biome' && biomeSmoothed) {
                 cr = biomeSmoothed[br * 3]; cg = biomeSmoothed[br * 3 + 1]; cb = biomeSmoothed[br * 3 + 2];
             } else if (type === 'koppen' && koppenArr) {
-                [cr, cg, cb] = koppenColor(koppenArr[br]);
+                [cr, cg, cb] = toLinear3(koppenColor(koppenArr[br]));
             } else {
                 [cr, cg, cb] = elevationToColor(r_elevation[br]);
             }
@@ -1839,9 +1865,9 @@ export async function exportMap(type, width, onProgress) {
         const x1 = t_xyz[3*ot], y1 = t_xyz[3*ot+1], z1 = t_xyz[3*ot+2];
         const x2 = r_xyz[3*br], y2 = r_xyz[3*br+1], z2 = r_xyz[3*br+2];
 
-        let lon0 = Math.atan2(x0, z0), lat0 = Math.asin(Math.max(-1, Math.min(1, y0)));
-        let lon1 = Math.atan2(x1, z1), lat1 = Math.asin(Math.max(-1, Math.min(1, y1)));
-        let lon2 = Math.atan2(x2, z2), lat2 = Math.asin(Math.max(-1, Math.min(1, y2)));
+        let lon0 = lonOf(x0, z0), lat0 = Math.asin(Math.max(-1, Math.min(1, y0)));
+        let lon1 = lonOf(x1, z1), lat1 = Math.asin(Math.max(-1, Math.min(1, y1)));
+        let lon2 = lonOf(x2, z2), lat2 = Math.asin(Math.max(-1, Math.min(1, y2)));
 
         const clx = (v) => Math.max(-2, Math.min(2, v));
         const cly = (v) => Math.max(-1, Math.min(1, v));
@@ -2032,7 +2058,23 @@ export async function exportMap(type, width, onProgress) {
     }
 }
 
+/** A longitude as it is read: `lonOf(x, z)` from a position on the sphere, turned so that the Map view's Centre Longitude is
+ * in the middle (the export centred as the map is shown; issue #62). */
+function exportLonOf() {
+    const PI = Math.PI, cLon = state.mapCenterLon || 0;
+    return (x, z) => {
+        let l = Math.atan2(x, z) - cLon;
+        if (l > PI) l -= 2 * PI; else if (l < -PI) l += 2 * PI;
+        return l;
+    };
+}
+/** The file name's note of the centre longitude — `-c120E` — when it is not 0°. */
+export function exportCentreTag() {
+    const d = Math.round((state.mapCenterLon || 0) * 180 / Math.PI);
+    return d ? `-c${Math.abs(d)}${d > 0 ? 'E' : 'W'}` : '';
+}
 function exportFilename(type, seed) {
+    seed = `${seed}${exportCentreTag()}`;
     switch (type) {
         case 'landmask':       return `orogen-landmask-${seed}.png`;
         case 'landheightmap':  return `orogen-land-heightmap-${seed}.png`;
@@ -2075,6 +2117,7 @@ export async function exportMapBatch(types, width, onProgress) {
     const triOuterT = new Uint32Array(numSides * 2);  // outer triangle index per output tri
     let triCount = 0;
 
+    const lonOf = exportLonOf();
     for (let s = 0; s < numSides; s++) {
         const it = mesh.s_inner_t(s);
         const ot = mesh.s_outer_t(s);
@@ -2084,9 +2127,9 @@ export async function exportMapBatch(types, width, onProgress) {
         const x1 = t_xyz[3*ot], y1 = t_xyz[3*ot+1], z1 = t_xyz[3*ot+2];
         const x2 = r_xyz[3*br], y2 = r_xyz[3*br+1], z2 = r_xyz[3*br+2];
 
-        let lon0 = Math.atan2(x0, z0), lat0 = Math.asin(Math.max(-1, Math.min(1, y0)));
-        let lon1 = Math.atan2(x1, z1), lat1 = Math.asin(Math.max(-1, Math.min(1, y1)));
-        let lon2 = Math.atan2(x2, z2), lat2 = Math.asin(Math.max(-1, Math.min(1, y2)));
+        let lon0 = lonOf(x0, z0), lat0 = Math.asin(Math.max(-1, Math.min(1, y0)));
+        let lon1 = lonOf(x1, z1), lat1 = Math.asin(Math.max(-1, Math.min(1, y1)));
+        let lon2 = lonOf(x2, z2), lat2 = Math.asin(Math.max(-1, Math.min(1, y2)));
 
         const clx = (v) => Math.max(-2, Math.min(2, v));
         const cly = (v) => Math.max(-1, Math.min(1, v));
@@ -2183,7 +2226,7 @@ export async function exportMapBatch(types, width, onProgress) {
                 } else if (type === 'biome' && biomeSmoothed) {
                     cr = biomeSmoothed[br * 3]; cg = biomeSmoothed[br * 3 + 1]; cb = biomeSmoothed[br * 3 + 2];
                 } else if (type === 'koppen' && koppenArr) {
-                    [cr, cg, cb] = koppenColor(koppenArr[br]);
+                    [cr, cg, cb] = toLinear3(koppenColor(koppenArr[br]));
                 } else {
                     [cr, cg, cb] = elevationToColor(r_elevation[br]);
                 }

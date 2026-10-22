@@ -634,6 +634,10 @@ document.getElementById('viewMode').addEventListener('change', (e) => {
     function openModal() {
         overlay.classList.remove('hidden');
         updateDims();
+        // (the export is centred as the Map view is turned — its Centre Longitude; issue #62)
+        const c = Math.round((state.mapCenterLon || 0) * 180 / Math.PI), note = document.getElementById('exportCentre');
+        note.hidden = !c;
+        note.textContent = c ? `Centred on ${Math.abs(c)}\u00B0${c > 0 ? 'E' : 'W'}, as the map view (Center Longitude).` : '';
         for (const opt of typeEl.options) {
             if (opt.value === 'biome' || opt.value === 'koppen') {
                 opt.disabled = !state.climateComputed;

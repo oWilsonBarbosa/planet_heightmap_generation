@@ -340,6 +340,10 @@
                 <label>Width <span class="v" id="exportDims"></span> <span class="tip" data-tip="Up to the width the moment was detailed at, the map is drawn from its own detail (narrower ones averaged down). Wider ones are enlarged from it for use downstream: heights smoothly interpolated, coasts, lakes and climate zones following the nearest pixels, then drawn at the full width — the shading and the rivers sharp, but no new detail. Very wide maps take a while and a lot of memory">?</span></label>
                 <select id="exportWidth"></select>
             </div>
+            <div class="tg">
+                <label class="toggle-label"><input type="checkbox" id="chkExportShade" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Hillshade <span class="tip" data-tip="Shade the Colour Map and the Satellite view by the relief, as on screen. Off, they are flat colour — to lay your own shading over, or to keep the colours exact">?</span></label>
+            </div>
+            <p class="evo-export-note" id="exportCentre" hidden></p>
             <div id="exportProgress" class="evo-export-progress" hidden><div class="evo-finish-bar"><i></i></div><span></span></div>
             <div class="export-actions">
                 <button id="exportCancel" class="btn-ghost">Cancel</button>
@@ -370,7 +374,7 @@
             <div class="tutorial-step" data-step="3">
                 <h3>Look Around &amp; Export</h3>
                 <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, <strong>Heightmap</strong> and <strong>Plates</strong> with the tabs over the planet. Climate shows Köppen zones, temperature, rain, wind and currents, with more layers (pressure, upwelling, ice, aridity, growing season and others) under <strong>More…</strong> or in the layer list. Climate also works on a paused preview.</p>
-                <p><strong>Export</strong> saves the detailed moment as map files: a colour map, the Satellite view (the year, January or July), its climate zones, heightmaps with and without the sea floor, a land mask, and its rivers and lakes on their own. <strong>Export All</strong> saves one of each in a ZIP, at any width up to 16384 px.</p>
+                <p><strong>Export</strong> saves the detailed moment as map files: a colour map, the Satellite view (the year, January or July), its climate zones, heightmaps with and without the sea floor, a land mask, and its rivers and lakes on their own. <strong>Export All</strong> saves one of each in a ZIP, at any width up to 16384 px. The maps are centred as the map view is (Center Longitude), and the hillshade can be left off.</p>
             </div>
             <div class="tutorial-step" data-step="4">
                 <h3>Steer It</h3>

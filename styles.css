@@ -39,6 +39,7 @@ body { background: #000; overflow: hidden; font-family: 'Segoe UI', system-ui, s
 }
 #sidebarContent {
     overflow-y: auto; overflow-x: hidden; flex: 1; min-height: 0;
+    scrollbar-gutter: stable; padding-right: 4px;   /* (the values at the right edge clear an overlay scrollbar — issue #34) */
 }
 #sidebarContent::-webkit-scrollbar { width: 10px; }
 #sidebarContent::-webkit-scrollbar-track { background: transparent; margin: 2px 0; }
@@ -641,6 +642,7 @@ button#generate.generating {
     transition: color 0.2s;
 }
 #exportClose:hover { color: #fff; }
+.export-note { font-size: 12px; color: #9ab; margin: 6px 0 0; }
 .export-actions {
     display: flex; justify-content: flex-end; gap: 10px;
     margin-top: 18px;
