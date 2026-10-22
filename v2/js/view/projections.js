@@ -25,13 +25,6 @@ function mollTheta(phi) {
     for (let i = 0; i < 12; i++) { const f = 2 * t + Math.sin(2 * t) - k, d = 2 + 2 * Math.cos(2 * t); if (d < 1e-9) break; const dt = f / d; t -= dt; if (Math.abs(dt) < 1e-10) break; }
     return t;
 }
-// Goode's homolosine: sinusoidal to 40°44′, Mollweide beyond, in lobes — [west, east, central] degrees, north and south.
-const GOODE_LAT = 40.73 * D, GOODE_OFF = 0.0528;
-const GOODE_LOBES = {
-    land:  { n: [[-180, -40, -100], [-40, 180, 30]], s: [[-180, -100, -160], [-100, -20, -60], [-20, 80, 20], [80, 180, 140]] },
-    ocean: { n: [[-180, -170, -175], [-170, -40, -100], [-40, 70, 15], [70, 180, 125]], s: [[-180, -100, -140], [-100, 20, -40], [20, 180, 100]] },
-};
-const goodeLobe = (L, deg) => { for (const b of L) if (deg < b[1]) return b; return L[L.length - 1]; };
 /** The azimuthals' inverse, the centre at latitude p0: (x, y, the angular distance c) → [lon, lat]. */
 function azimuthalInverse(x, y, r, c, p0) {
     const sc = Math.sin(c), cc = Math.cos(c);
@@ -124,34 +117,17 @@ export const P = {
             const r = Math.hypot(x, y), lim = (o.extent ?? 'world') === 'world' ? PI : HALF; if (r > lim) return null;
             return azimuthalInverse(x, y, r, r, (o.lat0 ?? 90) * D);
         } },
-    goode: { label: 'Goode homolosine', note: 'equal-area, interrupted into lobes',
-        bounds: () => [-PI, PI, -R2 + GOODE_OFF, R2 - GOODE_OFF],
-        fwd: (l, p, o) => {
-            const L = GOODE_LOBES[o.cut ?? 'land'][p >= 0 ? 'n' : 's'], lobe = goodeLobe(L, l / D), c = lobe[2] * D;
-            if (Math.abs(p) <= GOODE_LAT) return [c + (l - c) * Math.cos(p), p, lobe[2]];
-            const t = mollTheta(p); return [c + 2 * R2 / PI * (l - c) * Math.cos(t), Math.sign(p) * (R2 * Math.abs(Math.sin(t)) - GOODE_OFF), lobe[2]];
-        },
-        inv: (x, y, o) => {
-            const L = GOODE_LOBES[o.cut ?? 'land'][y >= 0 ? 'n' : 's'], lobe = goodeLobe(L, x / D), c = lobe[2] * D; let l, p;
-            if (Math.abs(y) <= GOODE_LAT) { p = y; l = c + (x - c) / Math.cos(p); }
-            else {
-                const s = (Math.abs(y) + GOODE_OFF) / R2; if (s > 1) return null;
-                const t = Math.asin(s); p = Math.sign(y) * Math.asin(clamp((2 * t + Math.sin(2 * t)) / PI, -1, 1));
-                const ct = Math.cos(t); if (ct < 1e-9) return null; l = c + PI * (x - c) / (2 * R2 * ct);
-            }
-            const ld = l / D; return ld < lobe[0] - 1e-9 || ld > lobe[1] + 1e-9 ? null : [l, p];
-        } },
+
 };
 
 /** The projections offered, in order. */
-export const PROJECTIONS = ['equirect', 'mercator', 'robinson', 'equalearth', 'mollweide', 'hammer', 'winkel', 'ortho', 'azeq', 'goode'].map(id => ({ id, label: P[id].label, note: P[id].note }));
+export const PROJECTIONS = ['equirect', 'mercator', 'robinson', 'equalearth', 'mollweide', 'hammer', 'winkel', 'ortho', 'azeq'].map(id => ({ id, label: P[id].label, note: P[id].note }));
 /** Each projection's own options (the centre longitude is shared by all): select or range. */
 export const PROJECTION_OPTIONS = {
     mercator: [{ id: 'maxLat', label: 'Max latitude', type: 'select', values: [[85, '85°'], [80, '80°'], [75, '75°'], [70, '70°']], def: 85 }],
     winkel: [{ id: 'par', label: 'Standard parallel', type: 'select', values: [[50.46, '50.5° (Winkel’s)'], [40, '40°'], [60, '60°']], def: 50.46 }],
     ortho: [{ id: 'lat0', label: 'Centre latitude', type: 'range', min: -90, max: 90, def: 20 }, { id: 'hemis', label: 'Hemispheres', type: 'select', values: [[2, 'two, opposite'], [1, 'one']], def: 2 }],
     azeq: [{ id: 'lat0', label: 'Centre latitude', type: 'range', min: -90, max: 90, def: 90 }, { id: 'extent', label: 'Extent', type: 'select', values: [['world', 'the whole world'], ['hemi', 'a hemisphere']], def: 'world' }],
-    goode: [{ id: 'cut', label: 'Interruptions', type: 'select', values: [['land', 'land-centred'], ['ocean', 'ocean-centred']], def: 'land' }],
 };
 
 /** The size of a map `W` wide in a projection: its height follows the outline's shape (equirectangular: W / 2). */
@@ -165,7 +141,7 @@ export function projectionSize(id, W, opts = {}) {
  * in a projection: every output pixel inverse-projected and the source sampled there — nearest for colours and 8-bit
  * classes, bilinear for 16-bit numbers; outside the outline clear (colour) or 0 (greys). The inverse is worked on a grid
  * of nodes 8 px apart and interpolated between them (the inverses are smooth), exactly again where a cell crosses the
- * outline, a seam or a lobe's edge. Returns a new layer (`alpha` set on a colour layer).
+ * outline or a seam. Returns a new layer (`alpha` set on a colour layer).
  */
 export function projectLayer(layer, id, opts = {}) {
     if (id === 'equirect') return layer;

@@ -1,11 +1,11 @@
-// The projections' inverses in GLSL (the same ten as projections.js), for Evolution's map view: the map is a full-screen
+// The projections' inverses in GLSL (the same nine as projections.js), for Evolution's map view: the map is a full-screen
 // quad whose fragment shader asks, for each pixel, which longitude and latitude it shows, and samples the planet's
 // equirectangular texture there. `projectionUniforms(id, opts)` gives the uniforms the shader reads; `PROJECTION_GLSL`
 // is the function `bool projInverse(vec2 xy, out vec2 lonLat)` (xy in the projection's map space, lonLat in radians).
 
 import { P } from './projections.js';
 
-const IDS = ['equirect', 'mercator', 'robinson', 'equalearth', 'mollweide', 'hammer', 'winkel', 'ortho', 'azeq', 'goode'];
+const IDS = ['equirect', 'mercator', 'robinson', 'equalearth', 'mollweide', 'hammer', 'winkel', 'ortho', 'azeq'];
 export const PROJECTION_INDEX = Object.fromEntries(IDS.map((id, i) => [id, i]));
 
 /** The uniforms for a projection and its options (degrees in, radians out): { uProj, uBounds, uOpt }. */
@@ -16,14 +16,14 @@ export function projectionUniforms(id = 'equirect', opts = {}) {
         uBounds: [b[0], b[1], b[2], b[3]],
         // (Mercator's max latitude; Winkel's cos(standard parallel); the azimuthals' centre latitude; flags)
         uOpt: [(opts.maxLat ?? 85) * D, Math.cos((opts.par ?? 50.46) * D), (opts.lat0 ?? (id === 'azeq' ? 90 : 20)) * D,
-            ((opts.hemis ?? 2) === 2 ? 2 : 1) + ((opts.extent ?? 'world') === 'world' ? 10 : 0) + ((opts.cut ?? 'land') === 'ocean' ? 100 : 0)],
+            ((opts.hemis ?? 2) === 2 ? 2 : 1) + ((opts.extent ?? 'world') === 'world' ? 10 : 0) + 0],
     };
 }
 
 export const PROJECTION_GLSL = /* glsl */`
 uniform int uProj;
 uniform vec4 uBounds;        // xmin, xmax, ymin, ymax
-uniform vec4 uOpt;           // Mercator max latitude (rad); cos(Winkel's parallel); azimuthal centre latitude (rad); flags
+uniform vec4 uOpt;           // Mercator max latitude (rad); cos(Winkel's parallel); azimuthal centre latitude (rad); flags (hemispheres + 10 × whole-world extent)
 const float PI = 3.14159265358979;
 const float HALF = 1.57079632679490;
 const float R2 = 1.41421356237310;
@@ -49,17 +49,6 @@ vec2 azInverse(vec2 xy, float r, float c, float p0) {
     float l = atan(xy.x * sc, r * cc * cos(p0) - xy.y * sc * sin(p0));
     return vec2(l, p);
 }
-// Goode's lobes: west, east, central longitude (degrees), north then south — land-centred, and ocean-centred
-const vec3 GL_N[4] = vec3[4](vec3(-180.0, -40.0, -100.0), vec3(-40.0, 180.0, 30.0), vec3(0.0), vec3(0.0));
-const vec3 GL_S[4] = vec3[4](vec3(-180.0, -100.0, -160.0), vec3(-100.0, -20.0, -60.0), vec3(-20.0, 80.0, 20.0), vec3(80.0, 180.0, 140.0));
-const vec3 GO_N[4] = vec3[4](vec3(-180.0, -170.0, -175.0), vec3(-170.0, -40.0, -100.0), vec3(-40.0, 70.0, 15.0), vec3(70.0, 180.0, 125.0));
-const vec3 GO_S[4] = vec3[4](vec3(-180.0, -100.0, -140.0), vec3(-100.0, 20.0, -40.0), vec3(20.0, 180.0, 100.0), vec3(0.0));
-vec3 goodeLobe(bool ocean, bool north, int n, float deg) {
-    vec3 lobe = north ? (ocean ? GO_N[n - 1] : GL_N[n - 1]) : (ocean ? GO_S[n - 1] : GL_S[n - 1]);
-    for (int i = 0; i < 4; i++) { if (i >= n) break; vec3 b = north ? (ocean ? GO_N[i] : GL_N[i]) : (ocean ? GO_S[i] : GL_S[i]); if (deg < b.y) { lobe = b; break; } }
-    return lobe;
-}
-
 /** The inverse: map-space xy → (longitude, latitude) in radians; false outside the map. */
 bool projInverse(vec2 xy, out vec2 ll) {
     float x = xy.x, y = xy.y;
@@ -114,18 +103,6 @@ bool projInverse(vec2 xy, out vec2 ll) {
     if (uProj == 8) {
         float lim = mod(uOpt.w, 100.0) >= 10.0 ? PI : HALF, r = length(xy); if (r > lim) return false;
         ll = azInverse(xy, r, r, uOpt.z); return true;
-    }
-    if (uProj == 9) {
-        bool ocean = uOpt.w >= 100.0, north = y >= 0.0; int n = north ? (ocean ? 4 : 2) : (ocean ? 3 : 4);
-        vec3 lobe = goodeLobe(ocean, north, n, x / RAD); float c = lobe.z * RAD, l, p;
-        if (abs(y) <= 0.7108763) { p = y; l = c + (x - c) / cos(p); }
-        else {
-            float s = (abs(y) + 0.0528) / R2; if (s > 1.0) return false;
-            float t = asin(s); p = sign(y) * asin(clamp((2.0 * t + sin(2.0 * t)) / PI, -1.0, 1.0));
-            float ct = cos(t); if (ct < 1e-6) return false; l = c + PI * (x - c) / (2.0 * R2 * ct);
-        }
-        float ld = l / RAD; if (ld < lobe.x - 1e-4 || ld > lobe.y + 1e-4) return false;
-        ll = vec2(l, p); return true;
     }
     return false;
 }
