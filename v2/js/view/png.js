@@ -84,6 +84,32 @@ export async function encodeRgbPng(width, height, rgba) {
     return new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', z), chunk('IEND', new Uint8Array(0))], { type: 'image/png' });
 }
 
+/**
+ * A colour PNG with its transparency (colour type 6, RGBA) — for a layer on a clear ground (rivers alone, a projection's
+ * outside): `rgba` is width × height × 4 bytes, each row filtered by its left neighbour.
+ * @returns {Promise<Blob>}
+ */
+export async function encodeRgbaPng(width, height, rgba) {
+    const ihdr = new Uint8Array(13), iv = new DataView(ihdr.buffer);
+    iv.setUint32(0, width); iv.setUint32(4, height);
+    ihdr[8] = 8; ihdr[9] = 6;                                      // (8 bits, colour type 6: RGBA)
+    const rowLen = 1 + 4 * width, raw = new Uint8Array(height * rowLen);
+    for (let y = 0; y < height; y++) {
+        const o = y * rowLen, row = 4 * y * width;
+        raw[o] = 1;                                                 // (filter: Sub)
+        let pr = 0, pg = 0, pb = 0, pa = 0;
+        for (let x = 0; x < width; x++) {
+            const i = row + 4 * x, r = rgba[i], g = rgba[i + 1], b = rgba[i + 2], a = rgba[i + 3], q = o + 1 + 4 * x;
+            raw[q] = (r - pr) & 0xFF; raw[q + 1] = (g - pg) & 0xFF; raw[q + 2] = (b - pb) & 0xFF; raw[q + 3] = (a - pa) & 0xFF;
+            pr = r; pg = g; pb = b; pa = a;
+        }
+    }
+    const cs = new CompressionStream('deflate'), writer = cs.writable.getWriter();
+    writer.write(raw); writer.close();
+    const z = new Uint8Array(await new Response(cs.readable).arrayBuffer());
+    return new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', z), chunk('IEND', new Uint8Array(0))], { type: 'image/png' });
+}
+
 /** A canvas of the given size (an OffscreenCanvas where there is one). */
 export function canvasOf(width, height) {
     if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(width, height);

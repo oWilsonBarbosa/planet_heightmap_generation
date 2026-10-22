@@ -119,23 +119,22 @@ out from its lowest point. Drawn on the Terrain view as a flow map (hairlines, s
 rivers, seasonal ones dashed; a River Density choice; a Rivers & Lakes toggle; Colour by Regime with a legend; the readout
 names a river's discharge, regime and flood months, and a lake's kind). Measured (20K plates, desktop): 640K
 ~8 s, 2.5M ~15 s, 10M ~53 s the first time (~40 s after: the mesh is kept), the browser ~3 GB above the page at 10M.
-**Export** (on the timeline once the moment shown is finished; `js/evolution/export.js`, PNG files by `js/view/png.js`,
-the ZIP by `js/view/zip.js`): the colour map as the Terrain view shows it (palette, lakes, rivers); the Satellite view
-for the year, January or July (as shown: no grid, no glint); the Köppen climate zones in their own colours, unshaded;
-a 16-bit heightmap with the sea floor on a fixed scale (black −11 km, white +9 km — the same shade the same height on
-every planet); a 16-bit land heightmap (the sea black, land 0…+9 km; re-imports on the Import Heightmap page, which reads
-white as 6 km); a land mask; and the rivers and lakes alone on a transparent ground (the Terrain view's density and
-colouring). **Export All** saves one of each (Satellite for the year) in one ZIP. Widths from 1024 to 16384 px (4096 on
-phones): up to the finished picture's own (4096, 8192 at 10M, 2048 on phones) drawn from its detail, narrower ones
-averaged down; wider ones enlarged for use downstream (developer, 2026-10-17) — heights by a clamped bicubic, coasts,
-lakes and climate zones by the weighted majority of the nearest pixels, satellite colours blended, then painted at the
-full width (`finish-view.js rasterAt`), so the shading, the coasts and the rivers' lines stay sharp. Named by seed and
-moment (`orogen-evolution-12345-760Myr-heightmap.png`, `orogen-evolution-12345-760Myr.zip`).
-The **Climate** tab gives the moment shown the new climate (`js/climate/`; Köppen, temperature, rain,
-winds, currents — seasonal in the tropics, fading out by 60° — and More…'s layers, with Generate's colours and legends
-from `js/climate-layers.js`; a few seconds, in a worker), kept per moment while the history is open. Its code is
-`js/evolution/` (the shell, and `terrain-player.js`: per-frame terrain for frames that stream in); plan and status in
-[`plans/V2_FULL_PLANET_PLAN.md`](../plans/V2_FULL_PLANET_PLAN.md). The rest of this section is the lab.
+**Export** (on the timeline once the moment shown is finished; the panel every page shares, `js/view/export-panel.js`,
+this page's maps in `js/evolution/export.js`, PNG files by `js/view/png.js`, the ZIP by `js/view/zip.js`, the projections
+by `js/view/projections.js`): every map as Colour and / or as Data — the colour map as the Terrain view shows it (palette,
+lakes, rivers; the hillshade optional); the Satellite view for the year, January or July (as shown: no grid, no glint);
+the Köppen climate zones in their own colours, unshaded, and as a class index; each climate layer (climate-view.js's
+samplers, finishedClimateColor and finishedClimateValue) as colour and as a 16-bit greyscale on a fixed scale
+(export-raster.js DATA_SCALES); a 16-bit heightmap with the sea floor on a fixed scale (black −11 km, white +9 km — the
+same shade the same height on every planet); a 16-bit land heightmap (the sea black, land 0…+9 km; re-imports on the
+Import Heightmap page, which reads white as 6 km); a land mask; a hillshade; and the rivers and lakes alone on a transparent
+ground (the Terrain view's density and colouring). One map saves as a PNG, several as one ZIP with a README.txt. Widths from
+1024 to 16384 px (4096 on phones): up to the finished picture's own (4096, 8192 at 10M, 2048 on phones) drawn from its
+detail, narrower ones averaged down; wider ones enlarged for use downstream (developer, 2026-10-17) — heights by a clamped
+bicubic, coasts, lakes and climate zones by the weighted majority of the nearest pixels, satellite colours blended — then
+painted at the full width. Every map is centred on the map view's Center Longitude and can be drawn in any of ten
+projections (the inverse per pixel; the same inverses in GLSL, `js/view/projection-glsl.js`, draw the map view itself
+in the projection chosen beside Center Longitude).
 
 ```
 node tuning/dev-server.mjs 8123        # any static server works; there is no build step

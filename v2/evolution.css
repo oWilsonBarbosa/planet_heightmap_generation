@@ -273,3 +273,8 @@
     .evo-chip button { min-height: 44px; padding: 0 16px; }
     .evo-climate-btn { min-height: 44px; }
 }
+
+/* the map view's projection options (the export panel's controls, in the sidebar) */
+.evo-proj-opts { margin-top: 6px; }
+.evo-proj-opts .xp-proj-opt { min-width: 0; }
+.evo-proj-opts .xp-proj-opt select, .evo-proj-opts .xp-proj-opt input[type=range] { width: 100%; }

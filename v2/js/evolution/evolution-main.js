@@ -26,7 +26,9 @@ import { ClimateService, CLIMATE_LAYERS, SEASONAL_LAYERS, FINISHED_ONLY_LAYERS, 
 import { FinishService, paintFinished, riverPaths, drawRivers, riverAt, finishedAt, REGIME_STYLE, riverYearWords } from './finish-view.js';
 import { FRAME_FIELDS } from '../terrain/terrain-pool.js';
 import { STAGES as FINISH_STAGES } from '../finish/finish.js';
-import { exportTypes, exportWidths, exportFileName, exportMap, exportAll, EXPORT_MAX, EXPORT_MAX_TOUCH } from './export.js';
+import { initEvolutionExport } from './export.js';
+import { PROJECTIONS } from '../view/projections.js';
+import { renderProjectionOptions } from '../view/export-panel.js';
 import { downloadBlob } from '../view/png.js';
 import { SMALL_DEVICE } from '../core/device.js';
 
@@ -168,7 +170,7 @@ let glinting = false, glintFrom = null;
 let lines = null, linesKey = null;      // the GPU's overlay: the grid and a climate layer's arrows, drawn again only when they change
 const PALETTE_KEY = 'orogen.evolution.palette';
 const storedPalette = (() => { try { return localStorage.getItem(PALETTE_KEY); } catch { return null; } })();
-const view = { layer: 'terrain', palette: PALETTES[storedPalette] ? storedPalette : 'relief', mode: 'globe', grid: true, gridStep: 15, centerLon: 0, season: 'year', finished: true,
+const view = { layer: 'terrain', palette: PALETTES[storedPalette] ? storedPalette : 'relief', mode: 'globe', grid: true, gridStep: 15, centerLon: 0, projection: 'equirect', projOpts: {}, season: 'year', finished: true,
     water: true, riverQ: 40, byRegime: false };                      // (rivers and lakes on finished moments: the density's threshold, m³/s; coloured by regime)
 const climate = new ClimateService();   // the climate, on request, for the moment shown (climate-view.js)
 const finisher = new FinishService();   // the Finish step, on request, for the moment shown (finish-view.js)
@@ -377,7 +379,7 @@ function show(t) {
 }
 
 /** The map view (or the globe): the texture flat, turned so that the centre longitude is in the middle. */
-const showMap = () => globe.setMap(view.mode === 'map' ? ui.map : null, view.centerLon);
+const showMap = () => globe.setMap(view.mode === 'map' ? ui.map : null, view.centerLon, view.projection, view.projOpts);
 
 function progress(b, t) {
     if (b.retexturing) return;
@@ -685,70 +687,16 @@ function updateCard() {
 function mainAction() {
     const b = B, frame = painted;
     if (!b || !frame) return;
-    if (!b.finishJob && b.finishes.get(frame)) openExport();
+    if (!b.finishJob && b.finishes.get(frame)) exportPanel.open();
     else finishMoment();
 }
 
 // ── the export (plans/V2_FULL_PLANET_PLAN.md C): the finished moment shown, as map files — V1's dialog ──
-let exporting = null;                   // (the moment the dialog is open for: { frame, fin, seed, busy })
-function openExport() {
-    const frame = painted, fin = frame && B?.finishes.get(frame);
-    if (!fin) return;
-    setPlaying(false);
-    exporting = { frame, fin, seed: B.seed, busy: false };
-    // (the maps this moment has — the climate's where it has its climate — keeping the type chosen last where it can)
-    const was = $('exportType').value;
-    $('exportType').innerHTML = exportTypes(fin).map(t => `<option value="${t.id}">${t.label}</option>`).join('');
-    if ([...$('exportType').options].some(o => o.value === was)) $('exportType').value = was;
-    // (every width up to the widest — its own chosen at first; wider ones enlarged from it, smoothly: export.js)
-    const wasW = Number($('exportWidth').value);
-    $('exportWidth').innerHTML = exportWidths(fin.raster, IS_TOUCH ? EXPORT_MAX_TOUCH : EXPORT_MAX)
-        .map(({ w, enlarged }) => `<option value="${w}"${w === fin.raster.w ? ' selected' : ''}>${w}${enlarged ? ` · enlarged ×${w / fin.raster.w}` : w === fin.raster.w ? ' · as detailed' : ''}</option>`).join('');
-    if ([...$('exportWidth').options].some(o => Number(o.value) === wasW)) $('exportWidth').value = String(wasW);
-    $('exportMoment').textContent = `· ${frame.time.toFixed(0)} Myr`;
-    $('exportCentre').hidden = !view.centerLon;
-    $('exportCentre').textContent = view.centerLon ? `Centred on ${Math.abs(view.centerLon)}°${view.centerLon > 0 ? 'E' : 'W'}, as the map view (Center Longitude).` : '';
-    exportDims();
-    $('exportProgress').hidden = true;
-    $('exportGo').disabled = false; $('exportAllGo').disabled = false;
-    $('exportOverlay').classList.remove('hidden');
-}
-function exportDims() { const w = Number($('exportWidth').value); $('exportDims').textContent = `${w} × ${w >> 1}`; }
-function closeExport() { $('exportOverlay').classList.add('hidden'); if (!exporting?.busy) exporting = null; }
-async function runExport(all = false) {
-    const ex = exporting;
-    if (!ex || ex.busy) return;
-    ex.busy = true; $('exportGo').disabled = true; $('exportAllGo').disabled = true;
-    const type = $('exportType').value, W = Number($('exportWidth').value), bar = $('exportProgress'), fill = bar.querySelector('i'), label = bar.querySelector('span');
-    const onProgress = (p, text) => { fill.style.width = `${(100 * p).toFixed(0)}%`; label.textContent = text; };
-    bar.hidden = false; onProgress(0, 'Starting…');
-    try {
-        // (the colour map as the Terrain view shows it: the palette chosen, Rivers & Lakes as set; the rivers-and-lakes
-        // layer with the same density and colouring)
-        const look = { lut: heightLutOf(view.palette), exaggeration: SHADING.exaggeration, water: view.water, riverQ: view.riverQ, byRegime: view.byRegime,
-            shaded: $('chkExportShade').checked, centerLon: view.centerLon };
-        const t0 = performance.now();
-        const blob = all ? await exportAll(ex.fin, W, look, t => exportFileName(ex.seed, ex.frame.time, t, 'png', view.centerLon), onProgress)
-            : await exportMap(type, ex.fin, W, look, onProgress);
-        const name = all ? exportFileName(ex.seed, ex.frame.time, null, 'zip', view.centerLon) : exportFileName(ex.seed, ex.frame.time, type, 'png', view.centerLon);
-        downloadBlob(blob, name);
-        onProgress(1, `Saved ${name} · ${(blob.size / 2 ** 20).toFixed(1)} MB`);
-        console.info(`[evolution] export ${name}: ${W} × ${W >> 1}, ${(blob.size / 2 ** 20).toFixed(1)} MB in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
-    } catch (err) {
-        onProgress(0, `Could not export: ${String(err.message).split('\n')[0]}`);
-        console.error(err);
-    } finally {
-        ex.busy = false;
-        if (exporting === ex) { $('exportGo').disabled = false; $('exportAllGo').disabled = false; } else if (!exporting) exporting = null;
-    }
-}
-$('exportWidth').addEventListener('change', exportDims);
-$('exportGo').addEventListener('click', () => runExport());
-$('exportAllGo').addEventListener('click', () => runExport(true));
-$('exportCancel').addEventListener('click', closeExport);
-$('exportClose').addEventListener('click', closeExport);
-$('exportOverlay').addEventListener('click', e => { if (e.target === $('exportOverlay')) closeExport(); });
-addEventListener('keydown', e => { if (e.key === 'Escape' && !$('exportOverlay').classList.contains('hidden')) closeExport(); });
+// (the panel: every map as colour and as data, in a projection — v2/js/view/export-panel.js, export.js)
+const exportPanel = initEvolutionExport({
+    moment: () => { const frame = painted, fin = frame && B?.finishes.get(frame); if (!fin) return null; setPlaying(false); return { frame, fin, seed: B.seed }; },
+    look: () => ({ lut: heightLutOf(view.palette), exaggeration: SHADING.exaggeration, water: view.water, riverQ: view.riverQ, byRegime: view.byRegime }),
+    centerLon: () => view.centerLon, projection: () => (view.mode === 'map' ? { id: view.projection, opts: view.projOpts } : null), isTouch: IS_TOUCH });
 
 // ── the climate (step D): calculated on request for the moment shown, kept per moment while the history is open ──
 const climateOf = frame => { const e = B?.climates.get(frame); return e && e.tMesh === B.tMesh && e.key === climateKey() ? e.data : null; };
@@ -930,9 +878,25 @@ $('viewMode').addEventListener('change', e => {
     view.mode = e.target.value;
     ui.map.hidden = view.mode !== 'map';                    // (the map's frame: the map is drawn under it, and it takes the pointer)
     $('mapCenterLonGroup').hidden = view.mode !== 'map';
+    $('mapProjectionGroup').hidden = view.mode !== 'map';
     ui.hover.style.display = 'none';
     showMap();
 });
+// the map view's projection (projections.js), with its own options; remembered
+const PROJECTION_KEY = 'orogen.evolution.projection';
+{
+    const sel = $('mapProjection'), optsEl = $('mapProjOpts');
+    for (const p of PROJECTIONS) { const o = document.createElement('option'); o.value = p.id; o.textContent = p.label; sel.appendChild(o); }
+    let stored = null;
+    try { stored = JSON.parse(localStorage.getItem(PROJECTION_KEY) || 'null'); } catch { stored = null; }
+    if (stored?.id && PROJECTIONS.some(p => p.id === stored.id)) { view.projection = stored.id; view.projOpts = stored.opts || {}; }
+    sel.value = view.projection;
+    let getOpts = () => ({});
+    const apply = () => { view.projOpts = getOpts(); showMap(); try { localStorage.setItem(PROJECTION_KEY, JSON.stringify({ id: view.projection, opts: view.projOpts })); } catch { /* (remembered only where the browser allows) */ } };
+    const build = (initial) => { getOpts = renderProjectionOptions(optsEl, view.projection, initial, apply); view.projOpts = getOpts(); };
+    build(view.projOpts);
+    sel.addEventListener('change', () => { view.projection = sel.value; build(null); apply(); });
+}
 $('sMapCenterLon').addEventListener('input', e => {
     view.centerLon = Number(e.target.value);
     $('vMapCenterLon').textContent = `${view.centerLon}°`;

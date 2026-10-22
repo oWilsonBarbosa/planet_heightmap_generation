@@ -408,6 +408,43 @@ export function finishedClimateColor(layer, season, C, W, lut, fin = null) {
     }
 }
 
+/**
+ * A finished moment's climate as numbers, pixel by pixel — for the export's data layers (v2/js/evolution/export.js):
+ * `(x, y, wet) → value` (NaN where the layer has none: a land quantity at sea, a sea quantity on land), sampled as
+ * finishedClimateColor samples the same layer. `key`: a DATA_SCALES key (export-raster.js), or koppenIndex.
+ */
+export function finishedClimateValue(key, season, C, W) {
+    const R = C.raster, g = gridSampler(W), st = R.stats, land = (x, y) => landPixel(R, W, x, y), s = season;
+    switch (key) {
+        case 'koppenIndex': return (x, y, wet) => { if (wet) return 0; const i = land(x, y); return i >= 0 ? R.koppen[i] : 0; };
+        case 'temperature': return (x, y, wet) => {
+            if (wet) return g((C.Tsea ?? C.T)[s], x, y);
+            const i = land(x, y); return i >= 0 ? R.tAnnual[i] / 100 + (s === 'year' ? 0 : g(C.T[s], x, y) - g(C.T.year, x, y)) : g(C.T[s], x, y);
+        };
+        case 'precip': return (x, y, wet) => {
+            const p = g(C.P[s], x, y); if (wet) return p;
+            const i = land(x, y); if (i < 0) return p;
+            const monthly = R.pAnnual[i] / 12, yr = s === 'year' ? 0 : g(C.P.year, x, y);
+            return s === 'year' || !(yr > 0.01) ? monthly : monthly * p / yr;
+        };
+        case 'pressure': return (x, y) => g(C.slp[s], x, y);
+        case 'windSpeed': return (x, y) => windSpeed(C, s, f => g(f, x, y));
+        case 'windU': return (x, y) => g(C.u[s], x, y);
+        case 'windV': return (x, y) => g(C.v[s], x, y);
+        case 'sstAnom': return (x, y, wet) => (wet ? g(C.sstAnom[s], x, y) : NaN);
+        case 'currentU': return (x, y, wet) => (wet ? g(C.currentU[s], x, y) : NaN);
+        case 'currentV': return (x, y, wet) => (wet ? g(C.currentV[s], x, y) : NaN);
+        case 'upwelling': return (x, y, wet) => (wet ? g(C.upwelling[s], x, y) : NaN);
+        case 'seaIce': return (x, y, wet) => (wet ? g(C.seaIce[s], x, y) : 0);
+        case 'snow': return (x, y, wet) => (wet || !C.snow ? 0 : g(C.snow[s], x, y));
+        case 'iceSheet': return (x, y, wet) => (wet ? 0 : g(C.iceSheet, x, y));
+        case 'rainShadow': return (x, y, wet) => (wet ? NaN : g(C.orographic, x, y));
+        case 'tempRange': case 'aridity': case 'growing': case 'rainSeason':
+            return (x, y, wet) => { if (wet || !st?.[key]) return NaN; const i = land(x, y); return i >= 0 ? statValue(st[key], key, i) : NaN; };
+    }
+    throw new Error(`no such climate value: ${key}`);
+}
+
 // ── the Satellite layer (plans/V2_SATELLITE_PLAN.md): the land's own colours from space (the finish's, per view: the
 // year, January, July — finish-cover.js), the sea by its depth (Blue Marble's: near black in the deep, lighter over the
 // shelves, turquoise over warm shallows), sea ice in its season, lakes as water and salt pans white ──

@@ -43,7 +43,7 @@
             "Timeline of the whole history to scrub and replay",
             "Detailed moments with rivers, lakes, glaciers and a seasonal climate",
             "Satellite and Köppen climate views of a detailed moment",
-            "Export of a detailed moment: colour map, satellite view (year, January, July), Köppen climate zones, 16-bit heightmaps, land mask and a transparent rivers-and-lakes layer, singly or all in one ZIP, up to 16384 px wide"
+            "Export of a detailed moment, every map as colour or as 16-bit data: colour map, satellite view (year, January, July), Köppen climate zones and class index, each climate layer, 16-bit heightmaps, land mask, hillshade and a transparent rivers-and-lakes layer, in ten map projections, one PNG or a ZIP with a README, up to 16384 px wide"
         ],
         "screenshot": "https://orogen.studio/assets/studio/evolution.jpg",
         "isPartOf": { "@type": "WebSite", "name": "World Orogen", "url": "https://orogen.studio/" }
@@ -210,6 +210,11 @@
                         <option value="map">Map</option>
                     </select>
                 </div>
+                <div class="cg" id="mapProjectionGroup" hidden>
+                    <label>Projection <span class="tip" data-tip="The map's shape: equirectangular (the plain 2 : 1 map), Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, the globe as two hemispheres, an azimuthal (polar) map, or Goode's interrupted lobes. Each has its own options; the export offers the same">?</span></label>
+                    <select id="mapProjection"></select>
+                    <div id="mapProjOpts" class="xp-proj-opts evo-proj-opts" hidden></div>
+                </div>
                 <div class="cg" id="mapCenterLonGroup" hidden>
                     <label>Center Longitude <span class="v" id="vMapCenterLon">0°</span></label>
                     <input type="range" id="sMapCenterLon" min="-180" max="180" value="0" step="5">
@@ -331,25 +336,7 @@
     <div id="exportOverlay" class="hidden">
         <div id="exportCard">
             <button id="exportClose" aria-label="Close">&times;</button>
-            <h3>Export Map <span id="exportMoment" class="evo-export-moment"></span></h3>
-            <div class="cg">
-                <label>Type <span class="tip" data-tip="Colour Map — the Terrain view as shown, in your Terrain Colours, with rivers and lakes if Rivers &amp; Lakes is on. Satellite — the Satellite view for the year, January or July. Climate Zones — the Köppen zones in their own colours, unshaded. Heightmap with Sea Floor — 16-bit greyscale, the same scale on every planet: black −11 km, white +9 km (sea level at 55 %). Land Heightmap — 16-bit, the sea black and land from 0 to +9 km (re-imports on the Import Heightmap page, which reads white as 6 km). Land Mask — land white, the sea black. Rivers &amp; Lakes — the rivers and lakes alone on a transparent ground, to lay over another map. Export All saves one of each (Satellite for the year) in a ZIP">?</span></label>
-                <select id="exportType"></select>
-            </div>
-            <div class="cg">
-                <label>Width <span class="v" id="exportDims"></span> <span class="tip" data-tip="Up to the width the moment was detailed at, the map is drawn from its own detail (narrower ones averaged down). Wider ones are enlarged from it for use downstream: heights smoothly interpolated, coasts, lakes and climate zones following the nearest pixels, then drawn at the full width — the shading and the rivers sharp, but no new detail. Very wide maps take a while and a lot of memory">?</span></label>
-                <select id="exportWidth"></select>
-            </div>
-            <div class="tg">
-                <label class="toggle-label"><input type="checkbox" id="chkExportShade" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Hillshade <span class="tip" data-tip="Shade the Colour Map and the Satellite view by the relief, as on screen. Off, they are flat colour — to lay your own shading over, or to keep the colours exact">?</span></label>
-            </div>
-            <p class="evo-export-note" id="exportCentre" hidden></p>
-            <div id="exportProgress" class="evo-export-progress" hidden><div class="evo-finish-bar"><i></i></div><span></span></div>
-            <div class="export-actions">
-                <button id="exportCancel" class="btn-ghost">Cancel</button>
-                <button id="exportGo" class="btn-primary">Export</button>
-                <button id="exportAllGo" class="btn-primary" title="Every kind of map (Satellite for the year) at this width, in one ZIP">Export All</button>
-            </div>
+            <h3>Export</h3>
         </div>
     </div>
     <div id="tutorialOverlay" class="hidden">
@@ -374,7 +361,7 @@
             <div class="tutorial-step" data-step="3">
                 <h3>Look Around &amp; Export</h3>
                 <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, <strong>Heightmap</strong> and <strong>Plates</strong> with the tabs over the planet. Climate shows Köppen zones, temperature, rain, wind and currents, with more layers (pressure, upwelling, ice, aridity, growing season and others) under <strong>More…</strong> or in the layer list. Climate also works on a paused preview.</p>
-                <p><strong>Export</strong> saves the detailed moment as map files: a colour map, the Satellite view (the year, January or July), its climate zones, heightmaps with and without the sea floor, a land mask, and its rivers and lakes on their own. <strong>Export All</strong> saves one of each in a ZIP, at any width up to 16384 px. The maps are centred as the map view is (Center Longitude), and the hillshade can be left off.</p>
+                <p><strong>Export</strong> saves the detailed moment as map files: a colour map, the Satellite view (the year, January or July), its climate zones, heightmaps with and without the sea floor, a land mask, and its rivers and lakes on their own. Every climate layer can go too, and each map as <strong>Data</strong> &mdash; 16-bit greyscales on fixed scales &mdash; as well as colour; several save as one ZIP with a README, at any width up to 16384 px, in any of ten map projections, centred as you like, with or without the hillshade. The map view itself has a <strong>Projection</strong> picker beside Center Longitude.</p>
             </div>
             <div class="tutorial-step" data-step="4">
                 <h3>Steer It</h3>
