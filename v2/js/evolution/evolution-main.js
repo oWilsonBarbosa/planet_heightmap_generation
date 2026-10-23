@@ -33,6 +33,8 @@ import { downloadBlob } from '../view/png.js';
 import { savePlanet, planetBytes, openPlanet } from '../save/planet-file.js';
 import { PackedFrame } from '../tectonics/frame-pack.js';
 import { SMALL_DEVICE } from '../core/device.js';
+import { seedOf, randomSeed, isWordSeed } from '../core/seed.js';
+import { fileName } from '../view/export-raster.js';
 
 setDelaunator(Delaunator);
 
@@ -73,7 +75,9 @@ const climateKey = () => `${Number(ui.tmp.value)}|${Number(ui.prc.value)}`;
 // cores are several times slower — plans/V2_FULL_PLANET_PLAN.md, step A)
 if (IS_TOUCH) ui.sim.value = '20000';
 setIf(ui.ending, url.get('end')); setIf(ui.sim, url.get('sim')); setIf(ui.terrain, url.get('terrain'));
-ui.seed.value = url.get('seed') ?? String(Math.floor(Math.random() * 1e6));
+ui.seed.value = url.get('seed') ?? String(randomSeed());
+// (the seed as typed: a word as it is, a number as the world reads it — core/seed.js)
+const seedShown = () => (isWordSeed(ui.seed.value) ? ui.seed.value.trim() : String(seedOf(ui.seed.value)));
 // Quality: the two resolutions in one choice (plans/V2_EVOLUTION_UI_PLAN.md) — Custom shows them; a link whose pair is a
 // preset shows the preset
 const QUALITY = { fast: { sim: '20000', terrain: '160000' }, balanced: { sim: '40000', terrain: '160000' }, best: { sim: '80000', terrain: '640000' } };
@@ -96,7 +100,7 @@ function labels() {
     const t = Number(ui.tmp.value), p = Math.round(50 * Number(ui.prc.value));
     $('vTmp').textContent = t ? `${t > 0 ? '+' : '−'}${Math.abs(t)} W/m²` : '±0 W/m²';
     $('vPrc').textContent = p ? `${p > 0 ? '+' : '−'}${Math.abs(p)}%` : '±0%';
-    $('worldSummary').textContent = `Seed ${Number(ui.seed.value) || 0} · ${ui.len.value} Myr · ${QUALITY_WORDS[ui.quality.value]}` +
+    $('worldSummary').textContent = `Seed ${seedShown()} · ${ui.len.value} Myr · ${QUALITY_WORDS[ui.quality.value]}` +
         (t ? ` · temperature ${$('vTmp').textContent}` : '') + (p ? ` · ${$('vPrc').textContent} rain` : '');
     // (the plates' resolution is the one setting a history cannot change: it waits for a build)
     $('worldPending').hidden = !B?.simCells || B.simCells === Number(ui.sim.value);
@@ -132,7 +136,7 @@ document.addEventListener('click', e => {
     else if (tipFor) hideTip();
 }, true);
 $('sidebarContent').addEventListener('scroll', hideTip, { passive: true });
-ui.build.addEventListener('click', () => { ui.seed.value = String(Math.floor(Math.random() * 1e6)); build(); });   // (New World: a new seed)
+ui.build.addEventListener('click', () => { ui.seed.value = String(randomSeed()); build(); });   // (New World: a new seed)
 $('rebuildBtn').addEventListener('click', () => build());                                                         // (Settings: this seed, these settings)
 // Load Planet…: a planet file saved from the Export panel (a phone's picker may not know .orogen: there it shows every file)
 if (IS_TOUCH) $('loadFile').removeAttribute('accept');
@@ -156,7 +160,7 @@ $('loadFile').addEventListener('change', e => { const f = e.target.files[0]; e.t
 // (terrain detail only redraws the terrain: the history is the same at any terrain resolution)
 ui.terrain.addEventListener('change', () => setTerrainDetail());
 // (more: how far the history was kept going — a link rebuilds the same history, run on as far)
-const saveUrl = () => history.replaceState(null, '', `?seed=${Number(ui.seed.value) || 0}&cont=${ui.cont.value}&len=${ui.len.value}&end=${ui.ending.value}&sim=${ui.sim.value}&terrain=${ui.terrain.value}` +
+const saveUrl = () => history.replaceState(null, '', `?seed=${encodeURIComponent(seedShown())}&cont=${ui.cont.value}&len=${ui.len.value}&end=${ui.ending.value}&sim=${ui.sim.value}&terrain=${ui.terrain.value}` +
     (Number(ui.tmp.value) ? `&greenhouse=${ui.tmp.value}` : '') + (Number(ui.prc.value) ? `&rain=${ui.prc.value}` : '') + (B?.moreTo ? `&more=${B.moreTo}` : ''));
 let linkedMore = Number(url.get('more')) || 0;          // (the first build only: a new world starts at its length)
 // Keep going: the history runs on in pieces this long, until stopped (a multiple of the step grid and of the snapshot
@@ -267,14 +271,14 @@ function clearView(len, { play, label }) {
 
 async function build() {
     leaveWorld();
-    const seed = Number(ui.seed.value) || 0, cont = Number(ui.cont.value) / 100, len = Number(ui.len.value), ending = ui.ending.value;
+    const seed = seedOf(ui.seed.value), cont = Number(ui.cont.value) / 100, len = Number(ui.len.value), ending = ui.ending.value;
     const simCells = Number(ui.sim.value), terrainCells = Number(ui.terrain.value);
-    const b = B = newWorld({ simCells, endMyr: len, lengthMyr: len, moreTo: linkedMore,
+    const b = B = newWorld({ simCells, endMyr: len, lengthMyr: len, moreTo: linkedMore, seedText: isWordSeed(ui.seed.value) ? ui.seed.value.trim() : null,
         contPct: Number(ui.cont.value), ending });                       // (the settings it was built with, for its planet file)
     linkedMore = 0;
     // (watching it build is playing it from the start, at the speed chosen — held at the newest moment built)
     clearView(len, { play: true, label: 'Starting…' });
-    status(`Starting a world (seed ${seed})…`, 0);
+    status(`Starting a world (seed ${seedShown()})…`, 0);
     if (IS_TOUCH) ui.panel.classList.add('collapsed');
     await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));            // (let the status paint first)
     if (B !== b) return;
@@ -480,9 +484,9 @@ async function loadPlanet(file) {
     const terrainCells = IS_TOUCH ? Math.min(640000, s.terrain) : s.terrain;
     leaveWorld();
     const b = B = newWorld({ simCells: s.sim, endMyr: m.history.toMyr, lengthMyr: s.len, live: false, loading: true, opened: name,
-        seed: s.seed, contPct: s.cont, ending: s.ending, moreTo: s.more || 0, simMyr: m.history.simMyr, steps: m.history.steps, stopped: m.history.stopped });
+        seed: s.seed, seedText: s.seedText ?? null, contPct: s.cont, ending: s.ending, moreTo: s.more || 0, simMyr: m.history.simMyr, steps: m.history.steps, stopped: m.history.stopped });
     // its settings, and the link to them (the same history again, built here)
-    ui.seed.value = String(s.seed); ui.cont.value = s.cont; ui.len.value = s.len; setIf(ui.ending, s.ending); setIf(ui.sim, String(s.sim));
+    ui.seed.value = s.seedText ?? String(s.seed); ui.cont.value = s.cont; ui.len.value = s.len; setIf(ui.ending, s.ending); setIf(ui.sim, String(s.sim));
     setIf(ui.terrain, String(terrainCells)); ui.tmp.value = s.greenhouse; ui.prc.value = s.rain;
     ui.quality.value = Object.keys(QUALITY).find(k => QUALITY[k].sim === ui.sim.value && QUALITY[k].terrain === ui.terrain.value) ?? 'custom';
     $('customGroup').hidden = ui.quality.value !== 'custom';
@@ -889,14 +893,14 @@ const planetFile = {
         if (b.finishes.get(frame) !== fin) throw new Error('this moment is no longer the detailed one');
         const [greenhouse, rain] = fin.climateKey.split('|').map(Number);
         const { blob } = await savePlanet({
-            settings: { seed: b.seed, cont: b.contPct, len: b.lengthMyr, ending: b.ending, sim: b.simCells, terrain: b.terrainCells, greenhouse, rain, more: b.moreTo || 0 },
+            settings: { seed: b.seed, ...(b.seedText ? { seedText: b.seedText } : {}), cont: b.contPct, len: b.lengthMyr, ending: b.ending, sim: b.simCells, terrain: b.terrainCells, greenhouse, rain, more: b.moreTo || 0 },
             history: { frames: b.frames, simMesh: b.simMesh, simMyr: b.simMyr, steps: b.steps, stopped: b.stopped ?? null, snapshotMyr: SNAPSHOT_MYR },
             detail: { frame, fin }, onProgress: progress });
-        return { blob, name: `orogen-${b.seed}-${Math.round(frame.time)}Myr.orogen` };
+        return { blob, name: fileName(['orogen', b.seedText ?? b.seed, `${Math.round(frame.time)}Myr`], 'orogen') };
     },
 };
 const exportPanel = initEvolutionExport({
-    moment: () => { const frame = painted, fin = frame && B?.finishes.get(frame); if (!fin) return null; setPlaying(false); return { frame, fin, seed: B.seed }; },
+    moment: () => { const frame = painted, fin = frame && B?.finishes.get(frame); if (!fin) return null; setPlaying(false); return { frame, fin, seed: B.seedText ?? B.seed }; },
     look: () => ({ lut: heightLutOf(view.palette), exaggeration: SHADING.exaggeration, water: view.water, riverQ: view.riverQ, byRegime: view.byRegime }),
     centerLon: () => view.centerLon, projection: () => (view.mode === 'map' ? { id: view.projection, opts: view.projOpts } : null), isTouch: IS_TOUCH, planetFile });
 

@@ -32,7 +32,9 @@ the developer before the next begins.**
 
 **Evolution** (`/evolution`, `evolution.html`) is the product page built on this engine — a side generator beside V1's
 Generate and Import Heightmap. Its layout (plans/V2_EVOLUTION_UI_PLAN.md): the sidebar holds **New World** (a new seed),
-the **World** section — folded to a one-line summary once a history is building: the seed, starting continent size,
+the **World** section — folded to a one-line summary once a history is building: the seed (a number from 0 to
+2,147,483,645 — New World draws one — or any word or phrase, hashed into that range: `js/core/seed.js`; a number reads as
+it always did, so a link shared before builds its world again), starting continent size,
 history length, ending, the planet's **Temperature** (−30…+30 W/m²) and **Precipitation** (±50 %) — the climate's
 options (`greenhouseWm2`: a radiative forcing in the energy balance; `precipScale`: the evaporation in the rain budget — so the ice, winds, currents and rain answer them), for the preview climate and Add detail alike; they change the climate only, so
 previews are worked out again when shown and a detailed moment says it was made with the old ones (in the link: `greenhouse=`,
@@ -180,6 +182,7 @@ node v2/tools/bench-lab.mjs 2500000           # the lab's terrain pipeline piece
 node v2/tools/check-save.mjs                  # the planet file: (a) a small history and detailed moment saved and read back bit for bit, and older
                                               # files made by hand → v2/out/; (b) every planet kept in tools/fixtures/saves/ opens, its terrain and every export map drawn
 node v2/tools/check-save.mjs --fixture        # (a) on a small planet kept as the fixture of today's versions — once per version
+node v2/tools/check-seeds.mjs                 # the seeds: each of 0 … 2,147,483,645 its own world; typed seeds, words' hashes and old planet codes as they were
 ```
 
 After a change to what a frame or a detailed moment holds, or to `js/save/`, run `check-save.mjs`: planets saved by an
@@ -202,7 +205,8 @@ js/core/           geometry with no tectonics in it: rotations, sphere index, si
                    mesh-locate (the triangle a point falls in, with barycentric weights), min-heap (+ spreadKm: Dijkstra
                    in km over a mesh), mesh-rings (every cell's rings 0–3, precomputed), fast-noise (bit-identical to V1's
                    SimplexNoise, faster); sim-mesh also rebuilds a mesh from its arrays (meshFromArrays: how workers get it);
-                   device (SMALL_DEVICE: a phone or a device reporting ≤ 4 GB — the memory budgets that follow it)
+                   device (SMALL_DEVICE: a phone or a device reporting ≤ 4 GB — the memory budgets that follow it);
+                   seed (a typed seed read — a number as ever, a word hashed — and the range new seeds are drawn from)
 js/tectonics/
   config.js        every tunable, in physical units (km, Myr, cm/yr); MECHANISMS = each mechanism's off-switch
   model/           crust.js (CrustRaster: per-plate cells in the plate's own frame; CELL_FIELDS; the type / flag /

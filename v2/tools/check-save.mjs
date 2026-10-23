@@ -33,6 +33,7 @@ import { frameArrays } from '../js/tectonics/snapshot.js';
 import { savePlanet, readPlanet, openPlanet, planetBytes } from '../js/save/planet-file.js';
 import { encodeTree, decodeTree, binPieces, allocArrays, arrayFiller } from '../js/save/tree-codec.js';
 import { unpackCodec1 } from '../js/save/migrations.js';
+import { seedOf } from '../js/core/seed.js';
 import { ZipReader, ZipWriter } from '../js/save/zip-io.js';
 import { FORMAT_VERSION, FRAME_VERSION, FINISH_VERSION, FRAME_CODEC } from '../js/save/versions.js';
 import { CATALOGUE, produceMap } from '../js/evolution/export.js';
@@ -165,6 +166,12 @@ const { paths, ...own } = fin, momentDiff = differ(own, back.detail.moment, 'mom
 check(!momentDiff, `the detailed moment comes back bit for bit (${momentDiff})`);
 check(!('paths' in back.detail.moment), 'the views\' caches are not saved');
 check(back.manifest.detail.time === moment.time && back.manifest.settings.seed === SEED, 'the manifest says what it holds');
+// (a word for a seed, 2026-10: the setting added — no version bump — while the kept planets, without it, open as before)
+{
+    const worded = await savePlanet({ settings: { ...settings, seed: seedOf('Pangaea'), seedText: 'Pangaea' }, history, detail: { frame: moment, fin } });
+    const w = await readPlanet(worded.blob);
+    check(w.manifest.settings.seedText === 'Pangaea' && w.manifest.settings.seed === seedOf('Pangaea'), 'a word seed is saved with its word');
+}
 // (opened first — what it holds measured — then the history read without its moment: a phone's, for a desktop's detail)
 const opened = await openPlanet(new Blob([fs.readFileSync(file)]));
 check(opened.historyBytes > 0 && opened.detailBytes > 0 && opened.historyBytes + opened.detailBytes < bytes + 2 ** 20, `what it holds is measured before reading (${mb(opened.historyBytes)} + ${mb(opened.detailBytes)} MB)`);
