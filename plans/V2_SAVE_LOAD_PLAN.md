@@ -154,13 +154,44 @@ the saved one and Extend can run on from it. Otherwise (another browser), say so
 4. **File name**: `orogen-<seed>-<time>Myr.orogen`.
 
 ## Status
-- **S1 built 2026-10-22.** `v2/js/save/` (planet-file, tree-codec, zip-io, versions), the Export panel's Planet file
-  row, and `v2/tools/check-save.mjs`:
-  - a 10K plates, 200 Myr, 160K-cell moment round-trips bit for bit;
-  - a flipped byte is caught;
-  - .NET's own ZIP reader opens the file.
-- **Measured in Chrome** at 40K plates, 1200 Myr and 2.5M detail: 355 MB of data → a 139.5 MB file, saved in 4.7 s and
-  read back in 1.5 s (121 frames, 1025 events). Not yet measured: 160K plates with 10M detail.
+- **S1 built 2026-10-22** (9c9761d). `v2/js/save/` (planet-file, tree-codec, zip-io, versions), the Export panel's Planet
+  file row, and `v2/tools/check-save.mjs`. Measured in Chrome:
+  - 40K plates, 1200 Myr, 2.5M detail: 355 MB of data → a 139.5 MB file, saved in 4.7 s;
+  - 160K plates, 600 Myr, 10M detail: 558 MB → a 211 MB file, saved in 7.6 s.
+- **S2 built 2026-10-23.** Load Planet… (Settings → World) and dropping a file on the page (`openPlanet` reads the manifest
+  and measures the file first, then reads it). The mesh is saved with its neighbours, and a loaded history keeps its saved
+  mesh. Verified in Chrome:
+  - **Exact:** a 20K / 600 Myr / 640K planet saved, then loaded. Every one of its 39 export maps matched the original
+    byte for byte (the README differed only in its date), and saving the loaded planet again gave the same file (only
+    `savedAt` differed).
+  - **Speed:** 160K / 10M opened in 2.2 s and was on screen in 7 s; it took 176 s plus 98 s to build.
+  - **Bad files:** a file that is not a planet is refused with a note, and the world on screen stays.
+  - **Phones:** a history over 400 MB is refused. A detailed moment over 150 MB is left in the file, with a note to add
+    detail at the phone's size. This is a byte budget, not the "640K or 8192 px" first planned: a desktop's 640K moment
+    is 4096 px wide, ~200 MB.
+  - **Not tested:** on a real phone, and in Firefox (the history is data, so it is the same by construction).
+- **S3 built 2026-10-23.**
+  - `migrations.js`: a frozen copy of codec 1's unpack, steps between frame or finish versions (none yet), and a field an
+    older file lacks read as zeros (today's per-cell fields from `snapshot.js`'s `frameArrays`).
+  - A moment too old to read is left in the file. Its history opens on that moment, and a note offers Add detail.
+  - The first fixture, `v2/tools/fixtures/saves/format1-frame1-finish1-codec1.orogen` (9.2 MB, mostly the climate's 1°
+    grids). Kept fixtures are never replaced, and the deploy leaves `v2/tools` out.
+  - `check-save.mjs` part (b) opens every fixture, builds a frame's terrain, draws all 80 export maps (through
+    `export.js`'s new `produceMap`) and traces the rivers.
+  - Part (a) also checks:
+    - frame-pack.js still packs as codec 1;
+    - a newer file is refused;
+    - hand-made older files: an older finish version, and frames without `margin` and `mantleHeat`.
+  - Both older files open in Chrome. The old moment is set aside, Add detail re-details it, and the field-less history draws.
+  - Docs: the CLAUDE.md rule, both READMEs, the tutorial's last step, the SEO feature lists and llms.txt. What's New:
+    the developer's call.
+- **S4 built 2026-10-23.** On a loaded history, Extend history runs it again from its seed out of sight, with Stop. Each
+  replayed frame is compared with the file's, every packed field byte for byte and every property; no hashes are needed,
+  since the saved frames are in memory. If all match, it runs on as a normal Extend; if one differs, the history stays
+  view-only and says so. Verified in Chrome:
+  - a file built here, extended to 360 Myr, saved and loaded: the replay matched in 8.5 s, then extended to 1300 Myr;
+  - Stop part-way: back to Extend history;
+  - the same file with its continent size changed: "comes out otherwise from 0 Myr", and Extend is hidden.
 
 ## The seven strengths
 - **Climate depth**: untouched (the climate is saved as computed).

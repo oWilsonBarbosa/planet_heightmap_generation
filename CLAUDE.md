@@ -88,3 +88,5 @@ After any code change that adds, removes, or modifies slider controls, update th
 - The `RADICES` array (the count values in right-to-left order)
 - The `encodePlanetCode` and `decodePlanetCode` functions (packing/unpacking order)
 - The corresponding slider wiring in `js/main.js` (the `map` objects in the `generate-done` handler, `applyCode`, and hash-loading code)
+
+After any code change to what an Evolution history frame or detailed moment holds (`v2/js/tectonics/snapshot.js`, `frame-pack.js`, `v2/js/finish/`), or to `v2/js/save/`, run `node v2/tools/check-save.mjs`: planet files (`.orogen`, the Export panel's Save planet) saved by an earlier version must keep opening. Adding data needs nothing — a new per-cell frame field goes in `snapshot.js`'s `frameArrays`, and an older file reads it as zeros. Changing the **meaning** of saved data (an enum's numbering, a byte scale, a layout, row order) needs its version bumped in `v2/js/save/versions.js`, a step from the old meaning in `v2/js/save/migrations.js` (for a detailed moment it may be none: old moments are then detailed again) and a new fixture (`node v2/tools/check-save.mjs --fixture`); see `v2/README.md`.

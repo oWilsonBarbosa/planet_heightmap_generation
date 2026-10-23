@@ -210,6 +210,29 @@ export function hillshadeMap(fin, W, exaggeration, centerLon = 0) {
 }
 
 /**
+ * One map of a finished moment, W wide, as the panel asks for it: `job` {row (a CATALOGUE row), variant ('colour' or
+ * 'data'), file (one of the row's data files), season}; `lk` the look ({lut, exaggeration, water, riverQ, byRegime,
+ * shaded, centerLon}). (v2/tools/check-save.mjs draws every one from each saved planet it keeps.)
+ */
+export function produceMap(fin, W, lk, job) {
+    const s = job.season || 'year', id = job.row.id, c = lk.centerLon;
+    if (job.variant === 'colour') {
+        if (id === 'color') return colorMap(fin, W, lk);
+        if (id === 'satellite') return satelliteMap(fin, W, s, lk);
+        if (id === 'koppen') return koppenMap(fin, W, c);
+        if (id === 'rivers') return riversMap(fin, W, lk);
+        return climateMap(fin, W, CLIMATE_LAYER_OF[id] || id, s, lk);
+    }
+    const key = job.file.key, H = W >> 1;
+    if (key === 'heightmap') return { kind: 'gray16', W, H, data: heightmap16(fin.raster, W, c) };
+    if (key === 'landheightmap') return { kind: 'gray16', W, H, data: landHeightmap16(fin.raster, W, c) };
+    if (key === 'landmask') return { kind: 'gray8', W, H, data: landMask8(fin.raster, W, c) };
+    if (key === 'hillshade') return hillshadeMap(fin, W, lk.exaggeration, c);
+    if (key === 'koppenIndex') return { kind: 'gray8', W, H, data: koppenIndexMap(fin, W, c) };
+    return valueMap(fin, W, key, s, job.file.scale, c);
+}
+
+/**
  * Wire the export panel on the Evolution page. `moment()`: the moment the dialog opens for ({ frame, fin, seed }) or null;
  * `look()`: the Terrain view's look ({ lut, exaggeration, water, riverQ, byRegime }); `centerLon()`: the map view's;
  * `planetFile`: the page's planet file ({ status, save }: export-panel.js), offered beside the maps.
@@ -228,23 +251,7 @@ export function initEvolutionExport({ moment, look, centerLon, projection = null
         names: (ctx, opts) => { const c = Math.round(opts.centerLon || 0); return { start: ['orogen-evolution', ctx.seed, `${Math.round(ctx.frame.time)}Myr`], end: [c ? `c${Math.abs(c)}${c > 0 ? 'E' : 'W'}` : null] }; },
         about: (ctx, opts) => ({ page: 'Evolution', planet: `seed ${ctx.seed}, the moment at ${Math.round(ctx.frame.time)} Myr`, link: location.href,
             sizeNote: opts.width > ctx.fin.raster.w ? `enlarged from the ${ctx.fin.raster.w} px the moment was detailed at` : opts.width < ctx.fin.raster.w ? `averaged down from ${ctx.fin.raster.w} px` : 'the width the moment was detailed at' }),
-        produce: async (rctx, job) => {
-            const { W, look: lk, fin } = rctx, s = job.season || 'year', id = job.row.id, c = lk.centerLon;
-            if (job.variant === 'colour') {
-                if (id === 'color') return colorMap(fin, W, lk);
-                if (id === 'satellite') return satelliteMap(fin, W, s, lk);
-                if (id === 'koppen') return koppenMap(fin, W, c);
-                if (id === 'rivers') return riversMap(fin, W, lk);
-                return climateMap(fin, W, CLIMATE_LAYER_OF[id] || id, s, lk);
-            }
-            const key = job.file.key, H = W >> 1;
-            if (key === 'heightmap') return { kind: 'gray16', W, H, data: heightmap16(fin.raster, W, c) };
-            if (key === 'landheightmap') return { kind: 'gray16', W, H, data: landHeightmap16(fin.raster, W, c) };
-            if (key === 'landmask') return { kind: 'gray8', W, H, data: landMask8(fin.raster, W, c) };
-            if (key === 'hillshade') return hillshadeMap(fin, W, lk.exaggeration, c);
-            if (key === 'koppenIndex') return { kind: 'gray8', W, H, data: koppenIndexMap(fin, W, c) };
-            return valueMap(fin, W, key, s, job.file.scale, c);
-        },
+        produce: async (rctx, job) => produceMap(rctx.fin, rctx.W, rctx.look, job),
     };
     return initExportPanel({ host: document.getElementById('exportCard'), overlay: document.getElementById('exportOverlay'), catalogue: CATALOGUE, adapter, onOpen: moment, getCenterLon: centerLon, getProjection: projection });
 }

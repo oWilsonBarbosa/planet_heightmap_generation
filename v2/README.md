@@ -37,7 +37,8 @@ history length, ending, the planet's **Temperature** (−30…+30 W/m²) and **P
 options (`greenhouseWm2`: a radiative forcing in the energy balance; `precipScale`: the evaporation in the rain budget — so the ice, winds, currents and rain answer them), for the preview climate and Add detail alike; they change the climate only, so
 previews are worked out again when shown and a detailed moment says it was made with the old ones (in the link: `greenhouse=`,
 `rain=`) — and **Quality** (Fast 20K plates / 160K terrain · Balanced 40K / 160K · Best 80K / 640K · Custom,
-which shows the two resolutions), with Build This World — then the **context card**, and **View** (terrain colours,
+which shows the two resolutions), with Build This World and **Load Planet…** (a planet file saved from the Export panel —
+or drop one anywhere on the page) — then the **context card**, and **View** (terrain colours,
 globe or map, grid, auto-rotate, playback speed, stats). The context card names the moment shown, a **Preview** or
 **Detailed** badge, and the one thing to do next — **Add detail** (with its Detail level), **Cancel** while it runs, or
 **Export** — its button mirrored on the timeline, beside the moment; on the detailed moment it holds the rivers' options,
@@ -54,7 +55,11 @@ timeline to scrub and play; changing the terrain resolution redraws the same his
 new build). **Extend history** runs a finished history on, 20 Myr at a time in the worker that ran it, until Stop
 extending (`simulate`'s `resume`: the pieces are the
 one history, bit for bit; the link records how far — `more=` — and rebuilds it; it stops for good at a memory budget,
-~13,000 Myr at 40K). Its views are V1's:
+~13,000 Myr at 40K). A history opened from a planet file is as it was saved — its plates exactly, in any browser — its
+terrain, previews and pictures drawn again with the code of the day; it has no simulation behind it, so its **Extend
+history** first runs it again from its seed out of sight (as long as it took to build; Stop stops it), checking every
+moment against the file's to the bit — the same, it runs on from where the file ended; otherwise (another browser, or an
+earlier World Orogen, built it) it stays to view, and says so. Its views are V1's:
 Terrain (the lab's relief, or one of fifteen other palettes — maps and other worlds; "Blue Marble (by height)" colours by
 height alone), Heightmap and Plates, globe (in V1's space: stars,
 atmosphere, sunlight glinting off the sea) or map (centre longitude), grid, a Hillshade toggle (off, every view flat
@@ -137,7 +142,10 @@ painted at the full width. Every map is centred on the map view's Center Longitu
 projections (the inverse per pixel; the same inverses in GLSL, `js/view/projection-glsl.js`, draw the map view itself
 in the projection chosen beside Center Longitude). Beside the maps, **Planet file** saves the whole history and the
 detailed moment as one `.orogen` file (a deflated ZIP: `js/save/`, plans/V2_SAVE_LOAD_PLAN.md) — measured at 40K plates,
-1200 Myr and 2.5M detail: 355 MB of data, a 140 MB file, saved in 5 s and read back in 1.5 s.
+1200 Myr and 2.5M detail: 355 MB of data, a 140 MB file, saved in 5 s and read back in 1.5 s; at 160K plates, 600 Myr
+and 10M detail: 558 MB, a 211 MB file, saved in 8 s and opened in 2 s (on screen in 7 s — built, it took 176 s and 98 s).
+A phone opens a history it can hold (400 MB); a desktop's detailed moment (more than 150 MB) is left in the file there,
+the moment ready to be detailed at the phone's size.
 
 ```
 node tuning/dev-server.mjs 8123        # any static server works; there is no build step
@@ -169,11 +177,18 @@ node --max-old-space-size=16000 v2/tools/render-moment.mjs --seed 799224 --cont 
 node v2/tools/shoot-lab.mjs 4 56 http://localhost:8123 scene=india   # screenshots + page smoke test (needs the server)
 node v2/tools/probe-play.mjs 8b history 40     # presses Play headlessly: frames painted, the page's long tasks (EXTRA=cells=2500000)
 node v2/tools/bench-lab.mjs 2500000           # the lab's terrain pipeline piece by piece: timings + output hashes (is a speed-up exact?)
-node v2/tools/check-save.mjs                  # the planet file: a small history and detailed moment saved and read back bit for bit → v2/out/check-save.orogen
+node v2/tools/check-save.mjs                  # the planet file: (a) a small history and detailed moment saved and read back bit for bit, and older
+                                              # files made by hand → v2/out/; (b) every planet kept in tools/fixtures/saves/ opens, its terrain and every export map drawn
+node v2/tools/check-save.mjs --fixture        # (a) on a small planet kept as the fixture of today's versions — once per version
 ```
 
-After a change to what a frame or a detailed moment holds, or to `js/save/`, run `check-save.mjs`; if the change alters
-the **meaning** of saved data (not just adds to it), bump its version in `js/save/versions.js` (plans/V2_SAVE_LOAD_PLAN.md).
+After a change to what a frame or a detailed moment holds, or to `js/save/`, run `check-save.mjs`: planets saved by an
+earlier World Orogen must keep opening. **Adding** data needs nothing (a new per-cell frame field belongs in
+`snapshot.js`'s `frameArrays`; an older file reads it as zeros — that feature off). **Changing the meaning** of saved data
+(an enum's numbering, a byte scale, a layout) needs its version bumped in `js/save/versions.js`, a step from the old
+meaning in `js/save/migrations.js` (for a finish version, none: its old moments are then detailed again), and a new
+fixture (`--fixture`); if `frame-pack.js` packs otherwise, bump `FRAME_CODEC` (the check says so) — the frozen codec 1
+still reads the old files (plans/V2_SAVE_LOAD_PLAN.md).
 
 After an engine change run `check-invariants.mjs`, `check-scale.mjs` and the check scripts of the phases the change
 touches; run all of them before calling a piece of work done. They need `npm install` (delaunator, pngjs; puppeteer
@@ -263,12 +278,14 @@ js/finish/         the Finish step (plans/V2_FINISH_PLAN.md): finish.js (the sta
                    regimes, lakes), finish-cover (the land's cover and its colours from space)
 js/save/           the planet file (plans/V2_SAVE_LOAD_PLAN.md): planet-file (save / read a history and its detailed moment),
                    tree-codec (any plain data with typed arrays as JSON + one binary), zip-io (a deflated ZIP written and
-                   read in pieces), versions (what a file's data means; bump on a change of meaning)
+                   read in pieces), versions (what a file's data means; bump on a change of meaning), migrations (an older
+                   file read today: the frozen codec 1, the steps between versions, fields it lacks as zeros)
 js/app/            the lab: shell (lab-main), globe, canvas overlays, phases/ (one module per phase + phase-kit),
                    history-runner / history-worker (a scene's history off the page's thread, frames streamed back),
                    helper-pool / helper-worker (a few workers the history's worker starts: the start world's layout
                    attempts and each rift's junctions, side by side — the same history)
-tools/             check scripts (+ lib/check-kit.mjs: shared frame helpers), trace / render / screenshot helpers
+tools/             check scripts (+ lib/check-kit.mjs: shared frame helpers), trace / render / screenshot helpers; fixtures/saves/ (a
+                   small planet file per version of the format, which check-save.mjs opens)
 ```
 
 ## How the engine is put together

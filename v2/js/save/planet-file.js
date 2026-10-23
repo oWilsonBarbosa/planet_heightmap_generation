@@ -5,7 +5,7 @@
 //
 // A ZIP (zip-io.js), each part a tree (tree-codec.js: NAME.json, and NAME.bin for its typed arrays):
 //   manifest.json          the file's versions (versions.js), the world's settings, the history and the moment in brief
-//   history/mesh           the plate mesh's points — its cells numbered the same in every browser
+//   history/mesh           the plate mesh: its points and their neighbours — its cells numbered the same in every browser
 //   history/events         the history's event log, once (every frame carries a copy of the log so far)
 //   history/frames/NNNN    each frame: its properties, and its fields packed as frame-pack.js packs them
 //   detail/moment          the detailed moment (finish-worker.js's raster, rivers and climate; its stats, time and climate)
@@ -14,6 +14,7 @@ import { ZipWriter, ZipReader } from './zip-io.js';
 import { encodeTree, decodeTree, binPieces, allocArrays, arrayFiller } from './tree-codec.js';
 import { FORMAT, FORMAT_VERSION, FRAME_VERSION, FINISH_VERSION, FRAME_CODEC } from './versions.js';
 import { packFrame, packedBytes } from '../tectonics/frame-pack.js';
+import { migrateFrame, migrateMoment, momentReadable } from './migrations.js';
 
 /** A detailed moment's own data (not the views' caches the page hangs on it: river paths, grids, its size). */
 const MOMENT_KEYS = ['cells', 'raster', 'rivers', 'climate', 'stats', 'secs', 'climateKey'];
@@ -56,7 +57,7 @@ export async function savePlanet({ settings, history, detail, onProgress = () =>
     // the parts, encoded (their arrays referenced, not copied); the event log once, each frame's own copy as how much of
     // it there was, and any entry it holds otherwise (none, while the log is only ever added to)
     const packed = frames.map(packedOf), log = packed.at(-1).meta.events ?? [], logJson = log.map(e => JSON.stringify(e));
-    const parts = [['history/mesh', encodeTree({ numCells: simMesh.numCells, xyz: simMesh.xyz })], ['history/events', encodeTree(log)]];
+    const parts = [['history/mesh', encodeTree({ numCells: simMesh.numCells, xyz: simMesh.xyz, adjOffset: simMesh.adjOffset, adjList: simMesh.adjList })], ['history/events', encodeTree(log)]];
     packed.forEach(({ meta, fields }, i) => {
         const { events = [], ...rest } = meta, differ = [];
         for (let j = 0; j < events.length; j++) if (j >= log.length || JSON.stringify(events[j]) !== logJson[j]) differ.push([j, events[j]]);
@@ -94,11 +95,14 @@ export async function savePlanet({ settings, history, detail, onProgress = () =>
 }
 
 /**
- * A planet file read back: {manifest, mesh: {numCells, xyz}, frames: [{meta, fields}] (as frame-pack.js packs them — the
- * page's `new PackedFrame(f)`), detail: {frame (its index), moment} or null}. `onProgress(share, text)`. Throws, saying
- * why, on a file it cannot read.
+ * A planet file opened: its manifest read and checked, and the bytes its history and its detailed moment hold (before
+ * compression) — so a page can refuse what it cannot hold before reading any of it. `read({detail, onProgress})` then
+ * reads it, an older file's parts as today reads them (migrations.js): {mesh: {numCells, xyz, adjOffset, adjList}, frames:
+ * [{meta, fields}] (as frame-pack.js packs them — the page's `new PackedFrame(f)`), detail: {frame (its index), moment}
+ * or null (none in the file, `detail: false`, or one too old to read: `detailNote` says so)}. `onProgress(share, text)`.
+ * Throws, saying why, on a file it cannot read.
  */
-export async function readPlanet(blob, { onProgress = () => {} } = {}) {
+export async function openPlanet(blob) {
     const zip = await ZipReader.open(blob);
     if (!zip.has('manifest.json')) throw new Error('not a planet file (it has no manifest)');
     const manifest = await zip.json('manifest.json');
@@ -107,29 +111,47 @@ export async function readPlanet(blob, { onProgress = () => {} } = {}) {
         throw new Error('this planet was saved by a newer World Orogen — reload the page to update it, then open the file again');
     }
     if (manifest.littleEndian === false) throw new Error('this planet file was written in a byte order this device does not use');
-    let total = 0, done = 0;
-    for (const e of zip.entries.values()) total += e.size;
-    const read = async (name, what) => {
-        const json = await zip.json(`${name}.json`), arrays = allocArrays(json.a);
-        done += zip.entries.get(`${name}.json`).size;
-        if (json.a.length) {
-            const fill = arrayFiller(json.a, arrays);
-            let last = 0;
-            for await (const p of zip.pieces(`${name}.bin`)) {
-                fill.push(p); done += p.length;
-                if (performance.now() - last > 250) { last = performance.now(); onProgress(done / total, `Opening ${what}… ${Math.round(100 * done / total)}%`); }
+    let historyBytes = 0, detailBytes = 0;
+    for (const e of zip.entries.values()) { if (e.name.startsWith('history/')) historyBytes += e.size; else if (e.name.startsWith('detail/')) detailBytes += e.size; }
+    // (a moment too old to read today is left in the file: its history opens, ready to be detailed again)
+    const hasDetail = !!manifest.detail && zip.has('detail/moment.json'), readable = hasDetail && momentReadable(manifest.finishVersion);
+    async function read({ detail: wantDetail = true, onProgress = () => {} } = {}) {
+        const withDetail = wantDetail && readable, total = historyBytes + (withDetail ? detailBytes : 0) || 1;
+        let done = 0;
+        const part = async (name, what) => {
+            const json = await zip.json(`${name}.json`), arrays = allocArrays(json.a);
+            done += zip.entries.get(`${name}.json`).size;
+            if (json.a.length) {
+                const fill = arrayFiller(json.a, arrays);
+                let last = 0;
+                for await (const p of zip.pieces(`${name}.bin`)) {
+                    fill.push(p); done += p.length;
+                    if (performance.now() - last > 250) { last = performance.now(); onProgress(done / total, `Opening ${what}… ${Math.round(100 * done / total)}%`); }
+                }
+                fill.done();
             }
-            fill.done();
+            return decodeTree(json, arrays);
+        };
+        onProgress(0, 'Opening the history…');
+        const mesh = await part('history/mesh', 'the history'), log = await part('history/events', 'the history'), frames = [];
+        for (let i = 0; i < manifest.history.frames; i++) {
+            const f = await part(frameName(i), 'the history');
+            const events = log.slice(0, f.events);
+            for (const [j, e] of f.eventsDiffer ?? []) events[j] = e;
+            frames.push(migrateFrame({ meta: { ...f.meta, events }, fields: f.fields }, manifest, mesh.numCells));
         }
-        return decodeTree(json, arrays);
-    };
-    const mesh = await read('history/mesh', 'the history'), log = await read('history/events', 'the history'), frames = [];
-    for (let i = 0; i < manifest.history.frames; i++) {
-        const f = await read(frameName(i), 'the history');
-        const events = log.slice(0, f.events);
-        for (const [j, e] of f.eventsDiffer ?? []) events[j] = e;
-        frames.push({ meta: { ...f.meta, events }, fields: f.fields });
+        let detail = null, detailNote = hasDetail && !readable ? migrateMoment(null, manifest.finishVersion).note : null;
+        if (withDetail) {
+            const m = migrateMoment(await part('detail/moment', 'the detailed moment'), manifest.finishVersion);
+            if (m.moment) detail = { frame: manifest.detail.frame, moment: m.moment }; else detailNote = m.note;
+        }
+        return { mesh, frames, detail, detailNote };
     }
-    const detail = manifest.detail && zip.has('detail/moment.json') ? { frame: manifest.detail.frame, moment: await read('detail/moment', 'the detailed moment') } : null;
-    return { manifest, mesh, frames, detail };
+    return { manifest, historyBytes, detailBytes: readable ? detailBytes : 0, read };
+}
+
+/** A planet file read back whole (openPlanet, then read): {manifest, mesh, frames, detail}. */
+export async function readPlanet(blob, opts) {
+    const planet = await openPlanet(blob);
+    return { manifest: planet.manifest, ...(await planet.read(opts)) };
 }

@@ -43,7 +43,8 @@
             "Timeline of the whole history to scrub and replay",
             "Detailed moments with rivers, lakes, glaciers and a seasonal climate",
             "Satellite and Köppen climate views of a detailed moment",
-            "Export of a detailed moment, every map as colour or as 16-bit data: colour map, satellite view (year, January, July), Köppen climate zones and class index, each climate layer, 16-bit heightmaps, land mask, hillshade and a transparent rivers-and-lakes layer, in ten map projections, one PNG or a ZIP with a README, up to 16384 px wide"
+            "Export of a detailed moment, every map as colour or as 16-bit data: colour map, satellite view (year, January, July), Köppen climate zones and class index, each climate layer, 16-bit heightmaps, land mask, hillshade and a transparent rivers-and-lakes layer, in ten map projections, one PNG or a ZIP with a README, up to 16384 px wide",
+            "Planet files: the whole history and its detailed moment saved as one file and opened again later, without building either again — the same planet in any browser"
         ],
         "screenshot": "https://orogen.studio/assets/studio/evolution.jpg",
         "isPartOf": { "@type": "WebSite", "name": "World Orogen", "url": "https://orogen.studio/" }
@@ -140,6 +141,9 @@
                 </div>
                 <div id="worldPending" class="evo-card-note" hidden>The new plate resolution applies when you build this world</div>
                 <button id="rebuildBtn" class="evo-climate-btn" title="Build the world of this seed with these settings">Build This World</button>
+                <button id="loadBtn" class="evo-climate-btn evo-load-btn" title="Open a planet file (.orogen) saved from the Export panel: its history and detailed moment, as they were saved — no waiting for either">Load Planet…</button>
+                <input type="file" id="loadFile" accept=".orogen" hidden>
+                <div id="loadNote" class="evo-card-note" hidden></div>
             </div>
         </details>
         <div id="momentCard" class="evo-card">
@@ -336,6 +340,7 @@
         <div id="finishBar" class="evo-finish-bar evo-timeline-progress" hidden><i></i></div>
     </div>
     <div id="hoverInfo"></div>
+    <div id="dropOverlay" class="evo-drop" hidden><div>Drop to open this planet file</div></div>
     <div id="exportOverlay" class="hidden">
         <div id="exportCard">
             <button id="exportClose" aria-label="Close">&times;</button>
@@ -370,6 +375,7 @@
                 <h3>Steer It</h3>
                 <p><strong>New World</strong> starts a fresh history from a random seed. Open <strong>World</strong> to set the seed, the starting continent size, how long the history runs, how it should end, the planet's <strong>Temperature</strong> and <strong>Precipitation</strong>, and the <strong>Quality</strong>.</p>
                 <p>At the end of a history, <strong>Extend history</strong> runs it on for as long as you like. The link in your address bar rebuilds the same history, so you can share it.</p>
+                <p>To keep a planet, <strong>Save planet</strong> in Export puts its whole history and its detailed moment in one file. <strong>Load Planet…</strong> in World opens it again later, with no waiting<span data-touch=".">, as does dropping the file on the page.</span></p>
             </div>
             <div class="tutorial-dots">
                 <span class="dot active" data-dot="0"></span>

@@ -7,7 +7,7 @@
 
 import Delaunator from 'delaunator';
 import { setDelaunator } from '../../../js/sphere-mesh.js';
-import { buildSimMesh } from '../core/sim-mesh.js';
+import { buildSimMesh, meshFromArrays } from '../core/sim-mesh.js';
 import { terrainMeshAsync } from '../terrain/terrain-mesh.js';
 import { terrainConfig } from '../terrain/terrain-config.js';
 import { SmoothMapRaster } from '../view/map-raster.js';
@@ -30,7 +30,8 @@ import { initEvolutionExport } from './export.js';
 import { PROJECTIONS } from '../view/projections.js';
 import { renderProjectionOptions } from '../view/export-panel.js';
 import { downloadBlob } from '../view/png.js';
-import { savePlanet, planetBytes } from '../save/planet-file.js';
+import { savePlanet, planetBytes, openPlanet } from '../save/planet-file.js';
+import { PackedFrame } from '../tectonics/frame-pack.js';
 import { SMALL_DEVICE } from '../core/device.js';
 
 setDelaunator(Delaunator);
@@ -133,6 +134,25 @@ document.addEventListener('click', e => {
 $('sidebarContent').addEventListener('scroll', hideTip, { passive: true });
 ui.build.addEventListener('click', () => { ui.seed.value = String(Math.floor(Math.random() * 1e6)); build(); });   // (New World: a new seed)
 $('rebuildBtn').addEventListener('click', () => build());                                                         // (Settings: this seed, these settings)
+// Load Planet…: a planet file saved from the Export panel (a phone's picker may not know .orogen: there it shows every file)
+if (IS_TOUCH) $('loadFile').removeAttribute('accept');
+$('loadBtn').addEventListener('click', () => $('loadFile').click());
+$('loadFile').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadPlanet(f); });
+// …or dropped anywhere on the page (not while the export panel or the tutorial is open over it)
+{
+    let depth = 0;
+    const files = e => [...(e.dataTransfer?.types ?? [])].includes('Files'), covered = () => !$('exportOverlay').classList.contains('hidden') || !$('tutorialOverlay').classList.contains('hidden');
+    const drop = on => { $('dropOverlay').hidden = !on; };
+    addEventListener('dragenter', e => { if (!files(e) || covered()) return; e.preventDefault(); depth++; drop(true); });
+    addEventListener('dragover', e => { if (!files(e) || covered()) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+    addEventListener('dragleave', e => { if (files(e) && --depth <= 0) { depth = 0; drop(false); } });
+    addEventListener('drop', e => {
+        if (!files(e)) return;
+        e.preventDefault(); depth = 0; drop(false);
+        const f = e.dataTransfer.files[0];
+        if (f && !covered()) loadPlanet(f);
+    });
+}
 // (terrain detail only redraws the terrain: the history is the same at any terrain resolution)
 ui.terrain.addEventListener('change', () => setTerrainDetail());
 // (more: how far the history was kept going — a link rebuilds the same history, run on as far)
@@ -217,29 +237,43 @@ const simMeshOf = n => { if (!simMeshes.has(n)) simMeshes.set(n, buildSimMesh(n,
 let B = null;                           // { controller, player, frames, simMesh, tMesh, raster, live, started, endMyr, error }
 let playing = false, playTime = 0, lastTick = 0, preparing = null, painted = null, paintedT = null, paintedMesh = null, paintedSharp = false, dirty = true, cellRgb = null, simRgb = null;
 
-async function build() {
+/** A history's state, as build() starts one and loadPlanet() opens one (`o`: what differs). */
+function newWorld(o) {
+    return { controller: new AbortController(), player: null, frames: [], simMesh: null, tMesh: null, raster: null, live: true, started: performance.now(), error: null, doneText: null,
+        climates: new Map(), climateJob: null, problem: null,         // (climates: frame → {tMesh, data}, while this history is open)
+        run: null, going: false, wantGo: false, moreTo: 0,                 // (keep going: the history's run, kept to run on)
+        finishes: new Map(), finishJob: null, finishNote: null, ...o };   // (finishes: frame → {cells, raster, secs} — the one detailed moment)
+}
+/** The world shown goes (its history's worker, its detail under way, its terrain's): another takes its place. */
+function leaveWorld() {
+    $('loadNote').hidden = true;
     if (B?.finishJob) finisher.cancel();
     B?.controller.abort();
     B?.player?.dispose();
-    const seed = Number(ui.seed.value) || 0, cont = Number(ui.cont.value) / 100, len = Number(ui.len.value), ending = ui.ending.value;
-    const simCells = Number(ui.sim.value), terrainCells = Number(ui.terrain.value);
-    const b = B = { controller: new AbortController(), player: null, frames: [], simMesh: null, simCells, tMesh: null, raster: null, live: true, started: performance.now(), endMyr: len, error: null, lengthMyr: len, doneText: null,
-        contPct: Number(ui.cont.value), ending,                         // (the settings it was built with, for its planet file)
-        climates: new Map(), climateJob: null, problem: null,         // (climates: frame → {tMesh, data}, while this history is open)
-        run: null, going: false, wantGo: false, moreTo: linkedMore,        // (keep going: the history's run, kept to run on)
-        finishes: new Map(), finishJob: null, finishNote: null };           // (finishes: frame → {cells, raster, secs} — the one detailed moment)
-    linkedMore = 0;
+}
+/** The view emptied for a world that is starting (`len` Myr long, played as it builds) or opening. */
+function clearView(len, { play, label }) {
     saveUrl(); labels();
     ui.world.open = false;                                                            // (the World section folds to its summary)
-    // (watching it build is playing it from the start, at the speed chosen — held at the newest moment built)
-    playing = true; playTime = 0; preparing = null; painted = null; paintedT = null; paintedMesh = null; paintedSharp = false; dirty = true;
+    playing = play; playTime = 0; preparing = null; painted = null; paintedT = null; paintedMesh = null; paintedSharp = false; dirty = true;
     updateClimateUi();
     setScale(len); ui.time.value = 0; rail();
     blank();                                                                          // (the old world goes at once: a new one is starting)
-    ui.timeLabel.textContent = 'Starting…';
-    ui.play.innerHTML = '&#x23F8;';
+    ui.timeLabel.textContent = label;
+    ui.play.innerHTML = play ? '&#x23F8;' : '&#x25B6;';
     ui.timeline.hidden = false;
     updateCard();
+}
+
+async function build() {
+    leaveWorld();
+    const seed = Number(ui.seed.value) || 0, cont = Number(ui.cont.value) / 100, len = Number(ui.len.value), ending = ui.ending.value;
+    const simCells = Number(ui.sim.value), terrainCells = Number(ui.terrain.value);
+    const b = B = newWorld({ simCells, endMyr: len, lengthMyr: len, moreTo: linkedMore,
+        contPct: Number(ui.cont.value), ending });                       // (the settings it was built with, for its planet file)
+    linkedMore = 0;
+    // (watching it build is playing it from the start, at the speed chosen — held at the newest moment built)
+    clearView(len, { play: true, label: 'Starting…' });
     status(`Starting a world (seed ${seed})…`, 0);
     if (IS_TOUCH) ui.panel.classList.add('collapsed');
     await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));            // (let the status paint first)
@@ -259,7 +293,7 @@ async function build() {
         simRgb = new Uint8Array(b.simMesh.numCells * 3);
         const done = await run;
         if (B !== b) return;
-        b.run = done; b.simMyr = done.time; b.steps = done.steps;
+        b.run = done; b.simMyr = done.time; b.steps = done.steps; b.stopped = done.stopped;
         b.live = false; b.endMyr = b.frames.at(-1).time;
         setScale(b.endMyr); rail();
         b.player.finish();
@@ -322,6 +356,74 @@ async function keepGoing(b, until = Infinity) {
     updateCard(); dirty = true;
 }
 
+// ── Extend history, on a history opened from a file: the simulation that made it is not in the file, so it is run again
+// here from its seed — out of sight, each moment checked against the file's to the bit — and, where every one matches
+// (this browser's arithmetic, this version's rules), it runs on from where the file ended. Where one differs (another
+// browser, or an earlier World Orogen, built it), the history stays as it is, to view, and says so ──
+/** The bytes of two typed arrays (or both absent) the same. */
+function sameBytes(a, b) {
+    if (!a || !b) return !a && !b;
+    if (a.byteLength !== b.byteLength) return false;
+    const x = new Uint8Array(a.buffer, a.byteOffset, a.byteLength), y = new Uint8Array(b.buffer, b.byteOffset, b.byteLength);
+    for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false;
+    return true;
+}
+/** Two frames (PackedFrames) the same: every field as packed, to the bit, and every property. */
+function sameFrame(a, b) {
+    const pa = a._packed, pb = b._packed, ka = Object.keys(pa), ma = Object.keys(a);
+    if (ka.length !== Object.keys(pb).length || ma.length !== Object.keys(b).length) return false;
+    for (const k of ka) {
+        const x = pa[k], y = pb[k];
+        if (!y || x.type !== y.type || x.length !== y.length || !Object.is(x.bg, y.bg) || x.first !== y.first) return false;
+        if (!sameBytes(x.bits, y.bits) || !sameBytes(x.values, y.values) || !sameBytes(x.steps, y.steps) || !sameBytes(x.far, y.far)) return false;
+    }
+    return ma.every(k => JSON.stringify(a[k]) === JSON.stringify(b[k]));
+}
+async function replayHistory(b) {
+    if (B !== b || b.run || b.replay) return;
+    const ctl = new AbortController(), job = b.replay = { ctl, share: 0, started: performance.now() };
+    b.controller.signal.addEventListener('abort', () => ctl.abort(), { once: true });          // (the world closed: the replay goes too)
+    updateCard();
+    let differs = null;
+    const total = b.simMyr, onTime = t => {
+        if (B !== b) return;
+        if (b.replay !== job) { progress(b, t); return; }                                       // (run on: extending)
+        job.share = Math.min(1, t / total);
+        status(`Running the history again here, so that it can be extended… ${t.toFixed(0)} of ${total.toFixed(0)} Myr · ${((performance.now() - job.started) / 1000).toFixed(0)} s`, job.share);
+        updateCard();
+    };
+    const onFrame = (frame, i) => {
+        if (B !== b) return;
+        if (i < b.frames.length) { if (!differs && !sameFrame(frame, b.frames[i])) { differs = b.frames[i]; ctl.abort(); } return; }
+        // (past the file's end: the history running on — as build()'s)
+        b.frames.push(frame); b.player?.addFrame(frame); if (frame.time > Number(ui.time.max)) setScale(frame.time); rail();
+    };
+    let run = null;
+    try {
+        run = await runHistory({ list: 'terrain', scene: SCENE, ending: b.ending, start: { continentalFraction: b.contPct / 100 }, lengthMyr: b.lengthMyr, keep: true, collect: false },
+            b.simMesh, b.seed, SNAPSHOT_MYR, onTime, onFrame, ctl.signal);
+        // (a history kept going before it was saved: run on as far, in the same pieces)
+        let { time, steps } = run;
+        while (time < b.simMyr - 1e-9 && !differs) ({ time, steps } = await run.more(Math.min(b.simMyr, time + GO_PIECE_MYR)));
+        if (differs || steps !== b.steps || Math.abs(time - b.simMyr) > 1e-6) { differs ??= b.frames.at(-1); throw new Error('the history came out otherwise'); }
+        if (B !== b) { run.close(); return; }
+        console.info(`[evolution] history run again to ${time.toFixed(0)} Myr in ${((performance.now() - job.started) / 1000).toFixed(1)} s: every moment the same as the file's`);
+        b.replay = null; b.run = run; b.stopped = run.stopped;
+        keepGoing(b);
+    } catch (err) {
+        run?.close();
+        if (B !== b) return;
+        b.replay = null;
+        if (differs) {
+            b.noReplay = true;
+            b.doneText = `Run again in this browser, this history comes out otherwise from ${differs.time.toFixed(0)} Myr — another browser, or an earlier World Orogen, built it — so it is here to view, not to extend. Build This World builds it again here, to extend it.`;
+            console.info(`[evolution] history run again: it differs from the file's at ${differs.time.toFixed(0)} Myr`);
+        } else if (err.name !== 'AbortError') { b.doneText = `Could not run the history again: ${String(err.message).split('\n')[0]}`; console.error(err); }
+        status(b.doneText, differs ? null : 1);
+        updateCard();
+    }
+}
+
 /** Draw a build's frames on a terrain mesh: a player of its own (the frames so far handed over; the rest arrive as they come). */
 function useTerrain(b, tMesh, cells) {
     const old = b.player;
@@ -356,6 +458,72 @@ async function setTerrainDetail() {
             status(`Could not build the terrain: ${err.message}`, null);
             updateCard();
         }
+        console.error(err);
+    }
+}
+
+// ── a planet file opened (plans/V2_SAVE_LOAD_PLAN.md): its history and its detailed moment as they were saved — the
+// plates exactly so, in any browser — their terrain, previews and pictures drawn again here, with today's code. The
+// history is to view, not to extend: the simulation that made it is not in the file (Build This World builds it again) ──
+const mb = n => (n / 2 ** 20).toFixed(0);
+// (a phone holds a detailed moment of its own size — ~60 MB at 2048 px — not a desktop's 4096 or 8192 px ones)
+const DETAIL_BYTES = IS_TOUCH ? 150e6 : Infinity;
+async function loadPlanet(file) {
+    const name = file.name || 'the planet file';
+    const refuse = why => { const text = `Could not open ${name}: ${why}`; status(text, null); $('loadNote').textContent = text; $('loadNote').hidden = false; };
+    let planet;
+    try { planet = await openPlanet(file); } catch (err) { refuse(String(err.message).split('\n')[0]); console.error(err); return; }
+    const m = planet.manifest, s = m.settings;
+    if (planet.historyBytes > HISTORY_BYTES) { refuse(`its history (${mb(planet.historyBytes)} MB) is longer than this device can hold — open it on a desktop`); return; }
+    const withDetail = planet.detailBytes > 0 && planet.detailBytes <= DETAIL_BYTES;
+    // (the terrain drawn while scrubbing: as it was, but at most a phone's finest)
+    const terrainCells = IS_TOUCH ? Math.min(640000, s.terrain) : s.terrain;
+    leaveWorld();
+    const b = B = newWorld({ simCells: s.sim, endMyr: m.history.toMyr, lengthMyr: s.len, live: false, loading: true, opened: name,
+        seed: s.seed, contPct: s.cont, ending: s.ending, moreTo: s.more || 0, simMyr: m.history.simMyr, steps: m.history.steps, stopped: m.history.stopped });
+    // its settings, and the link to them (the same history again, built here)
+    ui.seed.value = String(s.seed); ui.cont.value = s.cont; ui.len.value = s.len; setIf(ui.ending, s.ending); setIf(ui.sim, String(s.sim));
+    setIf(ui.terrain, String(terrainCells)); ui.tmp.value = s.greenhouse; ui.prc.value = s.rain;
+    ui.quality.value = Object.keys(QUALITY).find(k => QUALITY[k].sim === ui.sim.value && QUALITY[k].terrain === ui.terrain.value) ?? 'custom';
+    $('customGroup').hidden = ui.quality.value !== 'custom';
+    clearView(m.history.toMyr, { play: false, label: 'Opening…' });
+    status(`Opening ${name}…`, 0);
+    if (IS_TOUCH) ui.panel.classList.add('collapsed');
+    try {
+        const { mesh, frames, detail, detailNote } = await planet.read({ detail: withDetail, onProgress: (share, text) => { if (B === b) status(text, share); } });
+        if (B !== b) return;
+        // (a file saved without the mesh's neighbours: the same mesh's, found again here)
+        const near = mesh.adjOffset ? mesh : simMeshOf(mesh.numCells);
+        b.simMesh = meshFromArrays({ numCells: mesh.numCells, xyz: mesh.xyz, adjOffset: near.adjOffset, adjList: near.adjList });
+        b.frames = frames.map(f => new PackedFrame(f));
+        const shown = b.frames[m.detail?.frame ?? 0] ?? b.frames[0];
+        if (detail) { b.finishes.set(b.frames[detail.frame], detail.moment); b.finishOk = true; b.finishNote = `Opened from ${name}`; }
+        // (a moment left in the file — too old to read, or more than a phone can show: this moment, ready to be detailed again)
+        else if (m.detail) {
+            b.loadFrame = shown;
+            b.loadNote = detailNote ? `${detailNote} — add detail to see it again.` : `${name} holds this moment in detail, but at ${mb(planet.detailBytes)} MB it is more than a phone can show — add detail to see it at this device’s size.`;
+        }
+        status(`Building the terrain at ${ui.terrain.selectedOptions[0]?.textContent.split(' ·')[0] ?? terrainCells}…`, null);
+        const tMesh = await terrainMeshAsync(terrainCells);
+        if (B !== b) return;
+        b.loading = false;
+        useTerrain(b, tMesh, terrainCells);
+        simRgb = new Uint8Array(b.simMesh.numCells * 3);
+        setScale(b.endMyr);
+        playTime = shown.time; ui.time.value = playTime; rail();
+        b.player.finish();
+        view.finished = true;
+        const secs = (performance.now() - b.started) / 1000;
+        b.doneText = `Opened ${name} in ${secs.toFixed(0)} s — ${b.endMyr.toFixed(0)} Myr of history · ${b.steps} steps` + (detail ? `, detailed at ${shown.time.toFixed(0)} Myr` : '');
+        console.info(`[evolution] opened ${name}: ${b.frames.length} frames, ${mb(planet.historyBytes)} MB of history + ${detail ? mb(planet.detailBytes) : 0} MB of detail in ${secs.toFixed(1)} s`);
+        status(b.doneText, 1);
+        saveUrl(); labels(); updateCard(); dirty = true;
+    } catch (err) {
+        if (B !== b) return;
+        b.loading = false; b.error = err;
+        b.problem = `Could not open ${name}: ${String(err.message).split('\n')[0]}`;
+        status(b.problem, null);
+        updateCard();
         console.error(err);
     }
 }
@@ -652,9 +820,9 @@ function updateCard() {
     for (const el of [$('cardBadge'), $('momentBadge')]) {
         if (showIf(el, !!badge)) { el.textContent = badge; el.classList.toggle('detailed', isDet); }
     }
-    $('cardTitle').textContent = frame ? `${t} Myr` : 'Starting…';
+    $('cardTitle').textContent = frame ? `${t} Myr` : b?.loading ? 'Opening…' : 'Starting…';
     const computing = !!b?.live && !b.going;
-    $('cardText').textContent = !frame ? 'A new world is starting…'
+    $('cardText').textContent = !frame ? (b?.loading ? 'Opening a planet file…' : b?.problem ? '' : 'A new world is starting…')
         : job ? `Adding detail to ${job.frame.time.toFixed(0)} Myr: ${job.stage}…`
         : isDet ? 'This moment, sculpted in detail. Look around — Satellite and Climate show it at its detail — then export it as map files.'
         : playing ? (computing ? 'Computing the history — scrub through any of it as it fills in. Pause on a moment you like, then add detail.' : 'Pause on a moment you like, then add detail.')
@@ -669,18 +837,28 @@ function updateCard() {
     }
     const note = b?.problem ? b.problem
         : stale && !job ? 'Detailed with the Temperature and Precipitation as they were — its rivers, ice and Satellite view too.'
-        : b?.finishNote && (isDet || !b.finishOk) ? b.finishNote : null;
+        : b?.finishNote && (isDet || !b.finishOk) ? b.finishNote
+        : b?.loadNote && frame === b.loadFrame && !job ? b.loadNote : null;
     if (showIf($('cardNote'), !!note)) $('cardNote').textContent = note;
     // Extend history: once the history has reached its end — Stop while it runs on, Stopping… until its piece is done
-    const ext = ui.extend;
-    if (showIf(ext, !!b?.run?.more)) {
-        ext.disabled = b.going && !b.wantGo;
-        ext.classList.toggle('on', b.going);
-        ext.textContent = !b.going ? 'Extend history' : b.wantGo ? 'Stop extending' : 'Stopping…';
-        ext.title = !b.going ? 'Run the history on from where it ended, for as long as you like' : b.wantGo ? 'Stop the history here (you can extend it again later)' : 'Stopping once this piece of history is done';
+    const ext = ui.extend, replay = b?.replay, canReplay = !!b?.opened && !b.run && !b.noReplay && !b.loading && !b.error;
+    if (showIf(ext, !!b?.run?.more || canReplay)) {
+        if (!b.run) {
+            // (a history opened from a file: run again first — Stop while it is)
+            ext.disabled = false;
+            ext.classList.toggle('on', !!replay);
+            ext.textContent = replay ? `Stop · ${Math.round(100 * replay.share)}%` : 'Extend history';
+            ext.title = replay ? 'Stop running the history again (you can start it again later)'
+                : 'Run the history on from where it ended — first run again here from its seed, out of sight, as long as it took to build (a planet file holds the history, not the simulation that made it)';
+        } else {
+            ext.disabled = b.going && !b.wantGo;
+            ext.classList.toggle('on', b.going);
+            ext.textContent = !b.going ? 'Extend history' : b.wantGo ? 'Stop extending' : 'Stopping…';
+            ext.title = !b.going ? 'Run the history on from where it ended, for as long as you like' : b.wantGo ? 'Stop the history here (you can extend it again later)' : 'Stopping once this piece of history is done';
+        }
     }
     // (the collapsed bottom sheet: the moment and what is going on, in a line)
-    $('sheetLine').textContent = b?.problem && !frame ? b.problem : !frame ? 'Starting a world…' : `${t} Myr · ${badge}` + (job ? ` · adding detail ${pct}%` : computing ? ' · computing the history…' : b?.going ? ' · extending the history…' : '');
+    $('sheetLine').textContent = b?.problem && !frame ? b.problem : !frame ? (b?.loading ? 'Opening a planet…' : 'Starting a world…') : `${t} Myr · ${badge}` + (job ? ` · adding detail ${pct}%` : computing ? ' · computing the history…' : b?.going ? ' · extending the history…' : replay ? ' · running the history again…' : '');
     // Satellite comes with detail: its tab locked on previews
     const satOk = !!(frame && b?.finishes.get(frame)?.climate?.raster?.sat);
     document.querySelector('#mapTabs [data-layer="satellite"]').classList.toggle('locked', !satOk);
@@ -712,7 +890,7 @@ const planetFile = {
         const [greenhouse, rain] = fin.climateKey.split('|').map(Number);
         const { blob } = await savePlanet({
             settings: { seed: b.seed, cont: b.contPct, len: b.lengthMyr, ending: b.ending, sim: b.simCells, terrain: b.terrainCells, greenhouse, rain, more: b.moreTo || 0 },
-            history: { frames: b.frames, simMesh: b.simMesh, simMyr: b.simMyr, steps: b.steps, stopped: b.run?.stopped ?? null, snapshotMyr: SNAPSHOT_MYR },
+            history: { frames: b.frames, simMesh: b.simMesh, simMyr: b.simMyr, steps: b.steps, stopped: b.stopped ?? null, snapshotMyr: SNAPSHOT_MYR },
             detail: { frame, fin }, onProgress: progress });
         return { blob, name: `orogen-${b.seed}-${Math.round(frame.time)}Myr.orogen` };
     },
@@ -850,6 +1028,8 @@ ui.time.addEventListener('input', () => {
 // Extend history / Stop (a stop lets the piece under way finish: the worker is in the middle of it)
 ui.extend.addEventListener('click', () => {
     const b = B;
+    if (b?.replay) { b.replay.ctl.abort(); return; }
+    if (b?.opened && !b.run) { replayHistory(b); return; }
     if (!b?.run?.more) return;
     if (!b.going) keepGoing(b);
     else { b.wantGo = false; b.goUntil = Infinity; updateCard(); }
