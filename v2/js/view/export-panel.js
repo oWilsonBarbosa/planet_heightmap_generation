@@ -39,7 +39,8 @@ const tick = () => new Promise(r => setTimeout(r, 0));
  * Build the panel inside `host` (#exportCard — its close button and title stay) and wire it.
  * `catalogue`: [{ id, label, rows: [{ id, label, tip, colour, data: [{ key, suffix, label, scale, bits }], seasonal, needs }] }]
  * `adapter`: { page, widths(ctx), available(row, ctx), ensure(rows, progress, ctx), begin(W, opts, ctx), produce(rctx,
- * job, progress), end(rctx), names(ctx), about(ctx, opts), options: { hillshade }, koppenClasses }
+ * job, progress), end(rctx), names(ctx), about(ctx, opts), options: { hillshade }, koppenClasses, planetFile? }
+ * (planetFile, a page that saves its planet whole: { status(ctx) → {ok, note}, save(ctx, progress) → {blob, name} })
  * `onOpen()`: the page's context for this opening (null: nothing to export); `getCenterLon()`: the map view's centre.
  * @returns {{ open(): void, close(): void }}
  */
@@ -62,6 +63,10 @@ export function initExportPanel({ host, overlay, catalogue, adapter, onOpen, get
             <label class="xp-opt" id="exportShadeRow"><input type="checkbox" id="chkExportShade" checked> Hillshade on the colour maps <span class="tip" data-tip="Shade the Colour Map and the Satellite view by the relief, as on screen. Off, they are flat colour — to lay your own shading over">?</span></label>
             <label class="xp-opt"><input type="checkbox" id="chkExportReadme" checked> README.txt in the ZIP <span class="tip" data-tip="A text file naming every map, its kind, units and scale, the projection and the centre — for whoever opens the files later">?</span></label>
         </div>
+        <div class="xp-planet" id="exportPlanet" hidden>
+            <div class="xp-planet-text"><span>Planet file <span class="tip" data-tip="The whole history and this detailed moment in one file (.orogen), to open again later without building them again — the same planet in any browser. Its maps are drawn again from it, so later versions of World Orogen can draw them better">?</span></span><small id="exportPlanetNote"></small></div>
+            <button class="btn-ghost" id="exportPlanetGo" type="button">Save planet</button>
+        </div>
         <div class="xp-progress" id="exportProgress" hidden><div class="xp-bar"><i></i></div><span></span></div>
         <div class="export-actions">
             <button class="btn-ghost xp-small" id="exportNone" type="button">None</button>
@@ -74,7 +79,8 @@ export function initExportPanel({ host, overlay, catalogue, adapter, onOpen, get
     const $ = (id) => panel.querySelector('#' + id);
     const els = { width: $('exportWidth'), dims: $('exportDims'), proj: $('exportProjection'), projOpts: $('exportProjOpts'), centre: $('exportCentreLon'), centreV: $('exportCentreV'),
         season: $('exportSeason'), layers: $('exportLayers'), shadeRow: $('exportShadeRow'), shade: $('chkExportShade'), readme: $('chkExportReadme'),
-        progress: $('exportProgress'), go: $('exportGo'), cancel: $('exportCancel'), none: $('exportNone'), all: $('exportAllSel') };
+        progress: $('exportProgress'), go: $('exportGo'), cancel: $('exportCancel'), none: $('exportNone'), all: $('exportAllSel'),
+        planet: $('exportPlanet'), planetNote: $('exportPlanetNote'), planetGo: $('exportPlanetGo') };
     if (!adapter.options?.hillshade) els.shadeRow.hidden = true;
     for (const p of PROJECTIONS) { const o = document.createElement('option'); o.value = p.id; o.textContent = p.label; els.proj.appendChild(o); }
 
@@ -134,10 +140,14 @@ export function initExportPanel({ host, overlay, catalogue, adapter, onOpen, get
         }
         return out;
     }
-    function updateGo() { const n = jobs().length; els.go.textContent = n === 0 ? 'Export' : n === 1 ? 'Export 1 file' : `Export ${n} files as ZIP`; els.go.disabled = n === 0 || busy; }
+    function updateGo() {
+        const n = jobs().length;
+        els.go.textContent = n === 0 ? 'Export' : n === 1 ? 'Export 1 file' : `Export ${n} files as ZIP`; els.go.disabled = n === 0 || busy;
+        els.planetGo.disabled = busy || !planetOk;
+    }
 
     // ── wiring ──
-    let ctx = null, busy = false;
+    let ctx = null, busy = false, planetOk = false;
     els.layers.addEventListener('change', () => { updateGo(); remember(); });
     els.season.addEventListener('change', () => { updateGo(); remember(); });
     els.width.addEventListener('change', () => { updateDims(); remember(); });
@@ -175,6 +185,9 @@ export function initExportPanel({ host, overlay, catalogue, adapter, onOpen, get
         const c = Math.round(getCenterLon() || 0);
         els.centre.value = String(c); els.centreV.textContent = c ? `${Math.abs(c)}°${c > 0 ? 'E' : 'W'}` : '0°';
         els.progress.hidden = true;
+        // (the planet file, where the page saves one: whether it can now, and what it would hold)
+        els.planet.hidden = !adapter.planetFile;
+        if (adapter.planetFile) { const st = adapter.planetFile.status(ctx); planetOk = st.ok; els.planetNote.textContent = st.note; }
         if (adapter.titleNote) title.querySelector('.xp-note')?.remove(), title.insertAdjacentHTML('beforeend', ` <span class="xp-note evo-export-moment">${adapter.titleNote(ctx)}</span>`);
         updateGo();
         overlay.classList.remove('hidden');
@@ -230,6 +243,22 @@ export function initExportPanel({ host, overlay, catalogue, adapter, onOpen, get
             progress(1, `Saved ${name} · ${(out.size / 2 ** 20).toFixed(1)} MB in ${((performance.now() - t0) / 1000).toFixed(0)} s`);
         } catch (err) {
             progress(0, `Could not export: ${String(err && err.message || err).split('\n')[0]}`);
+            console.error(err);
+        } finally { busy = false; els.cancel.disabled = false; updateGo(); }
+    });
+
+    // ── the planet file: the page's own save, beside the maps ──
+    els.planetGo.addEventListener('click', async () => {
+        if (busy || !planetOk || !adapter.planetFile) return;
+        busy = true; els.cancel.disabled = true; updateGo();
+        const t0 = performance.now();
+        try {
+            progress(0, 'Starting…'); await tick();
+            const { blob, name } = await adapter.planetFile.save(ctx, progress);
+            downloadBlob(blob, name);
+            progress(1, `Saved ${name} · ${(blob.size / 2 ** 20).toFixed(1)} MB in ${((performance.now() - t0) / 1000).toFixed(0)} s`);
+        } catch (err) {
+            progress(0, `Could not save the planet: ${String(err && err.message || err).split('\n')[0]}`);
             console.error(err);
         } finally { busy = false; els.cancel.disabled = false; updateGo(); }
     });

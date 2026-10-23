@@ -211,12 +211,14 @@ export function hillshadeMap(fin, W, exaggeration, centerLon = 0) {
 
 /**
  * Wire the export panel on the Evolution page. `moment()`: the moment the dialog opens for ({ frame, fin, seed }) or null;
- * `look()`: the Terrain view's look ({ lut, exaggeration, water, riverQ, byRegime }); `centerLon()`: the map view's.
+ * `look()`: the Terrain view's look ({ lut, exaggeration, water, riverQ, byRegime }); `centerLon()`: the map view's;
+ * `planetFile`: the page's planet file ({ status, save }: export-panel.js), offered beside the maps.
  */
-export function initEvolutionExport({ moment, look, centerLon, projection = null, isTouch }) {
+export function initEvolutionExport({ moment, look, centerLon, projection = null, isTouch, planetFile = null }) {
     const adapter = {
         page: 'evolution',
         options: { hillshade: true },
+        planetFile,
         koppenClasses: KOPPEN_CLASSES,
         widths: (ctx) => exportWidths(ctx.fin.raster, isTouch ? EXPORT_MAX_TOUCH : EXPORT_MAX).map(({ w, enlarged }) => ({ w, selected: w === ctx.fin.raster.w, label: `${w}${enlarged ? ` · enlarged ×${w / ctx.fin.raster.w}` : w === ctx.fin.raster.w ? ' · as detailed' : ''}` })),
         available: (row, ctx) => (row.needs === 'climate' ? !!ctx.fin.climate?.raster?.koppen : row.needs === 'satellite' ? !!ctx.fin.climate?.raster?.sat : row.needs === 'rivers' ? !!ctx.fin.rivers : true),

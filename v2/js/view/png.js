@@ -11,8 +11,9 @@ const CRC_TABLE = (() => {
     return t;
 })();
 
-export function crc32(buf) {
-    let crc = 0xFFFFFFFF;
+/** The CRC-32 of `buf` — or, given `prev` (the CRC of the bytes before), of those bytes and these: one file in pieces. */
+export function crc32(buf, prev = 0) {
+    let crc = (prev ^ 0xFFFFFFFF) >>> 0;
     for (let i = 0; i < buf.length; i++) crc = CRC_TABLE[(crc ^ buf[i]) & 0xFF] ^ (crc >>> 8);
     return (crc ^ 0xFFFFFFFF) >>> 0;
 }

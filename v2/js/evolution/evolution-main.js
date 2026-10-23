@@ -30,6 +30,7 @@ import { initEvolutionExport } from './export.js';
 import { PROJECTIONS } from '../view/projections.js';
 import { renderProjectionOptions } from '../view/export-panel.js';
 import { downloadBlob } from '../view/png.js';
+import { savePlanet, planetBytes } from '../save/planet-file.js';
 import { SMALL_DEVICE } from '../core/device.js';
 
 setDelaunator(Delaunator);
@@ -223,6 +224,7 @@ async function build() {
     const seed = Number(ui.seed.value) || 0, cont = Number(ui.cont.value) / 100, len = Number(ui.len.value), ending = ui.ending.value;
     const simCells = Number(ui.sim.value), terrainCells = Number(ui.terrain.value);
     const b = B = { controller: new AbortController(), player: null, frames: [], simMesh: null, simCells, tMesh: null, raster: null, live: true, started: performance.now(), endMyr: len, error: null, lengthMyr: len, doneText: null,
+        contPct: Number(ui.cont.value), ending,                         // (the settings it was built with, for its planet file)
         climates: new Map(), climateJob: null, problem: null,         // (climates: frame → {tMesh, data}, while this history is open)
         run: null, going: false, wantGo: false, moreTo: linkedMore,        // (keep going: the history's run, kept to run on)
         finishes: new Map(), finishJob: null, finishNote: null };           // (finishes: frame → {cells, raster, secs} — the one detailed moment)
@@ -698,10 +700,27 @@ function mainAction() {
 
 // ── the export (plans/V2_FULL_PLANET_PLAN.md C): the finished moment shown, as map files — V1's dialog ──
 // (the panel: every map as colour and as data, in a projection — v2/js/view/export-panel.js, export.js)
+// …and beside the maps the planet file (plans/V2_SAVE_LOAD_PLAN.md): the history and its detailed moment, to open again
+// later without building them again
+const planetFile = {
+    status: ({ fin }) => (B.live || B.going
+        ? { ok: false, note: 'Once the history has finished building, it can be saved here with this detailed moment' }
+        : { ok: true, note: `The ${B.endMyr.toFixed(0)} Myr history and this detailed moment, to open again later · about ${Math.round(planetBytes(B.frames, fin) / 2 ** 20)} MB before compression` }),
+    save: async ({ frame, fin }, progress) => {
+        const b = B;
+        if (b.finishes.get(frame) !== fin) throw new Error('this moment is no longer the detailed one');
+        const [greenhouse, rain] = fin.climateKey.split('|').map(Number);
+        const { blob } = await savePlanet({
+            settings: { seed: b.seed, cont: b.contPct, len: b.lengthMyr, ending: b.ending, sim: b.simCells, terrain: b.terrainCells, greenhouse, rain, more: b.moreTo || 0 },
+            history: { frames: b.frames, simMesh: b.simMesh, simMyr: b.simMyr, steps: b.steps, stopped: b.run?.stopped ?? null, snapshotMyr: SNAPSHOT_MYR },
+            detail: { frame, fin }, onProgress: progress });
+        return { blob, name: `orogen-${b.seed}-${Math.round(frame.time)}Myr.orogen` };
+    },
+};
 const exportPanel = initEvolutionExport({
     moment: () => { const frame = painted, fin = frame && B?.finishes.get(frame); if (!fin) return null; setPlaying(false); return { frame, fin, seed: B.seed }; },
     look: () => ({ lut: heightLutOf(view.palette), exaggeration: SHADING.exaggeration, water: view.water, riverQ: view.riverQ, byRegime: view.byRegime }),
-    centerLon: () => view.centerLon, projection: () => (view.mode === 'map' ? { id: view.projection, opts: view.projOpts } : null), isTouch: IS_TOUCH });
+    centerLon: () => view.centerLon, projection: () => (view.mode === 'map' ? { id: view.projection, opts: view.projOpts } : null), isTouch: IS_TOUCH, planetFile });
 
 // ── the climate (step D): calculated on request for the moment shown, kept per moment while the history is open ──
 const climateOf = frame => { const e = B?.climates.get(frame); return e && e.tMesh === B.tMesh && e.key === climateKey() ? e.data : null; };

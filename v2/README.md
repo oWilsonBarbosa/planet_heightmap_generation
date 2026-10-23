@@ -135,7 +135,9 @@ detail, narrower ones averaged down; wider ones enlarged for use downstream (dev
 bicubic, coasts, lakes and climate zones by the weighted majority of the nearest pixels, satellite colours blended — then
 painted at the full width. Every map is centred on the map view's Center Longitude and can be drawn in any of ten
 projections (the inverse per pixel; the same inverses in GLSL, `js/view/projection-glsl.js`, draw the map view itself
-in the projection chosen beside Center Longitude).
+in the projection chosen beside Center Longitude). Beside the maps, **Planet file** saves the whole history and the
+detailed moment as one `.orogen` file (a deflated ZIP: `js/save/`, plans/V2_SAVE_LOAD_PLAN.md) — measured at 40K plates,
+1200 Myr and 2.5M detail: 355 MB of data, a 140 MB file, saved in 5 s and read back in 1.5 s.
 
 ```
 node tuning/dev-server.mjs 8123        # any static server works; there is no build step
@@ -167,7 +169,11 @@ node --max-old-space-size=16000 v2/tools/render-moment.mjs --seed 799224 --cont 
 node v2/tools/shoot-lab.mjs 4 56 http://localhost:8123 scene=india   # screenshots + page smoke test (needs the server)
 node v2/tools/probe-play.mjs 8b history 40     # presses Play headlessly: frames painted, the page's long tasks (EXTRA=cells=2500000)
 node v2/tools/bench-lab.mjs 2500000           # the lab's terrain pipeline piece by piece: timings + output hashes (is a speed-up exact?)
+node v2/tools/check-save.mjs                  # the planet file: a small history and detailed moment saved and read back bit for bit → v2/out/check-save.orogen
 ```
+
+After a change to what a frame or a detailed moment holds, or to `js/save/`, run `check-save.mjs`; if the change alters
+the **meaning** of saved data (not just adds to it), bump its version in `js/save/versions.js` (plans/V2_SAVE_LOAD_PLAN.md).
 
 After an engine change run `check-invariants.mjs`, `check-scale.mjs` and the check scripts of the phases the change
 touches; run all of them before calling a piece of work done. They need `npm install` (delaunator, pngjs; puppeteer
@@ -255,6 +261,9 @@ js/finish/         the Finish step (plans/V2_FINISH_PLAN.md): finish.js (the sta
                    finish-basins (closed basins), finish-sediment (fans, floodplains, deltas; creep by climate),
                    finish-ice (the last ice age), finish-wind (sand seas, dunes, pans, loess), finish-hydro (rivers, their
                    regimes, lakes), finish-cover (the land's cover and its colours from space)
+js/save/           the planet file (plans/V2_SAVE_LOAD_PLAN.md): planet-file (save / read a history and its detailed moment),
+                   tree-codec (any plain data with typed arrays as JSON + one binary), zip-io (a deflated ZIP written and
+                   read in pieces), versions (what a file's data means; bump on a change of meaning)
 js/app/            the lab: shell (lab-main), globe, canvas overlays, phases/ (one module per phase + phase-kit),
                    history-runner / history-worker (a scene's history off the page's thread, frames streamed back),
                    helper-pool / helper-worker (a few workers the history's worker starts: the start world's layout
