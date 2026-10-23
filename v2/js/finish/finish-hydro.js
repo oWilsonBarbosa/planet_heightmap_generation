@@ -127,7 +127,8 @@ export function fillSeaBasins(mesh, z, ocean, F) {
 /**
  * @param {{mesh, z: Float32Array, ocean: Uint8Array, runoff: Float32Array (mm/yr), pet: Float32Array (mm/yr),
  *          rain: Float32Array (mm/yr), wetMonths: Float32Array (0–12), ice: Uint8Array|null (1: an ice cap now), glaciated: Uint8Array|null (1: under the ice age's ice), lat, lon,
- *          network?: boolean (also return the drainage network: each cell's receiver, each river point's cell)}} ctx
+ *          network?: boolean (also return the drainage network: each cell's receiver, each lake cell's outlet, each river
+ *          point's cell)}} ctx
  * @returns {{lake: Uint8Array (Water per cell), lakeLevel: Float32Array (km; NaN if none), q: Float32Array (m³/s),
  *            rivers: {start: Int32Array, lat: Float32Array, lon: Float32Array, q: Float32Array, season: Float32Array},
  *            stats: Object}}
@@ -545,16 +546,17 @@ export function hydrology(ctx, F) {
     for (let c = 0; c < n; c++) if (lakeKind[c]) lakeKm2 += cellKm2;
     const landKm2 = count * cellKm2;
     // (the network's receivers: a lake's water leaves by its outlet, or goes no further — the lake as a whole, as the
-    // discharge has it, not the flood's way across its floor)
+    // discharge has it, not the flood's way across its floor; and each lake cell's outlet, where its outflow is)
+    const lakeOutlet = ctx.network ? new Int32Array(n).fill(-1) : null;
     if (ctx.network) for (const h of hollows) if (h.kind) {
         const to = h.outflow > 0 ? h.outlet : -1;
-        for (const x of h.cells) if (lakeKind[x] && x !== h.outlet) recv[x] = to;
+        for (const x of h.cells) if (lakeKind[x]) { lakeOutlet[x] = to; if (x !== h.outlet) recv[x] = to; }
     }
     return {
         lake: lakeKind, lakeLevel, q, area,
         // (the network, on request: the cell each land cell drains into — a lake's water its outlet; −1 on the sea and
-        // where the water goes no further — and each river point's cell)
-        ...(ctx.network ? { recv } : {}),
+        // where the water goes no further — each lake cell's outlet, and each river point's cell)
+        ...(ctx.network ? { recv, lakeOutlet } : {}),
         rivers: { start: Int32Array.from(L.start), lat: Float32Array.from(L.lat), lon: Float32Array.from(L.lon), q: Float32Array.from(L.q), season: Float32Array.from(L.season),
             ...(ctx.network ? { cell: Int32Array.from(L.at) } : {}), ...(regimes ?? {}) },
         terminal: ctx.debug ? hollows.filter(h => h.kind && h.kind !== Water.FRESH).sort((a, b) => b.inflow - a.inflow).slice(0, 12).map(h => {

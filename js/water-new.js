@@ -5,7 +5,8 @@
 //
 //   ocean      1 on the sea: the open ocean, and the water behind a barrier lower and shorter than a strait the mesh
 //              could show (the Evolution's strait rule: a lagoon's mouth, a narrow strait)
-//   lake       the rest of the water (Water: 0 none, 1 fresh lake, 2 salt lake, 3 salt pan); lakeLevel its surface (km)
+//   lake       the rest of the water (Water: 0 none, 1 fresh lake, 2 salt lake, 3 salt pan); lakeLevel its surface (km);
+//              lakeOutlet the region its outflow leaves by (its discharge there: q), −1 if it has none
 //   q          the year's mean discharge (m³/s): the runoff — rain less evaporation, Budyko's curve — of everything
 //              upstream, less what a river loses along its bed in dry country; area: what drains there (km²)
 //   recv       the region each land region drains into — a lake's water its outlet; −1 on the sea and where the water
@@ -121,7 +122,7 @@ export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: r
     let salt = 0, spilled = 0;
     for (let i = 0; i < B; i++) if (!bodySea[i]) { if (closed[i]) salt++; else if (full[i]) spilled++; }
     return {
-        heightKm: z, ocean, lake, lakeLevel, q: Hy.q, area: Hy.area, recv: Hy.recv, rivers: Hy.rivers,
+        heightKm: z, ocean, lake, lakeLevel, lakeOutlet: Hy.lakeOutlet, q: Hy.q, area: Hy.area, recv: Hy.recv, rivers: Hy.rivers,
         stats: { ...Hy.stats, inlandSeas: { spilling: spilled, salt, rounds, unsettled: short } }, timing: { total: performance.now() - t0 },
     };
 }
