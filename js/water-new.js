@@ -37,13 +37,28 @@ import { elevToHeightKm } from './color-map.js';
 export const Water = Object.freeze({ ...HydroWater, BRACKISH: 4 });
 
 /**
+ * The hydrology's constants for Generate: the Evolution's (finish-config.js FINISH), with the rivers' year checked
+ * against measured flows (tuning/water/earth-rivers.mjs: real Earth's rivers against 130 of Dai & Trenberth's gauges,
+ * with the observed climate):
+ *   - a basin its river cuts through (no water kept) does not even out the river's months — the Evolution's own do,
+ *     as lakes: at 2.56M that flattened the Tocantins', the Mackenzie's and the Godavari's years to within ±15 % of
+ *     their mean, the more the finer the mesh;
+ *   - more of the water through the ground, drained back more slowly (baseflowShare 0.5 → 0.7, baseflowMonths 2.5 → 3,
+ *     the best of 0.5–0.9 × 2–4 months): the months' correlation with the measured 0.81 → 0.86, the peak within a
+ *     month 77 → 84 %, the range (coefficient of variation) ×1.23 → ×0.98 and the low flow ×0.51 → ×0.85 of the
+ *     measured. The year's flows do not depend on them.
+ */
+export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowShare: 0.7, baseflowMonths: 3 });
+
+/**
  * Rivers and lakes on a V1 planet.
  * @param {{r_xyz: Float32Array, r_elevation: Float32Array, adjOffset: Int32Array, adjList: Int32Array, climate: Object}} planet
  *        unit-sphere positions (any axes: the climate's lat / lon place the rivers), V1's elevation (≤ 0 water), each
  *        region's neighbours (SphereMesh), and planetClimate's result for this planet (grid, surface, months, cell)
- * @param {{F?: Object}} options  the hydrology's constants (finish-config.js FINISH)
+ * @param {{F?: Object, riverMonths?: boolean}} options  the hydrology's constants (WATER); riverMonths: also each river
+ *        point's twelve monthly flows (rivers.months, m³/s, 12 per point)
  */
-export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: res }, { F = FINISH } = {}) {
+export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: res }, { F = WATER, riverMonths = false } = {}) {
     const t0 = performance.now();
     const n = r_elevation.length, G = res.grid.size, climGrid = { w: res.grid.w, h: res.grid.h };
     const mesh = { numCells: n, xyz: r_xyz, adjOffset, adjList };
@@ -113,7 +128,7 @@ export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: r
     }
     const ocean = new Uint8Array(n), inland = new Uint8Array(n);
     for (let c = 0; c < n; c++) if (body[c] >= 0) { if (bodySea[body[c]]) ocean[c] = 1; else inland[c] = 1; }
-    const water = (z, sink, seaBasin) => hydrology({ mesh, z, ocean: sink, runoff, pet, rain: pAnn, wetMonths, ice, glaciated: null, tectonic: null, seaBasin, fillHollows: true, lat, lon, months, network: true }, Fw);
+    const water = (z, sink, seaBasin) => hydrology({ mesh, z, ocean: sink, runoff, pet, rain: pAnn, wetMonths, ice, glaciated: null, tectonic: null, seaBasin, fillHollows: true, lat, lon, months, network: true, debug: riverMonths }, Fw);
     // (each inland sea a remnant of the sea in its basin, as the Evolution has them: full, it spills on, its outflow cut
     // down to the sea; short of full it would shrink — here it is where its rivers end instead, a salt lake as the pages
     // draw it, and the rivers run again: until every inland sea left spills — a few, at the divides with their

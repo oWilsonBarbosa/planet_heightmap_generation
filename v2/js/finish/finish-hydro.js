@@ -596,8 +596,9 @@ function riverYears(ctx, F, G) {
             if (h && h.lake) {
                 for (let j = 0; j < M; j++) h.inM[j] += acc[j][c];
                 if (c !== h.outlet) continue;
-                // (a lake passes on its year's outflow, shaped by its inflow's months — evened out by its storage)
-                const lam = F.lakeRegulation;
+                // (a lake passes on its year's outflow, shaped by its inflow's months — evened out by its storage; a basin
+                // its river cuts through holds none to even them out with: F.lakeRegulationDry, where given)
+                const lam = h.kind === Water.FRESH || h.kind === Water.SALT ? F.lakeRegulation : (F.lakeRegulationDry ?? F.lakeRegulation);
                 for (let j = 0; j < M; j++) acc[j][c] = h.outflow > 0 && h.inflow > 0 ? h.outflow * ((1 - lam) * h.inM[j] / h.inflow + lam) : 0;
                 if (!(h.outflow > 0)) continue;
             }

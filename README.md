@@ -263,7 +263,8 @@ js/
                         planet as it is, fed by the new climate's twelve months (evaporation month by month): discharge, drainage,
                         lakes (the planet's inland seas spill on to the sea or end their rivers as salt lakes — brackish where the
                         climate is humid; their beds filled with sediment toward ~1 km deep; its coasts unchanged), river polylines
-                        with their seasons. Not run by the pages yet: for headless exports (Node)
+                        with their seasons (checked against measured flows: tuning/water/). Not run by the pages yet: for
+                        headless exports (Node)
   climate-layers.js     The climate's Inspect layers — colours, legends, hover lines, arrows, the season picker
   climate-config.js     The OLD climate's parameters (no longer run by the app; kept for the old tuning diagnostics)
   climate-util.js       Shared climate utilities — smoothing, ITCZ lookup, percentile selection
@@ -285,6 +286,9 @@ tuning/
                         map of an imported Earth heightmap against the observed
                         Köppen-Geiger classification and optimizes v2/js/climate/config.js
                         parameters to match (see tuning/climate/README.md)
+  water/                The rivers check — scores js/water-new.js's rivers on an imported Earth heightmap against
+                        the measured flows of ~130 great rivers (Dai & Trenberth, NCAR), with the simulated and the
+                        observed climate (see tuning/water/README.md)
 ```
 
 ## Dependencies
