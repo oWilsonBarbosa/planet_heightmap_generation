@@ -171,7 +171,11 @@ let lines = null, linesKey = null;      // the GPU's overlay: the grid and a cli
 const PALETTE_KEY = 'orogen.evolution.palette';
 const storedPalette = (() => { try { return localStorage.getItem(PALETTE_KEY); } catch { return null; } })();
 const view = { layer: 'terrain', palette: PALETTES[storedPalette] ? storedPalette : 'relief', mode: 'globe', grid: true, gridStep: 15, centerLon: 0, projection: 'equirect', projOpts: {}, season: 'year', finished: true,
-    water: true, riverQ: 40, byRegime: false };                      // (rivers and lakes on finished moments: the density's threshold, m³/s; coloured by regime)
+    water: true, riverQ: 40, byRegime: false,                        // (rivers and lakes on finished moments: the density's threshold, m³/s; coloured by regime)
+    shaded: true };                                                  // (the hillshade; off, every view flat colour)
+let flat = null;
+/** Every cell lit as flat ground (hillshade 1): the live views' colours without the relief's shading. */
+const flatShade = n => (flat?.length === n ? flat : (flat = new Float32Array(n).fill(1)));
 const climate = new ClimateService();   // the climate, on request, for the moment shown (climate-view.js)
 const finisher = new FinishService();   // the Finish step, on request, for the moment shown (finish-view.js)
 // (one detailed moment per history — its pictures, rivers and climate: ~50 MB on a phone, ~190 MB at 2.5M on a desktop,
@@ -429,6 +433,7 @@ function paint(frame, sharpTable = null, sharp = !!sharpTable) {
     // detail, on the climate layers)
     const fin = finishedShown(frame);
     if (fin) { paintFinishedFrame(frame, fin, T, sharp); return; }
+    const shade = view.shaded ? T.shade : flatShade(B.tMesh.numCells);
     // (the terrain and the heightmap are coloured per pixel from the heights — their coasts crisp; the other layers per cell)
     let byHeight = null;
     if (view.layer === 'plates') {
@@ -436,15 +441,15 @@ function paint(frame, sharpTable = null, sharp = !!sharpTable) {
         colorByPlate(frame, simRgb);
         const { cells: sc, weights: sw } = T.sampler;
         for (let t = 0; t < B.tMesh.numCells; t++) {
-            const k = 0.45 + 0.55 * T.shade[t];
+            const k = 0.45 + 0.55 * shade[t];
             for (let ch = 0; ch < 3; ch++) out[3 * t + ch] = Math.min(255, k * (sw[3 * t] * simRgb[3 * sc[3 * t] + ch] + sw[3 * t + 1] * simRgb[3 * sc[3 * t + 1] + ch] + sw[3 * t + 2] * simRgb[3 * sc[3 * t + 2] + ch]));
         }
     } else if (view.layer === 'heightmap') byHeight = heightLutOf('heightmap');
     else if (CLIMATE_LAYERS.has(view.layer)) {
         // the climate of this moment, if it has been calculated; else the terrain greyed (and the chip offers it)
         const C = FINISHED_ONLY_LAYERS.has(view.layer) ? null : climateOf(frame);
-        if (C) paintClimate(view.layer, view.season, C, T, B.tMesh, out, o => tint(T.heightKm, T.shade, o));
-        else { tint(T.heightKm, T.shade, out); paintUnavailable(out, B.tMesh.numCells); }
+        if (C) paintClimate(view.layer, view.season, C, { heightKm: T.heightKm, shade }, B.tMesh, out, o => tint(T.heightKm, shade, o));
+        else { tint(T.heightKm, shade, out); paintUnavailable(out, B.tMesh.numCells); }
     } else byHeight = heightLutOf(view.palette);
     const C = CLIMATE_LAYERS.has(view.layer) && !FINISHED_ONLY_LAYERS.has(view.layer) ? climateOf(frame) : null;
     // the sun glints off the sea on the Terrain view (V1's water shows there only)
@@ -453,7 +458,7 @@ function paint(frame, sharpTable = null, sharp = !!sharpTable) {
         glint(view.layer === 'terrain', gpu.seaTexture);
         gpu.setMesh(B.tMesh);
         layLines(C);
-        if (byHeight) gpu.drawHeights(T.heightKm, T.shade, byHeight, SHADING.seaLevelKm, glinting);
+        if (byHeight) gpu.drawHeights(T.heightKm, shade, byHeight, SHADING.seaLevelKm, glinting);
         else gpu.drawCells(out, T.heightKm, SHADING.seaLevelKm, glinting);
         show(gpu.texture);
     } else {
@@ -464,7 +469,7 @@ function paint(frame, sharpTable = null, sharp = !!sharpTable) {
             globe.seaMaskChanged();
         }
         const table = sharpTable ?? B.raster, t = sharpTable ? (tex.sharp ??= texture(SHARP_WIDTH)) : tex.lo;
-        if (byHeight) table.paintHeights(T.heightKm, T.shade, byHeight, t.image.data, SHADING.seaLevelKm);
+        if (byHeight) table.paintHeights(T.heightKm, shade, byHeight, t.image.data, SHADING.seaLevelKm);
         else table.paint(out, t.image.data);
         t.ctx.putImageData(t.image, 0, 0);
         drawLines(t, C);
@@ -536,7 +541,7 @@ function paintFinishedFrame(frame, fin, T, sharp) {
     glint(view.layer === 'terrain' || view.layer === 'satellite');
     // (the satellite view shows the lakes always — they are its ground — the rivers with Rivers & Lakes)
     paintFinished(fin.raster, t, lut, { seaImage: glinting ? seaMask.image.data : null, seaWidth: MAP_WIDTH, exaggeration: SHADING.exaggeration * (view.layer === 'satellite' ? 1.25 : 1), lakes: water || view.layer === 'satellite',
-        colorAt: C ? finishedClimateColor(view.layer, view.season, C, t.width, lut, fin) : null });
+        shaded: view.shaded, colorAt: C ? finishedClimateColor(view.layer, view.season, C, t.width, lut, fin) : null });
     if (glinting) { seaMask.ctx.putImageData(seaMask.image, 0, 0); globe.seaMaskChanged(); }
     t.ctx.putImageData(t.image, 0, 0);
     // (the rivers, on the Terrain view: drawn at a 2048-wide texture's scale — as thick on the sharper one)
@@ -869,6 +874,7 @@ $('cardDetailed').addEventListener('click', e => {
 });
 $('climateChipBtn').addEventListener('click', () => (FINISHED_ONLY_LAYERS.has(view.layer) ? finishMoment() : calculateClimate()));
 $('season').addEventListener('change', e => { view.season = e.target.value; dirty = true; });
+$('chkShade').addEventListener('change', e => { view.shaded = e.target.checked; dirty = true; });
 $('palette').value = view.palette;
 $('palette').addEventListener('change', e => {
     view.palette = e.target.value; dirty = true;

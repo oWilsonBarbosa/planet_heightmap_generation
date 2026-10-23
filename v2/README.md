@@ -57,7 +57,8 @@ one history, bit for bit; the link records how far — `more=` — and rebuilds 
 ~13,000 Myr at 40K). Its views are V1's:
 Terrain (the lab's relief, or one of fifteen other palettes — maps and other worlds; "Blue Marble (by height)" colours by
 height alone), Heightmap and Plates, globe (in V1's space: stars,
-atmosphere, sunlight glinting off the sea) or map (centre longitude), grid, and V1's hover readout with the crust's age
+atmosphere, sunlight glinting off the sea) or map (centre longitude), grid, a Hillshade toggle (off, every view flat
+colour: each cell lit as flat ground), and V1's hover readout with the crust's age
 and setting. **Add detail** (the code's *finish*) sculpts the moment shown again, with care, at a detail of its own (160K · 640K · 2.5M · 10M
 cells; phones up to 640K; plans/V2_FINISH_PLAN.md): the surface domain-warped and roughened on high ground; the climate
 calculated on it; the rivers carving longer with the climate's runoff (rain less evaporation), dry basins left closed —
