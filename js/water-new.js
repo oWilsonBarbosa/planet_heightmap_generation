@@ -15,7 +15,8 @@
 //              lake
 //   heightKm   the height after the rivers (km): where a river leaves a hollow it cannot keep as a lake, or an inland sea
 //              spills, it has cut its way out; a lake's bed filled with sediment toward at most about a kilometre below
-//              its surface — the pages' heights everywhere else
+//              its surface — the pages' heights everywhere else (with the ice age: its troughs, hollows and moraines too)
+//   glaciated  with the ice age (options.iceAge): 1 where its ice lay at its greatest extent, else null
 //   rivers     every reach from F.riverMinM3s as a polyline (lat, lon, discharge, its wet months' share, the region of
 //              each point) and its year: regime (steady, flood season, seasonal, dry most of the year), flood months,
 //              fed from afar
@@ -24,10 +25,13 @@
 // sea — fills its basin and spills on toward the sea if its rivers bring more than it evaporates (a fresh lake, its
 // outflow running on: every big river reaches the sea); else its rivers end in it (a salt lake, or brackish where its
 // climate is humid). A hollow on land holds a lake by its water balance and size, as in the Evolution — or its river
-// cuts through it.
+// cuts through it. V1's erosion drains almost every hollow on land; with options.iceAge the Evolution's last ice age
+// shapes the land first, and the hollows it scoured are lake districts, as on Earth's shields.
 
 import { FINISH } from '../v2/js/finish/finish-config.js';
 import { hydrology, openStraits, Water as HydroWater } from '../v2/js/finish/finish-hydro.js';
+import { lastIceAge } from '../v2/js/finish/finish-ice.js';
+import { LatLonGrid } from '../v2/js/finish/finish-grid.js';
 import { oceanMask, runoffMonths, corners, bilinear } from '../v2/js/finish/finish.js';
 import { KOPPEN_ID } from '../v2/js/climate/koppen.js';
 import { CORE_DEFAULTS } from '../v2/js/climate/core.js';
@@ -59,13 +63,14 @@ export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowSh
  *        region's neighbours (SphereMesh), planetClimate's result for this planet (grid, surface, months, cell), and
  *        the heights to run on (km: js/earth-relief.js earthLikeHeights for Earth's; by default the generator's own
  *        curve, js/color-map.js elevToHeightKm — the climate's must be the same)
- * @param {{F?: Object, riverMonths?: boolean}} options  the hydrology's constants (WATER); riverMonths: also each river
- *        point's twelve monthly flows (rivers.months, m³/s, 12 per point)
+ * @param {{F?: Object, riverMonths?: boolean, iceAge?: {seed: number}}} options  the hydrology's constants (WATER);
+ *        riverMonths: also each river point's twelve monthly flows (rivers.months, m³/s, 12 per point); iceAge: the land
+ *        shaped by the Evolution's last ice age first (lakeDistricts below; the planet's seed for its scour's noise)
  */
-export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: res, heightKm = null }, { F = WATER, riverMonths = false } = {}) {
+export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: res, heightKm = null }, { F = WATER, riverMonths = false, iceAge = null } = {}) {
     const t0 = performance.now();
     const n = r_elevation.length, G = res.grid.size, climGrid = { w: res.grid.w, h: res.grid.h };
-    const mesh = { numCells: n, xyz: r_xyz, adjOffset, adjList };
+    const mesh = { numCells: n, xyz: r_xyz, adjOffset, adjList, edgeKm: R_KM * Math.sqrt(8 * Math.PI / (Math.sqrt(3) * n)) };
     const z0 = new Float32Array(n);
     for (let r = 0; r < n; r++) z0[r] = heightKm ? heightKm[r] : elevToHeightKm(r_elevation[r]);
     // (an inland sea that spills stands at sea level, its outflow cut down to just above it: the pages' shores)
@@ -134,7 +139,9 @@ export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: r
     }
     const ocean = new Uint8Array(n), inland = new Uint8Array(n);
     for (let c = 0; c < n; c++) if (body[c] >= 0) { if (bodySea[body[c]]) ocean[c] = 1; else inland[c] = 1; }
-    const water = (z, sink, seaBasin) => hydrology({ mesh, z, ocean: sink, runoff, pet, rain: pAnn, wetMonths, ice, glaciated: null, tectonic: null, seaBasin, fillHollows: true, lat, lon, months, network: true, debug: riverMonths }, Fw);
+    const iceAgeOut = iceAge ? lakeDistricts({ mesh, z0, r_elevation, res, lat, lon, rain: pAnn, seed: iceAge.seed }, F) : null;
+    const glaciated = iceAgeOut ? iceAgeOut.ice : null;
+    const water = (z, sink, seaBasin) => hydrology({ mesh, z, ocean: sink, runoff, pet, rain: pAnn, wetMonths, ice, glaciated, tectonic: null, seaBasin, fillHollows: true, lat, lon, months, network: true, debug: riverMonths }, Fw);
     // (each inland sea a remnant of the sea in its basin, as the Evolution has them: full, it spills on, its outflow cut
     // down to the sea; short of full it would shrink — here it is where its rivers end instead, a salt lake as the pages
     // draw it, and the rivers run again: until every inland sea left spills — a few, at the divides with their
@@ -174,10 +181,54 @@ export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: r
         if (lake[c] && d > 0) z[c] = lakeLevel[c] - F.seaFillKm * Math.tanh(d / F.seaFillKm);
     }
     return {
-        heightKm: z, ocean, lake, lakeLevel, lakeOutlet: Hy.lakeOutlet, q: Hy.q, area: Hy.area, recv: Hy.recv, rivers: Hy.rivers,
-        stats: { ...Hy.stats, inlandSeas: { spilling: spilled, salt, brackish, rounds, unsettled: short } }, timing: { total: performance.now() - t0 },
+        heightKm: z, ocean, lake, lakeLevel, lakeOutlet: Hy.lakeOutlet, q: Hy.q, area: Hy.area, recv: Hy.recv, rivers: Hy.rivers, glaciated,
+        stats: { ...Hy.stats, inlandSeas: { spilling: spilled, salt, brackish, rounds, unsettled: short }, ...(iceAgeOut ? { iceAge: iceAgeOut.stats } : {}) },
+        timing: { total: performance.now() - t0 },
     };
 }
+
+/**
+ * The Evolution's last ice age (v2/js/finish/finish-ice.js) on a V1 planet's land, for its lake districts: the ice where
+ * snow outlasted an Earth-like glacial summer — the climate cooled toward the poles and dried — its troughs along the
+ * ice's paths, hollows scoured under the sheets, moraines at its farthest reach. V1's own erosion drains almost every
+ * hollow (js/terrain-post.js: each pit carved through toward the sea), so its land has few lakes; Earth's great lakes are
+ * mostly glacial (Canada, Scandinavia, Siberia). The hydrology then keeps a hollow the ice scoured as a lake where it is
+ * half the size it asks of others, and only a big river breaks one open (finish-config.js glacialKeepShare,
+ * glacialBreachQ). (Rifts' lakes are not made here: V1 builds a rift valley only where two super plates part inside a
+ * continent, and drains it like any hollow.)
+ * The coasts stay the pages': the sea floor keeps its heights, and the land is never cut below the sea (a trough's
+ * fjord ends at the coast). The land the ice pressed down is not left sunk (finish-config.js reboundLeft 0 here): behind
+ * coasts that cannot flood, a Hudson Bay would be a lake the size of a sea.
+ * Changes ctx.z0 in place; returns the ice's extent (1: under the ice) and its size.
+ */
+function lakeDistricts({ mesh, z0, r_elevation, res, lat, lon, rain, seed }, F) {
+    const n = z0.length, G = res.grid.size, climGrid = { w: res.grid.w, h: res.grid.h }, gamma = CORE_DEFAULTS.lapseRateCPerKm;
+    // (the warmest month at sea level, as the Evolution has it: on the climate's grid, to each region)
+    const warmG = new Float32Array(G).fill(-Infinity);
+    for (let g = 0; g < G; g++) {
+        const href = res.surface.meanLandKm[g] === res.surface.meanLandKm[g] ? Math.max(0, res.surface.meanLandKm[g]) : 0;
+        for (let m = 0; m < 12; m++) { const t = res.months.T[m * G + g] + gamma * href; if (t > warmG[g]) warmG[g] = t; }
+    }
+    const warmSl = new Float32Array(n);
+    for (let c = 0; c < n; c++) warmSl[c] = bilinear(climGrid, warmG, lat[c], lon[c]);
+    const before = z0.slice(), cellKm2 = 4 * Math.PI * R_KM * R_KM / n;
+    const I = lastIceAge({ mesh, z: z0, lat, lon, warmSl, rain, grid: new LatLonGrid(0.25), cellKm2, seed }, { ...F, reboundLeft: 0 });
+    let land = 0, iced = 0, lowered = 0, raised = 0, deepest = 0, highest = 0;
+    for (let c = 0; c < n; c++) {
+        if (r_elevation[c] <= 0) { z0[c] = before[c]; continue; }
+        if (z0[c] < ICE_AGE_LAND_FLOOR_KM) z0[c] = ICE_AGE_LAND_FLOOR_KM;
+        land++; if (I.ice[c]) iced++;
+        const d = z0[c] - before[c];
+        if (d < -1e-4) lowered++; else if (d > 1e-4) raised++;
+        deepest = Math.min(deepest, d); highest = Math.max(highest, d);
+    }
+    return { ice: I.ice, stats: { iceKm2: Math.round(I.iceKm2), sheets: I.sheets, landShareIced: iced / Math.max(1, land), landLowered: lowered, landRaised: raised,
+        mostLoweredKm: +(-deepest).toFixed(3), mostRaisedKm: +highest.toFixed(3) } };
+}
+
+/** The lowest the ice age leaves land (km), so that it stays above the sea. */
+const ICE_AGE_LAND_FLOOR_KM = 1e-4;
+const R_KM = 6371;
 
 /** At most this many runs of the rivers to settle which inland seas spill (two or three, as a rule). */
 const MAX_ROUNDS = 8;
