@@ -32,7 +32,17 @@ Planet `06cy8w6z6a89kow6psje93`, its heights by `js/color-map.js` `elevToHeightK
 The generator's curve is drawn for the eye; `earthLikeHeights()` gives a planet Earth's numbers, every region keeping
 its place in its planet's order. On that planet the climate's land is 3.5 °C colder (16.0 → 12.5 °C on average), the
 tundra and ice caps grow (Köppen E 4.9 → 11.5 % of the land, mostly mountains at 40–65° that now reach 2–4 km), the
-hot steppes turn cold (BSh → BSk), and its rivers carry more (runoff 289 → 335 mm a year).
+hot steppes turn cold (BSh → BSk), and its rivers carry more (runoff 289 → 333 mm a year).
+
+Its broad coastal ranges in moist trade winds then wring up to 16 m a year out of a 1° cell, 20 m a region — Earth's
+wettest 1° cells get ≈ 7.5 m. `EARTH_RELIEF_CLIMATE` bounds the air's supply of rain for a planet on these heights
+(`v2/js/climate/config.js` `RAIN_SUPPLY_*`; off for the pages): at most 12.8 m a region, 0.018 % of the land above
+10 m. Earth's own climate is the same with the bound as without (`tuning/climate/evaluate.mjs`,
+`coupled-check.mjs --quick`).
+
+Which water is sea stays decided on the generator's own heights (`js/water-new.js`): on Earth-like ones a strip of
+coast one region wide — the generator's lowest land, a metre or two — would stand tens of metres high and cut 445 bays
+off the sea.
 
 Files:
 
