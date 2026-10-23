@@ -59,9 +59,11 @@ export const Water = Object.freeze({ ...HydroWater, BRACKISH: 4 });
  *     river, as simple global river-routing schemes have it (TRIP's first version, CLM4, LPJ) — the water runs faster
  *     in its channel, but floodplains and wetlands hold it back. A basin far larger than Earth's has its year spread
  *     out more than shifted: water from 7,600 km on average, give or take 3,400, keeps 40 % of its seasons.
- * The year's flows do not depend on them.
+ * The year's flows do not depend on them. And a basin that a gorge from upstream drains below its own floor holds no
+ * water along that gorge (drainBelowFloor): the Evolution's hydrology takes the gorge's cells under the floor for a lake
+ * — on planet 06cy8w6z6a89kow6psje93 with the ice age, a 54,600 km² "lake" over a canyon cut 100 m below its surface.
  */
-export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowShare: 0.7, baseflowMonths: 3, riverSpeedKmDay: 40 });
+export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowShare: 0.7, baseflowMonths: 3, riverSpeedKmDay: 40, drainBelowFloor: true });
 
 /**
  * Rivers and lakes on a V1 planet.

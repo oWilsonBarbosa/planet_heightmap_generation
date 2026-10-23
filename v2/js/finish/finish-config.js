@@ -114,6 +114,10 @@ export const FINISH = {
     // glacialKeepShare of that) — no closed basins
     lakeKeepKm2: 5000,
     glacialKeepShare: 0.5,
+    // a basin that a gorge from upstream drains below its own floor holds no water along that gorge (off: the gorge's
+    // cells under the floor read as a lake strung along it — on for Generate, js/water-new.js; here they make 29 of the
+    // 99 fresh lakes of seed 10673275 at 250K cells)
+    drainBelowFloor: false,
     // Where a river must cut through — a basin it drains, a pocket in it — its gorge keeps the river's own course, every bend
     // of it, unless a shortcut is enough less work: the rock it cuts, and gorgeLengthKm for each km of its length (developer:
     // rivers "that go back and forth"; then "there should be some balance … between the 'true down' path and the 'shortcut'

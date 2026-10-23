@@ -375,7 +375,11 @@ export function hydrology(ctx, F) {
                 // full, it fills its hole to the brim and spills: its outflow has cut its way down to it (a gorge just above
                 // sea level), and the lowland round it drains as land does (below)
                 level = cut(h.deepCell, F.seaCutFloorKm); from = h.deepCell;
-            } else if (drained || areaKm2 < keepKm2 || h.inflow < full) { cut(h.deepCell, h.floor); level = h.floor; }
+            } else if (drained || areaKm2 < keepKm2 || h.inflow < full) {
+                // (drained by a gorge that runs through it — down to its own floor, or, where F.drainBelowFloor, below
+                // it: the gorge's cells under the floor are its bed, not a lake strung along it)
+                cut(h.deepCell, h.floor); level = F.drainBelowFloor ? Math.min(h.floor, crossed) : h.floor;
+            }
             else if (F.breachKm > 0) {
                 // an old basin that overflows has cut its outlet down (developer: the erosion should "break these basins
                 // up"): a gorge through its rim, deeper the more spills over; the lake drains to what lies below the gorge —
