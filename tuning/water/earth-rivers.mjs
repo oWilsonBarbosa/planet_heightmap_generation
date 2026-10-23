@@ -11,7 +11,8 @@
  *   runoff   the year's flow ÷ the drainage area, simulated ÷ measured: median, share within ×2, rms
  *   year     the twelve monthly mean flows: correlation with the measured, the peak month within one of it, the range
  *            (coefficient of variation of the months, simulated ÷ measured) and the low flow (the lowest month ÷ the
- *            mean, simulated ÷ measured)
+ *            mean, simulated ÷ measured); how early the simulated year comes (the shift, in months, that best
+ *            correlates it with the measured: the mean over all gauges, and over the great basins, from 500,000 km²)
  *
  *   node tuning/water/earth-rivers.mjs [--n 640000] [--climate obs|sim|both] [--min-area 25000] [--set key=value,…]
  *                                      [--tune [--grid key=v/v/v,…]] [--list]
@@ -119,6 +120,9 @@ const corr = (a, b) => { const ma = a.reduce((t, x) => t + x, 0) / 12, mb = b.re
 const cv = (a) => { const m = a.reduce((t, x) => t + x, 0) / 12; return Math.sqrt(a.reduce((t, x) => t + (x - m) ** 2, 0) / 12) / m; };
 const low = (a) => Math.max(0.01, Math.min(...a) / (a.reduce((t, x) => t + x, 0) / 12));
 const argmax = (a) => a.reduce((m, v, i) => (v > a[m] ? i : m), 0);
+/** How many months later the simulated year best matches the measured (−5 … 6; positive: the simulated comes early). */
+const early = (a, b) => { let best = 0, bestR = -Infinity; for (let k = -5; k <= 6; k++) { const r = corr(a.map((_, i) => a[(i - k + 12) % 12]), b); if (r > bestR) { bestR = r; best = k; } } return best; };
+const GREAT_KM2 = 500000;
 
 /** Each gauge against one run of the rivers: matched or not; its runoff ratio; its year's correlation, peak, range, low
  *  flow; and whether a lake lies upstream (a lake evens out what it passes on: on the coarse Earth map most are
@@ -141,7 +145,7 @@ function score(W) {
             const m = Array.from(W.rivers.months.subarray(12 * i, 12 * i + 12));
             if (m.every(v => v >= 0) && m.some(v => v > 0)) {
                 const d = Math.abs(argmax(m) - argmax(s.months));
-                Object.assign(row, { r: corr(m, s.months), peak: Math.min(d, 12 - d) <= 1, range: cv(m) / cv(s.months), low: low(m) / low(s.months),
+                Object.assign(row, { r: corr(m, s.months), peak: Math.min(d, 12 - d) <= 1, range: cv(m) / cv(s.months), low: low(m) / low(s.months), early: early(m, s.months), great: s.areaKm2 >= GREAT_KM2,
                     year: m.map(v => v / (m.reduce((t, x) => t + x, 0) / 12)), measured: s.months.map(v => v / (s.months.reduce((t, x) => t + x, 0) / 12)) });
             }
         }
@@ -149,6 +153,7 @@ function score(W) {
     }).filter(Boolean);
 }
 const med = (v) => { const a = v.filter(Number.isFinite).sort((x, y) => x - y); return a.length ? a[a.length >> 1] : NaN; };
+const mean = (v) => { const a = v.filter(Number.isFinite); return a.length ? a.reduce((t, x) => t + x, 0) / a.length : NaN; };
 /** The year's score: per gauge its correlation, less how far its range and (half) its low flow are from the measured
  *  (|ln| of the ratios); the median over the gauges. */
 const yearScore = (rows) => med(rows.filter(x => x.r !== undefined).map(x => x.r - Math.abs(Math.log(x.range)) - 0.5 * Math.abs(Math.log(x.low))));
@@ -156,7 +161,8 @@ function summary(rows) {
     const yr = rows.filter(x => x.r !== undefined), w2 = rows.filter(x => x.runoff >= 0.5 && x.runoff <= 2).length;
     const rms = 10 ** Math.sqrt(rows.reduce((t, x) => t + Math.log10(x.runoff) ** 2, 0) / Math.max(1, rows.length));
     return `${String(rows.length).padStart(3)} gauges · runoff ×${med(rows.map(x => x.runoff)).toFixed(2)}, within ×2 ${Math.round(100 * w2 / Math.max(1, rows.length))} %, rms ×${rms.toFixed(2)}`
-        + ` · year r ${med(yr.map(x => x.r)).toFixed(2)}, peak ±1 month ${Math.round(100 * yr.filter(x => x.peak).length / Math.max(1, yr.length))} %, range ×${med(yr.map(x => x.range)).toFixed(2)}, low flow ×${med(yr.map(x => x.low)).toFixed(2)}`;
+        + ` · year r ${med(yr.map(x => x.r)).toFixed(2)}, peak ±1 month ${Math.round(100 * yr.filter(x => x.peak).length / Math.max(1, yr.length))} %, range ×${med(yr.map(x => x.range)).toFixed(2)}, low flow ×${med(yr.map(x => x.low)).toFixed(2)}`
+        + `, early ${mean(yr.map(x => x.early)).toFixed(2)} months (great basins ${mean(yr.filter(x => x.great).map(x => x.early)).toFixed(2)}, ${yr.filter(x => x.great).length})`;
 }
 const run = (climate, F) => runNewWater({ r_xyz: xyz, r_elevation: E.r_elevation, ...adj, climate }, { F, riverMonths: true });
 
@@ -182,7 +188,7 @@ if (TUNING) {
         console.log(`  no lake  ${summary(rows.filter(x => !x.lake))}`);
         for (const z of ZONES) { const zr = rows.filter(x => x.zone === z); if (zr.length >= 3) console.log(`  zone ${z}   ${summary(zr)}`); }
         if (LIST) for (const x of rows.slice().sort((a, b) => b.q - a.q)) console.log(`    ${x.river.slice(0, 16).padEnd(17)}${x.zone} runoff ×${x.runoff.toFixed(2)}`
-            + (x.r === undefined ? '' : ` r ${x.r.toFixed(2)} range ×${x.range.toFixed(2)} low ×${x.low.toFixed(2)} | ${x.year.map(v => v.toFixed(1)).join(' ')} | measured ${x.measured.map(v => v.toFixed(1)).join(' ')}`));
+            + (x.r === undefined ? '' : ` r ${x.r.toFixed(2)} range ×${x.range.toFixed(2)} low ×${x.low.toFixed(2)} early ${x.early} | ${x.year.map(v => v.toFixed(1)).join(' ')} | measured ${x.measured.map(v => v.toFixed(1)).join(' ')}`));
     }
 }
 log('done');

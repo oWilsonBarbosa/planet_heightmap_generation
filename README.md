@@ -263,9 +263,10 @@ js/
                         planet as it is, fed by the new climate's twelve months (evaporation month by month): discharge, drainage,
                         lakes (the planet's inland seas spill on to the sea or end their rivers as salt lakes — brackish where the
                         climate is humid; their beds filled with sediment toward ~1 km deep; its coasts unchanged), river polylines
-                        with their seasons (checked against measured flows: tuning/water/); optionally the land first shaped
-                        by the Evolution's last ice age — troughs, scoured hollows, moraines — for its lake districts. Not run
-                        by the pages yet: for headless exports (Node)
+                        with their seasons, each month's water reaching a river point as late as its way down takes (checked
+                        against measured flows: tuning/water/); optionally the land first shaped by the Evolution's last ice
+                        age — troughs, scoured hollows, moraines — for its lake districts. Not run by the pages yet: for
+                        headless exports (Node)
   earth-relief.js       Earth-like heights for a V1 planet — its elevation mapped, every region's order kept, onto Earth's
                         hypsometry (ETOPO 2022: the land without Antarctica, the sea floor), where the generator's own height
                         curve leaves half the land below ~30 m and the sea 2.3 km deep; for running the climate and

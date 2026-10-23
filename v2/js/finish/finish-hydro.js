@@ -623,6 +623,30 @@ function riverYears(ctx, F, G) {
         }
         for (let p = 0; p < P; p++) for (let j = 0; j < M; j++) qm[12 * p + m0 + j] = acc[j][cells[p]];
     }
+    // (the water's way down, where F.riverSpeedKmDay is given: each point's months late by the time its water takes to
+    // reach it — the mean distance its water has come, weighed by the runoff along the way, at that speed; the year
+    // round, a month's water passing on into the next. A lake passes on its share of what flows in, a closed one none)
+    if (F.riverSpeedKmDay > 0) {
+        const Qa = new Float64Array(n), Sq = new Float64Array(n);
+        for (let i = count - 1; i >= 0; i--) {
+            const c = order[i], h = hollow[c] >= 0 ? hollows[hollow[c]] : null;
+            Qa[c] += own(c);
+            if (h && h.lake && c === h.outlet) {
+                const f = h.outflow > 0 && h.inflow > 0 ? Math.min(1, h.outflow / h.inflow) : 0;
+                Qa[c] *= f; Sq[c] *= f;
+            }
+            const r = recv[c];
+            if (r >= 0 && rank[r] >= 0 && Qa[c] > 0) { Qa[r] += Qa[c]; Sq[r] += Sq[c] + Qa[c] * stepKm[c]; }
+        }
+        const kmPerMonth = F.riverSpeedKmDay * 365.25 / 12, year = new Float64Array(12);
+        for (let p = 0; p < P; p++) {
+            const c = cells[p], late = Qa[c] > 0 ? Sq[c] / Qa[c] / kmPerMonth : 0;
+            if (!(late > 0.01)) continue;
+            const k = Math.floor(late), f = late - k;
+            for (let m = 0; m < 12; m++) year[m] = (1 - f) * qm[12 * p + (((m - k) % 12) + 12) % 12] + f * qm[12 * p + (((m - k - 1) % 12) + 12) % 12];
+            for (let m = 0; m < 12; m++) qm[12 * p + m] = year[m];
+        }
+    }
     // ── regimes ──
     const regime = new Uint8Array(P), floodFrom = new Uint8Array(P), floodTo = new Uint8Array(P), farFed = new Uint8Array(P), months = qm;
     for (let p = 0; p < P; p++) {
