@@ -293,7 +293,7 @@ function roughen(mesh, z, seed, F, fade) {
  *  rain, and snow kept until it melts — less a share of its potential evaporation; a share of that (more where it is
  *  humid) seeps into the ground, which drains back into the rivers slowly (baseflowMonths: a dry season's flow dwindles
  *  month by month). Three years, from dry ground: the store and the snow settle to their yearly round. */
-function runoffMonths(months, G, F) {
+export function runoffMonths(months, G, F) {
     const out = Array.from({ length: 12 }, () => new Float32Array(G)), arid = Array.from({ length: 12 }, () => new Float32Array(G));
     const liquid = new Float64Array(12), flow = new Float64Array(12);
     const drain = 1 - Math.exp(-1 / F.baseflowMonths);
@@ -320,7 +320,7 @@ function runoffMonths(months, G, F) {
 }
 
 /** The four grid points around (lat, lon) and their bilinear weights (as bilinear). */
-function corners(g, lat, lon, bi, bw) {
+export function corners(g, lat, lon, bi, bw) {
     const { w, h } = g, step = 180 / h;
     const x = (lon + 180) / step - 0.5, y = Math.max(0, Math.min(h - 1, (90 - lat) / step - 0.5));
     const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
@@ -329,7 +329,8 @@ function corners(g, lat, lon, bi, bw) {
     bw[0] = (1 - fx) * (1 - fy); bw[1] = fx * (1 - fy); bw[2] = (1 - fx) * fy; bw[3] = fx * fy;
 }
 
-function bilinear(g, field, lat, lon) {
+/** A field on the climate grid ({w, h}: rows north → south, columns from −180°) at (lat, lon), bilinear. */
+export function bilinear(g, field, lat, lon) {
     const { w, h } = g, step = 180 / h;
     const x = (lon + 180) / step - 0.5, y = Math.max(0, Math.min(h - 1, (90 - lat) / step - 0.5));
     const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;

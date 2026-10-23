@@ -126,7 +126,8 @@ export function fillSeaBasins(mesh, z, ocean, F) {
 
 /**
  * @param {{mesh, z: Float32Array, ocean: Uint8Array, runoff: Float32Array (mm/yr), pet: Float32Array (mm/yr),
- *          rain: Float32Array (mm/yr), wetMonths: Float32Array (0–12), ice: Uint8Array|null (1: an ice cap now), glaciated: Uint8Array|null (1: under the ice age's ice), lat, lon}} ctx
+ *          rain: Float32Array (mm/yr), wetMonths: Float32Array (0–12), ice: Uint8Array|null (1: an ice cap now), glaciated: Uint8Array|null (1: under the ice age's ice), lat, lon,
+ *          network?: boolean (also return the drainage network: each cell's receiver, each river point's cell)}} ctx
  * @returns {{lake: Uint8Array (Water per cell), lakeLevel: Float32Array (km; NaN if none), q: Float32Array (m³/s),
  *            rivers: {start: Int32Array, lat: Float32Array, lon: Float32Array, q: Float32Array, season: Float32Array},
  *            stats: Object}}
@@ -504,12 +505,14 @@ export function hydrology(ctx, F) {
     const on = c => rank[c] >= 0 && q[c] >= F.riverMinM3s && !lakeKind[c] && !(ctx.ice && ctx.ice[c]);
     const upCount = new Uint8Array(n);
     for (let i = 0; i < count; i++) { const c = order[i]; if (on(c) && recv[c] >= 0 && on(recv[c])) upCount[recv[c]] = Math.min(255, upCount[recv[c]] + 1); }
-    const lat = ctx.lat, lon = ctx.lon, L = { start: [], lat: [], lon: [], q: [], season: [], cell: [] };
-    // (a point: where, its discharge, and the cell whose year it has — a mouth's point, the river's last cell's)
+    const lat = ctx.lat, lon = ctx.lon, L = { start: [], lat: [], lon: [], q: [], season: [], cell: [], at: [] };
+    // (a point: where, its discharge, and the cell whose year it has — a mouth's point, the river's last cell's; with the
+    // network, the cell it is at)
     const pushPoint = (c, qq, ss, from = c) => {
         if (lat) { L.lat.push(lat[c]); L.lon.push(lon[c]); }
         else { L.lat.push(Math.asin(Math.max(-1, Math.min(1, xyz[3 * c + 2]))) * 180 / Math.PI); L.lon.push(Math.atan2(xyz[3 * c + 1], xyz[3 * c]) * 180 / Math.PI); }
         L.q.push(qq); L.season.push(ss); L.cell.push(from);
+        if (ctx.network) L.at.push(c);
     };
     let reaches = 0, biggest = 0;
     for (let i = count - 1; i >= 0; i--) {
@@ -543,8 +546,10 @@ export function hydrology(ctx, F) {
     const landKm2 = count * cellKm2;
     return {
         lake: lakeKind, lakeLevel, q, area,
+        // (the network, on request: the cell each land cell drains into — the sea's cells −1 — and each river point's cell)
+        ...(ctx.network ? { recv } : {}),
         rivers: { start: Int32Array.from(L.start), lat: Float32Array.from(L.lat), lon: Float32Array.from(L.lon), q: Float32Array.from(L.q), season: Float32Array.from(L.season),
-            ...(regimes ?? {}) },
+            ...(ctx.network ? { cell: Int32Array.from(L.at) } : {}), ...(regimes ?? {}) },
         terminal: ctx.debug ? hollows.filter(h => h.kind && h.kind !== Water.FRESH).sort((a, b) => b.inflow - a.inflow).slice(0, 12).map(h => {
             let P = 0, E = 0, la = 0, lo = 0; for (const c of h.cells) { P += rain[c]; E += pet[c]; la += (ctx.lat?.[c] ?? 0); lo += (ctx.lon?.[c] ?? 0); }
             const k = h.cells.length; return { inflow: +h.inflow.toFixed(0), fullEvap: +h.fullEvap.toFixed(0), grown: h.grown, grownE: +(h.grownE ?? 0).toFixed(0), cells: k, km2: Math.round(k * cellKm2), depthM: Math.round((h.level - Math.min(...h.cells.map(c => z[c]))) * 1000), rain: Math.round(P / k), pet: Math.round(E / k), at: `${(lo / k).toFixed(0)},${(la / k).toFixed(0)}`, kind: h.kind };
