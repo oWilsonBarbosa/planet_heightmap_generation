@@ -619,6 +619,22 @@ export function columnWaterRain() {
                 }
             }
         }
+        // The air brings only so much water: a 1° cell's year of rain above RAIN_SUPPLY_START_MM is drawn toward
+        // RAIN_SUPPLY_MAX_MM (tanh; every month by the same factor, its seasons kept), where that is set. Earth's wettest 1°
+        // cells get ≈ 7.5 m a year, and the climate gives them that, bound or none; a broad coastal range in moist trade
+        // winds, on a planet raised to Earth's heights (js/earth-relief.js), drew 16 m out of the same air. Off for the
+        // pages: the Evolution's terrain is carved by its rain, and answers any change in it
+        if (P_.RAIN_SUPPLY_MAX_MM > P_.RAIN_SUPPLY_START_MM) {
+            const a = P_.RAIN_SUPPLY_START_MM, span = P_.RAIN_SUPPLY_MAX_MM - a;
+            for (let c = 0; c < core.size; c++) {
+                let year = 0;
+                for (let k = 0; k < K; k++) year += Pout[k * core.size + c];
+                year *= 12 / K;                                           // (the anchors are evenly spaced through the year)
+                if (!(year > a)) continue;
+                const f = (a + span * Math.tanh((year - a) / span)) / year;
+                for (let k = 0; k < K; k++) Pout[k * core.size + c] *= f;
+            }
+        }
         const out = { P: Pout, W: Wout, E: Eout, r: Rout, orographic, eady: eadyOut, balance: results.map(r => r.balance), cycles, newton,
             state: { step: g.step, Wk }, profile: prof, ms: performance.now() - t0, source: 'column water' };
         if (globalThis.RAIN_DEBUG) out.debug = { g, prep, Wk, results, land, hgt };

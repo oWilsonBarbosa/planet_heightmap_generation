@@ -19,6 +19,15 @@ export const EARTH_LAND_KM = [0, 0.002, 0.004, 0.006, 0.009, 0.013, 0.017, 0.021
 /** Earth's sea depth (km) at each half per cent of its area, from the shallowest: 4.1 km at the median, 10.6 at the deepest. */
 export const EARTH_SEA_DEPTH_KM = [0, 0.008, 0.016, 0.023, 0.031, 0.039, 0.047, 0.055, 0.064, 0.074, 0.087, 0.102, 0.121, 0.145, 0.179, 0.224, 0.279, 0.34, 0.41, 0.486, 0.574, 0.69, 0.827, 0.973, 1.11, 1.237, 1.358, 1.474, 1.59, 1.699, 1.801, 1.899, 1.993, 2.08, 2.162, 2.241, 2.318, 2.392, 2.459, 2.525, 2.586, 2.642, 2.695, 2.744, 2.789, 2.832, 2.875, 2.917, 2.958, 2.996, 3.033, 3.068, 3.102, 3.135, 3.166, 3.196, 3.224, 3.251, 3.278, 3.305, 3.331, 3.356, 3.38, 3.405, 3.429, 3.452, 3.475, 3.498, 3.52, 3.541, 3.562, 3.583, 3.603, 3.623, 3.643, 3.663, 3.682, 3.702, 3.721, 3.74, 3.759, 3.778, 3.796, 3.814, 3.832, 3.85, 3.868, 3.886, 3.904, 3.921, 3.939, 3.956, 3.974, 3.991, 4.007, 4.024, 4.041, 4.058, 4.074, 4.091, 4.108, 4.124, 4.14, 4.156, 4.172, 4.188, 4.203, 4.219, 4.234, 4.25, 4.265, 4.28, 4.295, 4.309, 4.324, 4.338, 4.353, 4.367, 4.382, 4.396, 4.41, 4.425, 4.439, 4.454, 4.469, 4.484, 4.499, 4.514, 4.529, 4.544, 4.559, 4.575, 4.591, 4.606, 4.622, 4.637, 4.653, 4.668, 4.684, 4.7, 4.716, 4.733, 4.75, 4.766, 4.783, 4.799, 4.816, 4.832, 4.848, 4.864, 4.88, 4.896, 4.913, 4.929, 4.945, 4.961, 4.976, 4.992, 5.008, 5.024, 5.04, 5.055, 5.071, 5.087, 5.103, 5.118, 5.134, 5.15, 5.166, 5.182, 5.198, 5.215, 5.232, 5.25, 5.268, 5.286, 5.305, 5.323, 5.342, 5.361, 5.38, 5.4, 5.421, 5.441, 5.464, 5.487, 5.511, 5.536, 5.563, 5.59, 5.62, 5.651, 5.685, 5.721, 5.763, 5.811, 5.862, 5.924, 6.003, 6.144, 10.567];
 
+/**
+ * The climate's settings for a planet on these heights (v2/js/climate/config.js setParams): the air's supply of rain
+ * bounded. Raised to Earth's heights, planet 06cy8w6z6a89kow6psje93's broad coastal ranges in moist trade winds drew up
+ * to 16 m a year out of 1° cells (20 m a region; 0.06 % of its land above 10 m) — Earth's wettest 1° cells get ≈ 7.5 m,
+ * its wettest stations ≈ 11.9 m. Bounded: at most 12.8 m a region, 0.018 % of the land above 10 m. Earth's own climate
+ * is the same with the bound as without (Köppen against Kottek and against Beck, the stages' guardrails).
+ */
+export const EARTH_RELIEF_CLIMATE = Object.freeze({ RAIN_SUPPLY_START_MM: 5000, RAIN_SUPPLY_MAX_MM: 7500 });
+
 /** The lowest land, so that land stays above the sea (km). */
 const LAND_FLOOR_KM = 1e-4;
 

@@ -167,6 +167,9 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_OROGRAPHIC: 0.6,       // –          share of the water lifted by winds blowing up rising ground that rains out
     RAIN_OROG_MULT_MAX: 3,      // –          … and at most this many times its rain on any one 1° cell from the windward / lee step
     RAIN_CELL_FACTOR_MAX: 1.5,  // –          a terrain cell's rain for its height above or below its surroundings: within × / ÷ this
+    RAIN_SUPPLY_START_MM: 5000, // mm/yr      the air brings only so much water: a 1° cell's year of rain above this is drawn toward …
+    RAIN_SUPPLY_MAX_MM: 0,      // mm/yr      … this, at most, every month alike. 0: no bound — the pages' climate; js/earth-relief.js
+                                //            EARTH_RELIEF_CLIMATE sets 7,500 for a planet on Earth's heights
     RAIN_COLUMN_LAPSE_MAX: 6.5, // °C/km      the air column holds its water as if cooled with height by at most this (over ice sheets)
     RAIN_NEWTON: 30,          //            at most this many Newton steps per point in the year …
     RAIN_TOL: 2e-3,             //            … stopping when the column water changes less than this (relative)
@@ -297,6 +300,8 @@ export const PARAM_PRIORS = Object.freeze({
     RAIN_OROGRAPHIC:    { value: 0.5, min: 0.1, max: 1.0, source: 'precipitation efficiency of orographic clouds ≈ 20–50 % (Jiang & Smith 2003)' },
     RAIN_OROG_MULT_MAX: { value: 3, min: 2, max: 5, source: 'orographic enhancement ≈ ×2–3 on windward slopes (Roe 2005; Smith & Barstad 2004); observed 1° land rain peaks at ≈ 7,500 mm/yr (Beck et al. 2023)' },
     RAIN_CELL_FACTOR_MAX: { value: 1.5, min: 1.25, max: 2.5, source: 'no direct literature value: windward rain grows ≈ 5–10 % per 100 m (Roe 2005), so the few hundred metres a terrain cell stands above or below its 1° surroundings make ≈ ×1.2–1.6' },
+    RAIN_SUPPLY_START_MM: { value: 5000, min: 4000, max: 7500, source: "Earth's wettest 1° land cells get ≈ 5–7.5 m a year (Beck et al. 2023 at 1°: 7.5 m) — the Chocó, Mt Cameroon, the Khasi Hills; the climate gives Earth that with or without the bound" },
+    RAIN_SUPPLY_MAX_MM: { value: 7500, min: 7000, max: 12000, source: 'no 1° land cell on Earth reaches 8 m a year (Beck et al. 2023); the wettest stations ≈ 11.9 m (Mawsynram, Cherrapunji), a terrain cell up to ×RAIN_CELL_FACTOR_MAX its 1° cell' },
     RAIN_COLUMN_LAPSE_MAX: { value: 6.5, min: 6.5, max: 10, source: 'the free troposphere cools ≈ 6.5 K/km (standard atmosphere); the ≈ 8 K/km of an ice-sheet surface (Fortuin & Oerlemans 1990) is its near-surface inversion, which holds little of the column\'s water' },
 });
 
