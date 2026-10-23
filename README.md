@@ -265,6 +265,10 @@ js/
                         climate is humid; their beds filled with sediment toward ~1 km deep; its coasts unchanged), river polylines
                         with their seasons (checked against measured flows: tuning/water/). Not run by the pages yet: for
                         headless exports (Node)
+  earth-relief.js       Earth-like heights for a V1 planet — its elevation mapped, every region's order kept, onto Earth's
+                        hypsometry (ETOPO 2022: the land without Antarctica, the sea floor), where the generator's own height
+                        curve leaves half the land below ~30 m and the sea 2.3 km deep; for running the climate and
+                        water-new.js on Earth's heights. Not run by the pages yet: for headless exports (Node)
   climate-layers.js     The climate's Inspect layers — colours, legends, hover lines, arrows, the season picker
   climate-config.js     The OLD climate's parameters (no longer run by the app; kept for the old tuning diagnostics)
   climate-util.js       Shared climate utilities — smoothing, ITCZ lookup, percentile selection
@@ -289,6 +293,9 @@ tuning/
   water/                The rivers check — scores js/water-new.js's rivers on an imported Earth heightmap against
                         the measured flows of ~130 great rivers (Dai & Trenberth, NCAR), with the simulated and the
                         observed climate (see tuning/water/README.md)
+  relief/               Earth's hypsometry for js/earth-relief.js — downloads a sample of ETOPO 2022 (NOAA NCEI) and
+                        computes how much of Earth's land lies below each height, and of its sea floor above each depth
+                        (see tuning/relief/README.md)
 ```
 
 ## Dependencies

@@ -54,18 +54,20 @@ export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowSh
 
 /**
  * Rivers and lakes on a V1 planet.
- * @param {{r_xyz: Float32Array, r_elevation: Float32Array, adjOffset: Int32Array, adjList: Int32Array, climate: Object}} planet
+ * @param {{r_xyz: Float32Array, r_elevation: Float32Array, adjOffset: Int32Array, adjList: Int32Array, climate: Object, heightKm?: Float32Array}} planet
  *        unit-sphere positions (any axes: the climate's lat / lon place the rivers), V1's elevation (≤ 0 water), each
- *        region's neighbours (SphereMesh), and planetClimate's result for this planet (grid, surface, months, cell)
+ *        region's neighbours (SphereMesh), planetClimate's result for this planet (grid, surface, months, cell), and
+ *        the heights to run on (km: js/earth-relief.js earthLikeHeights for Earth's; by default the generator's own
+ *        curve, js/color-map.js elevToHeightKm — the climate's must be the same)
  * @param {{F?: Object, riverMonths?: boolean}} options  the hydrology's constants (WATER); riverMonths: also each river
  *        point's twelve monthly flows (rivers.months, m³/s, 12 per point)
  */
-export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: res }, { F = WATER, riverMonths = false } = {}) {
+export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: res, heightKm = null }, { F = WATER, riverMonths = false } = {}) {
     const t0 = performance.now();
     const n = r_elevation.length, G = res.grid.size, climGrid = { w: res.grid.w, h: res.grid.h };
     const mesh = { numCells: n, xyz: r_xyz, adjOffset, adjList };
     const z0 = new Float32Array(n);
-    for (let r = 0; r < n; r++) z0[r] = elevToHeightKm(r_elevation[r]);
+    for (let r = 0; r < n; r++) z0[r] = heightKm ? heightKm[r] : elevToHeightKm(r_elevation[r]);
     // (an inland sea that spills stands at sea level, its outflow cut down to just above it: the pages' shores)
     const Fw = { ...F, seaCutFloorKm: SPILL_LEVEL_KM };
 
@@ -113,8 +115,10 @@ export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: r
     for (let c = 0; c < n; c++) if (koppen[c] === KOPPEN_ID.EF) ice[c] = 1;
 
     // ── the sea, and the inland seas: each body of water, and whether the open ocean reaches it (through a strait the
-    // mesh cannot show, too — found on a copy of the heights: the planet's own are not cut) ──
-    const zs = z0.slice(), reach = oceanMask(mesh, zs);
+    // mesh cannot show, too — found on a copy of the heights: the planet's own are not cut). Always on the generator's
+    // own heights: a strip of coast one region wide is its lowest land, a strait's sill of a metre or two; on Earth-like
+    // heights it would stand tens of metres high and cut 445 bays off the sea on planet 06cy8w6z6a89kow6psje93 ──
+    const zs = heightKm ? Float32Array.from(r_elevation, (e) => elevToHeightKm(e)) : z0.slice(), reach = oceanMask(mesh, zs);
     openStraits(mesh, zs, reach, F);
     const reached = oceanMask(mesh, zs), body = new Int32Array(n).fill(-1), bodySea = [];
     for (let s = 0; s < n; s++) {
