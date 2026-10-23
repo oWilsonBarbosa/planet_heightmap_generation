@@ -124,8 +124,10 @@ const argmax = (a) => a.reduce((m, v, i) => (v > a[m] ? i : m), 0);
  *  flow; and whether a lake lies upstream (a lake evens out what it passes on: on the coarse Earth map most are
  *  artefacts of its 8-bit steps). */
 function score(W) {
+    // (each region's own river point: at a confluence the first point of the reach that starts there — the last point
+    // there, as every reach ending there, with its own tributary's year, is traced before it)
     const pointAt = new Map();
-    for (let i = 0; i < W.rivers.cell.length; i++) if (!pointAt.has(W.rivers.cell[i])) pointAt.set(W.rivers.cell[i], i);
+    for (let i = 0; i < W.rivers.cell.length; i++) pointAt.set(W.rivers.cell[i], i);
     const first = new Int32Array(n).fill(-1), next = new Int32Array(n).fill(-1);
     for (let c = 0; c < n; c++) { const r = W.recv[c]; if (r >= 0) { next[c] = first[r]; first[r] = c; } }
     const lakeUpstream = (c0) => { const st = [c0]; while (st.length) { const c = st.pop(); if (W.lake[c]) return true; for (let u = first[c]; u >= 0; u = next[u]) st.push(u); } return false; };

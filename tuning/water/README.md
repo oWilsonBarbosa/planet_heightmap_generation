@@ -42,10 +42,18 @@ node tuning/water/earth-rivers.mjs --tune [--grid baseflowShare=0.5/0.7,baseflow
 
 | | runoff within ×2 | year r | peak ±1 month | range | low flow |
 |---|---:|---:|---:|---:|---:|
-| observed climate, the Evolution's constants | 82 % (×0.92) | 0.82 | 78 % | ×0.74 | ×1.55 |
-| observed climate, `WATER` (dry basins don't even out the months; baseflow 0.7, 3 months) | 82 % (×0.92) | 0.86 | 84 % | ×0.98 | ×0.85 |
-| simulated climate, the Evolution's constants | 52 % (×0.79) | 0.53 | 52 % | ×0.69 | ×1.51 |
-| simulated climate, `WATER` | 52 % (×0.79) | 0.60 | 57 % | ×0.98 | ×0.75 |
+| observed climate, the Evolution's constants | 82 % (×0.92) | 0.82 | 76 % | ×0.64 | ×1.99 |
+| observed climate, `WATER` (dry basins don't even out the months; baseflow 0.7, 3 months) | 82 % (×0.92) | 0.86 | 83 % | ×0.98 | ×0.85 |
+| simulated climate, the Evolution's constants | 52 % (×0.79) | 0.53 | 51 % | ×0.64 | ×1.84 |
+| simulated climate, `WATER` | 52 % (×0.79) | 0.60 | 56 % | ×1.00 | ×0.75 |
+
+The Evolution's constants even out the months more the finer the mesh (the range ×0.86 at 640K, ×0.64 at 2.56M): the
+basins the rivers cut through, more of them at finer detail, pass on their water as lakes would. Without that the
+rivers were too seasonal at any detail (the range ×1.24 at both, the low flow ×0.55 and ×0.51), hence more water
+through the ground. `--tune` ranks
+0.7 × 2.5 months a little above `WATER`'s 0.7 × 3 with the observed climate (year score 0.208 against 0.189 at 2.56M,
+0.245 against 0.178 at 640K) and below it with the simulated one (−0.312 against −0.243): 3 months keeps the dry
+season's flow nearer the measured with either (×0.85 against ×0.66 observed, ×0.75 against ×0.56 simulated).
 
 With the observed climate the rivers are right within ×2 for 84–90 % of the gauges in tropical, temperate and cold
 climates, and 50 % in arid ones (dams, irrigation, losses). Most of what remains is the simulated climate's: how much

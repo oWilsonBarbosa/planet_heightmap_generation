@@ -39,14 +39,16 @@ export const Water = Object.freeze({ ...HydroWater, BRACKISH: 4 });
 /**
  * The hydrology's constants for Generate: the Evolution's (finish-config.js FINISH), with the rivers' year checked
  * against measured flows (tuning/water/earth-rivers.mjs: real Earth's rivers against 130 of Dai & Trenberth's gauges,
- * with the observed climate):
+ * with the observed climate, at 2.56M):
  *   - a basin its river cuts through (no water kept) does not even out the river's months — the Evolution's own do,
- *     as lakes: at 2.56M that flattened the Tocantins', the Mackenzie's and the Godavari's years to within ±15 % of
- *     their mean, the more the finer the mesh;
- *   - more of the water through the ground, drained back more slowly (baseflowShare 0.5 → 0.7, baseflowMonths 2.5 → 3,
- *     the best of 0.5–0.9 × 2–4 months): the months' correlation with the measured 0.81 → 0.86, the peak within a
- *     month 77 → 84 %, the range (coefficient of variation) ×1.23 → ×0.98 and the low flow ×0.51 → ×0.85 of the
- *     measured. The year's flows do not depend on them.
+ *     as lakes: at 2.56M that flattened the Tocantins', the Mackenzie's and the Brahmaputra's years to within ±15 % of
+ *     their mean, the more the finer the mesh (the range ×0.86 of the measured at 640K, ×0.64 at 2.56M);
+ *   - more of the water through the ground, drained back more slowly (baseflowShare 0.5 → 0.7, baseflowMonths 2.5 → 3):
+ *     the months' correlation with the measured 0.80 → 0.86, the peak within a month 76 → 83 %, the range (coefficient
+ *     of variation) ×1.24 → ×0.98 and the low flow ×0.51 → ×0.85 of the measured. Of 0.5–0.9 × 2–4 months, 2.5 months
+ *     scores a little higher with the observed climate, 3 with the simulated one, and keeps the dry season's flow
+ *     nearer the measured with either (×0.85 against ×0.66 observed, ×0.75 against ×0.56 simulated).
+ * The year's flows do not depend on them.
  */
 export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowShare: 0.7, baseflowMonths: 3 });
 
