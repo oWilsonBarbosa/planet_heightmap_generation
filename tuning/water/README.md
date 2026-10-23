@@ -60,13 +60,16 @@ through the ground. Without the travel time, `--tune` ranks
 season's flow nearer the measured with either (×0.85 against ×0.66 observed, ×0.75 against ×0.56 simulated). With it,
 at 640K, 0.6–0.8 × 2.5–3 months × 0–200 km a day score 0.15–0.27, 0.7 × 3 at 50 km a day fifth of the 30 (0.246).
 
-Each month's water reaches a river point as late as its way down takes: the mean distance its water has come,
-weighed by the runoff along the way, at `riverSpeedKmDay` (the Evolution's: none, every month's water at the mouth
-within the month). `--tune --grid riverSpeedKmDay=0/25/40/50/70/100` with the observed climate at 2.56M: year score
-0.189, 0.229, **0.262**, 0.258, 0.227, 0.235; the great basins early by 0.79, −0.43, 0.07, 0.29, 0.43, 0.43 months.
-40 km a day is 0.46 m/s: one effective speed for every river, as simple global routing schemes have it — the water
-runs faster in its channel, but floodplains and wetlands hold it back. The Amazon now peaks in April, the measured in
-May–June (before: March–April); the model has no floodplains.
+Each month's water reaches a river point as late as its way down takes, spread over the months as its water comes
+from near and far: the distances its water has come, weighed by the runoff along the way, at `riverSpeedKmDay` (the
+Evolution's: none, every month's water at the mouth within the month) — their mean and spread as a Nash cascade's
+travel times (a gamma distribution of the same mean and variance; the classic unit hydrograph). `--tune --grid
+riverSpeedKmDay=0/25/30/40/50/60/80` with the observed climate at 2.56M: year score 0.189, 0.249, 0.242, **0.262**,
+0.258, 0.242, 0.231; the great basins early by 0.79, −0.43, −0.07, 0.07, 0.29, 0.43, 0.43 months. 40 km a day is
+0.46 m/s: one effective speed for every river, as simple global routing schemes have it — the water runs faster in
+its channel, but floodplains and wetlands hold it back. The Amazon now peaks in April–May, the measured in May–June
+(before: March–April); the model has no floodplains. The spread changes little here (the Mackenzie's year: r 0.97 →
+0.99 against a shift alone); it matters for basins larger than Earth's, whose water comes from thousands of km apart.
 
 With the observed climate the rivers are right within ×2 for 84–90 % of the gauges in tropical, temperate and cold
 climates, and 50 % in arid ones (dams, irrigation, losses). Most of what remains is the simulated climate's: how much

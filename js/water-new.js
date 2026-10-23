@@ -52,11 +52,13 @@ export const Water = Object.freeze({ ...HydroWater, BRACKISH: 4 });
  *     of variation) ×1.24 → ×0.98 and the low flow ×0.51 → ×0.85 of the measured. Of 0.5–0.9 × 2–4 months, 2.5 months
  *     scores a little higher with the observed climate, 3 with the simulated one, and keeps the dry season's flow
  *     nearer the measured with either (×0.85 against ×0.66 observed, ×0.75 against ×0.56 simulated);
- *   - each month's water reaching a river point as late as its way down takes, at 40 km a day (riverSpeedKmDay: the
- *     Evolution's water reaches the mouth within the month): the great basins' year, from 500,000 km², 0.79 months early
- *     → 0.07, the months' correlation 0.86 → 0.89, the peak within a month 83 → 87 %. Of 25–100 km a day, 40 scores
- *     best: 0.46 m/s, one effective speed for every river, as simple global river-routing schemes have it (TRIP's
- *     first version, CLM4, LPJ) — the water runs faster in its channel, but floodplains and wetlands hold it back.
+ *   - each month's water reaching a river point as late as its way down takes, at 40 km a day, and spread over the
+ *     months as its water comes from near and far (riverSpeedKmDay: the Evolution's water reaches the mouth within the
+ *     month): the great basins' year, from 500,000 km², 0.79 months early → 0.07, the months' correlation 0.86 → 0.89,
+ *     the peak within a month 83 → 87 %. Of 25–80 km a day, 40 scores best: 0.46 m/s, one effective speed for every
+ *     river, as simple global river-routing schemes have it (TRIP's first version, CLM4, LPJ) — the water runs faster
+ *     in its channel, but floodplains and wetlands hold it back. A basin far larger than Earth's has its year spread
+ *     out more than shifted: water from 7,600 km on average, give or take 3,400, keeps 40 % of its seasons.
  * The year's flows do not depend on them.
  */
 export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowShare: 0.7, baseflowMonths: 3, riverSpeedKmDay: 40 });

@@ -623,27 +623,31 @@ function riverYears(ctx, F, G) {
         }
         for (let p = 0; p < P; p++) for (let j = 0; j < M; j++) qm[12 * p + m0 + j] = acc[j][cells[p]];
     }
-    // (the water's way down, where F.riverSpeedKmDay is given: each point's months late by the time its water takes to
-    // reach it — the mean distance its water has come, weighed by the runoff along the way, at that speed; the year
-    // round, a month's water passing on into the next. A lake passes on its share of what flows in, a closed one none)
+    // (the water's way down, where F.riverSpeedKmDay is given: each point's months later by the time its water takes to
+    // reach it, and spread out as its water comes from near and far — the distances its water has come, weighed by the
+    // runoff along the way, at that speed: their mean and spread as a Nash cascade's travel times (travelTimes), each
+    // month's water passing on over the months after it, the year round. A lake passes on its share of what flows in,
+    // a closed one none)
     if (F.riverSpeedKmDay > 0) {
-        const Qa = new Float64Array(n), Sq = new Float64Array(n);
+        const Qa = new Float64Array(n), S1 = new Float64Array(n), S2 = new Float64Array(n);
         for (let i = count - 1; i >= 0; i--) {
             const c = order[i], h = hollow[c] >= 0 ? hollows[hollow[c]] : null;
             Qa[c] += own(c);
             if (h && h.lake && c === h.outlet) {
                 const f = h.outflow > 0 && h.inflow > 0 ? Math.min(1, h.outflow / h.inflow) : 0;
-                Qa[c] *= f; Sq[c] *= f;
+                Qa[c] *= f; S1[c] *= f; S2[c] *= f;
             }
-            const r = recv[c];
-            if (r >= 0 && rank[r] >= 0 && Qa[c] > 0) { Qa[r] += Qa[c]; Sq[r] += Sq[c] + Qa[c] * stepKm[c]; }
+            const r = recv[c], s = stepKm[c];
+            if (r >= 0 && rank[r] >= 0 && Qa[c] > 0) { Qa[r] += Qa[c]; S2[r] += S2[c] + 2 * s * S1[c] + s * s * Qa[c]; S1[r] += S1[c] + s * Qa[c]; }
         }
-        const kmPerMonth = F.riverSpeedKmDay * 365.25 / 12, year = new Float64Array(12);
+        const kmPerMonth = F.riverSpeedKmDay * 365.25 / 12, w = new Float64Array(12), year = new Float64Array(12);
         for (let p = 0; p < P; p++) {
-            const c = cells[p], late = Qa[c] > 0 ? Sq[c] / Qa[c] / kmPerMonth : 0;
-            if (!(late > 0.01)) continue;
-            const k = Math.floor(late), f = late - k;
-            for (let m = 0; m < 12; m++) year[m] = (1 - f) * qm[12 * p + (((m - k) % 12) + 12) % 12] + f * qm[12 * p + (((m - k - 1) % 12) + 12) % 12];
+            const c = cells[p];
+            if (!(Qa[c] > 0)) continue;
+            const mean = S1[c] / Qa[c] / kmPerMonth, spread = Math.max(0, S2[c] / Qa[c] / (kmPerMonth * kmPerMonth) - mean * mean);
+            if (!(mean > 0.01)) continue;
+            travelTimes(mean, spread, w);
+            for (let m = 0; m < 12; m++) { let v = 0; for (let k = 0; k < 12; k++) v += w[k] * qm[12 * p + (m - k + 12) % 12]; year[m] = v; }
             for (let m = 0; m < 12; m++) qm[12 * p + m] = year[m];
         }
     }
@@ -664,4 +668,25 @@ function riverYears(ctx, F, G) {
         farFed[p] = regime[p] <= Regime.FLOOD && pet[c] > 0 && Math.max(0, rain[c]) < F.farFedAridity * pet[c] ? 1 : 0;
     }
     return ctx.debug ? { regime, floodFrom, floodTo, farFed, months } : { regime, floodFrom, floodTo, farFed };     // (the months: for checks only)
+}
+
+/**
+ * The share of a month's water that reaches a river point k = 0 … 11 months later, the year round (w, summing to 1), for
+ * travel times of the given mean and variance (months, months²): a gamma distribution — a Nash cascade of linear
+ * reservoirs fitted by its moments, the classic unit hydrograph — sampled finely, each time shared between the two
+ * months around it. A narrow one is a shift.
+ */
+function travelTimes(mean, variance, w) {
+    w.fill(0);
+    const shape = variance > 0 ? mean * mean / variance : Infinity;
+    if (shape > 400) { const k = Math.floor(mean), f = mean - k; w[k % 12] += 1 - f; w[(k + 1) % 12] += f; return w; }
+    const scale = variance / mean, sd = Math.sqrt(variance), dt = Math.min(0.05, sd / 8), end = mean + 8 * sd;
+    let sum = 0;
+    for (let t = dt / 2; t < end; t += dt) {
+        const p = Math.exp((shape - 1) * Math.log(t / mean) - (t - mean) / scale);     // (the density, up to a factor)
+        const k = Math.floor(t), f = t - k;
+        w[k % 12] += p * (1 - f); w[(k + 1) % 12] += p * f; sum += p;
+    }
+    for (let k = 0; k < 12; k++) w[k] /= sum;
+    return w;
 }

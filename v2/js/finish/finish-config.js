@@ -162,7 +162,8 @@ export const FINISH = {
     baseflowShare: 0.5,
     baseflowMonths: 2.5,
     lakeRegulation: 0.6,
-    riverSpeedKmDay: 0,         // the water's way down to each river point, km a day: its months that much later (0: none)
+    riverSpeedKmDay: 0,         // the water's way down to each river point, km a day: its months that much later, spread by
+                                // how far its water comes from (0: none)
     // regimes: a month is dry when the river carries under dryShare of its mean (or under dryM3s); dry ephemeralMonths or
     // more — dry most of the year; fewer — seasonal; never — permanent, with a flood season if its peak month carries
     // floodRatio × its mean (the Nile, the Ganges, the snowmelt rivers; not the Amazon, the Mississippi, the Rhine). Fed
