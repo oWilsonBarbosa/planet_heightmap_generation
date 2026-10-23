@@ -260,9 +260,10 @@ js/
   terrain-post.js       Domain warping, bilateral smoothing, glacial/hydraulic/thermal erosion, ridge sharpening, soil creep
   climate-new.js        The climate for Generate and Import — runs the new climate (v2/js/climate/) on a V1 planet: Köppen, per-region months, the 1° grid
   water-new.js          Rivers and lakes for a Generate or Import planet — the Evolution's hydrology (v2/js/finish/finish-hydro.js) on a V1
-                        planet as it is, fed by the new climate's twelve months: discharge, drainage, lakes (the planet's inland seas
-                        spill on to the sea or end their rivers as salt lakes; its coasts unchanged), river polylines with their
-                        seasons. Not run by the pages yet: for headless exports (Node)
+                        planet as it is, fed by the new climate's twelve months (evaporation month by month): discharge, drainage,
+                        lakes (the planet's inland seas spill on to the sea or end their rivers as salt lakes — brackish where the
+                        climate is humid; their beds filled with sediment toward ~1 km deep; its coasts unchanged), river polylines
+                        with their seasons. Not run by the pages yet: for headless exports (Node)
   climate-layers.js     The climate's Inspect layers — colours, legends, hover lines, arrows, the season picker
   climate-config.js     The OLD climate's parameters (no longer run by the app; kept for the old tuning diagnostics)
   climate-util.js       Shared climate utilities — smoothing, ITCZ lookup, percentile selection

@@ -5,31 +5,36 @@
 //
 //   ocean      1 on the sea: the open ocean, and the water behind a barrier lower and shorter than a strait the mesh
 //              could show (the Evolution's strait rule: a lagoon's mouth, a narrow strait)
-//   lake       the rest of the water (Water: 0 none, 1 fresh lake, 2 salt lake, 3 salt pan); lakeLevel its surface (km);
-//              lakeOutlet the region its outflow leaves by (its discharge there: q), −1 if it has none
-//   q          the year's mean discharge (m³/s): the runoff — rain less evaporation, Budyko's curve — of everything
-//              upstream, less what a river loses along its bed in dry country; area: what drains there (km²)
+//   lake       the rest of the water (Water: 0 none, 1 fresh lake, 2 salt lake, 3 salt pan, 4 brackish lake); lakeLevel
+//              its surface (km); lakeOutlet the region its outflow leaves by (its discharge there: q), −1 if it has none
+//   q          the year's mean discharge (m³/s): the runoff — rain less evaporation (potential evaporation month by
+//              month), Budyko's curve — of everything upstream, less what a river loses along its bed in dry country;
+//              area: what drains there (km²)
 //   recv       the region each land region drains into — a lake's water its outlet; −1 on the sea and where the water
-//              goes no further (a salt lake): a tree, every region's water followed down it reaches the sea or a salt lake
+//              goes no further (a closed lake): a tree, every region's water followed down it reaches the sea or a closed
+//              lake
 //   heightKm   the height after the rivers (km): where a river leaves a hollow it cannot keep as a lake, or an inland sea
-//              spills, it has cut its way out — the pages' heights everywhere else
+//              spills, it has cut its way out; a lake's bed filled with sediment toward at most about a kilometre below
+//              its surface — the pages' heights everywhere else
 //   rivers     every reach from F.riverMinM3s as a polyline (lat, lon, discharge, its wet months' share, the region of
 //              each point) and its year: regime (steady, flood season, seasonal, dry most of the year), flood months,
 //              fed from afar
 //
 // The water stays where the pages draw it. The planet's water below sea level that the sea does not reach — an inland
 // sea — fills its basin and spills on toward the sea if its rivers bring more than it evaporates (a fresh lake, its
-// outflow running on: every big river reaches the sea); else its rivers end in it (a salt lake). A hollow on land holds
-// a lake by its water balance and size, as in the Evolution — or its river cuts through it.
+// outflow running on: every big river reaches the sea); else its rivers end in it (a salt lake, or brackish where its
+// climate is humid). A hollow on land holds a lake by its water balance and size, as in the Evolution — or its river
+// cuts through it.
 
 import { FINISH } from '../v2/js/finish/finish-config.js';
-import { hydrology, openStraits, Water } from '../v2/js/finish/finish-hydro.js';
+import { hydrology, openStraits, Water as HydroWater } from '../v2/js/finish/finish-hydro.js';
 import { oceanMask, runoffMonths, corners, bilinear } from '../v2/js/finish/finish.js';
 import { KOPPEN_ID } from '../v2/js/climate/koppen.js';
 import { CORE_DEFAULTS } from '../v2/js/climate/core.js';
 import { elevToHeightKm } from './color-map.js';
 
-export { Water };
+/** The water of a lake region: the Evolution's kinds (finish-hydro.js), and brackish — a closed lake in a humid climate. */
+export const Water = Object.freeze({ ...HydroWater, BRACKISH: 4 });
 
 /**
  * Rivers and lakes on a V1 planet.
@@ -66,14 +71,25 @@ export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: r
         pG[g] = p; tG[g] = t + gamma * href;
     }
     for (let c = 0; c < n; c++) if (!(pAnn[c] === pAnn[c])) { pAnn[c] = bilinear(climGrid, pG, lat[c], lon[c]); tAnn[c] = bilinear(climGrid, tG, lat[c], lon[c]) - gamma * Math.max(0, z0[c]); }
-    const runoff = new Float32Array(n), pet = new Float32Array(n);
+    // (potential evaporation month by month, as the rivers' months have it (runoffMonths): each month's temperature at
+    // the region's own height — the grid's month there, moved by the region's year against the grid's: the climate's
+    // own per-region months, to rounding — so a continental summer evaporates where the year averages below freezing;
+    // from the annual mean the Lena's basin evaporated 60 mm and its rivers ran 1.6 times too full on real Earth, with
+    // the observed climate. Runoff by Budyko's curve from the year's totals)
+    const runoff = new Float32Array(n), pet = new Float32Array(n), Tm = new Float64Array(12);
+    const bi = new Int32Array(4), bw = new Float64Array(4), at = (f) => f[bi[0]] * bw[0] + f[bi[1]] * bw[1] + f[bi[2]] * bw[2] + f[bi[3]] * bw[3];
+    const monthT = Array.from({ length: 12 }, (_, m) => res.months.T.subarray(m * G, (m + 1) * G));
     for (let c = 0; c < n; c++) {
-        const P = Math.max(0, pAnn[c]), E0 = Math.max(F.petMinMm, F.petBaseMm + F.petPerC * tAnn[c]);
+        corners(climGrid, lat[c], lon[c], bi, bw);
+        let mean = 0;
+        for (let m = 0; m < 12; m++) { Tm[m] = at(monthT[m]); mean += Tm[m] / 12; }
+        const P = Math.max(0, pAnn[c]), shift = tAnn[c] - mean;
+        let E0 = 0;
+        for (let m = 0; m < 12; m++) E0 += Math.max(F.petMinMm / 12, (F.petBaseMm + F.petPerC * (Tm[m] + shift)) / 12);
         pet[c] = E0;
         runoff[c] = P > 0 ? Math.max(0, P - P * (1 + E0 / P - (1 + (E0 / P) ** F.budykoW) ** (1 / F.budykoW))) : 0;
     }
     const monthly = runoffMonths(res.months, G, F);
-    const bi = new Int32Array(4), bw = new Float64Array(4), at = (f) => f[bi[0]] * bw[0] + f[bi[1]] * bw[1] + f[bi[2]] * bw[2] + f[bi[3]] * bw[3];
     const months = { at: (c, m0, M, share, arid) => { corners(climGrid, lat[c], lon[c], bi, bw); for (let j = 0; j < M; j++) { share[j] = at(monthly.share[m0 + j]); arid[j] = at(monthly.arid[m0 + j]); } } };
     // (no rivers on the ice caps)
     const ice = new Uint8Array(n);
@@ -118,17 +134,36 @@ export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: r
         for (let c = 0; c < n; c++) if (spilling[c] && closed[body[c]]) { spilling[c] = 0; sink[c] = 1; }
     }
     const lake = Hy.lake, lakeLevel = Hy.lakeLevel;
-    for (let c = 0; c < n; c++) if (sink[c] && !ocean[c]) { lake[c] = Water.SALT; lakeLevel[c] = 0; }
-    let salt = 0, spilled = 0;
-    for (let i = 0; i < B; i++) if (!bodySea[i]) { if (closed[i]) salt++; else if (full[i]) spilled++; }
+    // (the inland seas the rivers end in: salt where the lake's own climate is dry; where it is humid — its rain at least
+    // BRACKISH_ARIDITY of its potential evaporation — brackish: on Earth a closed lake there is flushed in wet years or
+    // drains through the ground, and is seldom salt)
+    const sumP = new Float64Array(B), sumE = new Float64Array(B), humid = new Uint8Array(B);
+    for (let c = 0; c < n; c++) if (sink[c] && !ocean[c]) { sumP[body[c]] += Math.max(0, pAnn[c]); sumE[body[c]] += pet[c]; }
+    let salt = 0, brackish = 0, spilled = 0;
+    for (let i = 0; i < B; i++) {
+        if (closed[i]) { humid[i] = sumP[i] >= BRACKISH_ARIDITY * sumE[i] ? 1 : 0; if (humid[i]) brackish++; else salt++; }
+        else if (!bodySea[i] && full[i]) spilled++;
+    }
+    for (let c = 0; c < n; c++) if (sink[c] && !ocean[c]) { lake[c] = humid[body[c]] ? Water.BRACKISH : Water.SALT; lakeLevel[c] = 0; }
+    // (a lake's bed, filled with sediment since its water has stood there: toward at most about F.seaFillKm below its
+    // surface (depth d → seaFillKm × tanh(d / seaFillKm)), as the Evolution fills a remnant of the sea — V1's inland seas
+    // are pits of the sea floor, kilometres deep, and Earth's deepest lake, Baikal, is 1.6 km. Its water stays as it was)
+    for (let c = 0; c < n; c++) {
+        const d = lakeLevel[c] - z[c];
+        if (lake[c] && d > 0) z[c] = lakeLevel[c] - F.seaFillKm * Math.tanh(d / F.seaFillKm);
+    }
     return {
         heightKm: z, ocean, lake, lakeLevel, lakeOutlet: Hy.lakeOutlet, q: Hy.q, area: Hy.area, recv: Hy.recv, rivers: Hy.rivers,
-        stats: { ...Hy.stats, inlandSeas: { spilling: spilled, salt, rounds, unsettled: short } }, timing: { total: performance.now() - t0 },
+        stats: { ...Hy.stats, inlandSeas: { spilling: spilled, salt, brackish, rounds, unsettled: short } }, timing: { total: performance.now() - t0 },
     };
 }
 
 /** At most this many runs of the rivers to settle which inland seas spill (two or three, as a rule). */
 const MAX_ROUNDS = 8;
+
+/** A closed lake is brackish rather than salt where its rain is at least this share of its potential evaporation: the
+ *  humid side of UNEP's aridity index (P / PET 0.65). */
+const BRACKISH_ARIDITY = 0.65;
 
 /** The level (km) an inland sea that spills stands at — sea level, as the pages draw it: a hair above it (2⁻¹⁰⁰, exact in
  *  a Float32Array), so the gorge its outflow cuts stays land and no land is drowned — V1's coastal plains lie within
