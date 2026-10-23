@@ -8,7 +8,8 @@
 //   lake       the rest of the water (Water: 0 none, 1 fresh lake, 2 salt lake, 3 salt pan); lakeLevel its surface (km)
 //   q          the year's mean discharge (m³/s): the runoff — rain less evaporation, Budyko's curve — of everything
 //              upstream, less what a river loses along its bed in dry country; area: what drains there (km²)
-//   recv       the region each land or lake region drains into (−1 on the sea and on the salt lakes the rivers end in)
+//   recv       the region each land region drains into — a lake's water its outlet; −1 on the sea and where the water
+//              goes no further (a salt lake): a tree, every region's water followed down it reaches the sea or a salt lake
 //   heightKm   the height after the rivers (km): where a river leaves a hollow it cannot keep as a lake, or an inland sea
 //              spills, it has cut its way out — the pages' heights everywhere else
 //   rivers     every reach from F.riverMinM3s as a polyline (lat, lon, discharge, its wet months' share, the region of
