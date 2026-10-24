@@ -35,10 +35,10 @@ World Orogen generates realistic procedural planets shaped by tectonic plate sim
 
 ## URL
 
-https://orogen.studio/ — Generate
+https://orogen.studio/ — Studio: the three tools explained, plus curated worldbuilding resources
+https://orogen.studio/generate — Generate (a planet's link: orogen.studio/generate#CODE; older orogen.studio/#CODE links still open it)
 https://orogen.studio/import — Import Heightmap
 https://orogen.studio/evolution — Evolution
-https://orogen.studio/studio — Studio: the three tools explained, plus curated worldbuilding resources
 
 ## Technical details
 

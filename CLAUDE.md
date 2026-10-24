@@ -45,13 +45,13 @@ After any code change, check whether README.md needs updating. The README docume
 - Project file structure (new files, renamed files, removed files)
 - External dependencies
 
-After any code change, check whether the tutorial modal content (in `index.html`, inside `#tutorialOverlay`) needs updating. The tutorial steps describe the app's features and interactions. If a change adds, removes, or modifies any of the following, update the relevant tutorial step to match:
+After any code change, check whether the tutorial modal content (in `generate.html`, inside `#tutorialOverlay`) needs updating. The tutorial steps describe the app's features and interactions. If a change adds, removes, or modifies any of the following, update the relevant tutorial step to match:
 
 - Core workflow (how to generate a planet, what controls to use)
 - Interactive features (navigation, editing, keyboard/mouse actions)
 - What the tool does or its key selling points
 
-After any code change that adds significant user-facing features, ask the developer if they would like to update the What's New modal (in `index.html`, inside `#whatsNewOverlay`). The modal is version-gated by the `VERSION` constant in `initWhatsNew()` in `js/main.js` — bumping this string will show the modal again to returning users on their next visit.
+After any code change that adds significant user-facing features, ask the developer if they would like to update the What's New modal (in `generate.html`, inside `#whatsNewOverlay`). The modal is version-gated by the `VERSION` constant in `initWhatsNew()` in `js/main.js` — bumping this string will show the modal again to returning users on their next visit.
 
 After any code change that affects the UI, ensure it works on mobile. The app uses a responsive bottom-sheet layout on screens ≤ 768px (`styles.css` media queries) and has touch-specific behavior throughout. If a change adds, removes, or modifies any of the following, verify and update the mobile experience:
 
@@ -60,7 +60,7 @@ After any code change that affects the UI, ensure it works on mobile. The app us
 - Tooltips — must reposition above their trigger on mobile, not to the right (overflow off-screen)
 - New overlays or modals — must be usable within the bottom-sheet layout and not be hidden behind it
 - Performance-sensitive features — consider lower thresholds on touch devices (detail warnings, export limits); check `state.isTouchDevice` in `js/state.js`
-- Info/hint text — update both desktop text (in `index.html`) and the mobile-specific text set in `js/main.js` (search for `state.isTouchDevice`)
+- Info/hint text — update both desktop text (in `generate.html`) and the mobile-specific text set in `js/main.js` (search for `state.isTouchDevice`)
 
 After any code change to simulation or climate code, ensure **scale invariance** — the result must look equivalent regardless of the Detail slider (numRegions from 2K to 2.5M). The key rule: never use raw cell-hop counts or neighbor-displacement magnitudes without scaling by resolution. Specifically:
 
@@ -74,9 +74,9 @@ Generate, Import and Evolution all run one climate — the new climate in `v2/js
 
 After any code change that adds, removes, or modifies features, check whether the SEO and AISEO files need updating. The project has several files that describe the app to search engines and AI models. These must stay accurate — outdated claims are worse than no claims. If a change adds, removes, or modifies any of the following, update the relevant files:
 
-- **`index.html` `<head>` meta tags** — The `<title>`, `description`, `og:description`, `twitter:description`, and `keywords` meta tags describe what the app does. Update if core capabilities change (e.g. new simulation type, new export format, new interaction mode).
-- **`index.html` JSON-LD structured data** — The `<script type="application/ld+json">` block contains a `WebApplication` schema with a `featureList` array. Add or remove entries when major features are added or removed.
-- **`index.html` hidden `<main>` block** — The visually hidden semantic HTML block (right after `<body>`) describes the app for crawlers. Update its feature list, use cases, or description when the app's capabilities change meaningfully.
+- **`generate.html` `<head>` meta tags** (Generate, at `/generate`; the home page, `index.html`, is the Studio, with its own) — The `<title>`, `description`, `og:description`, `twitter:description`, and `keywords` meta tags describe what the app does. Update if core capabilities change (e.g. new simulation type, new export format, new interaction mode).
+- **`generate.html` JSON-LD structured data** — The `<script type="application/ld+json">` block contains a `WebApplication` schema with a `featureList` array. Add or remove entries when major features are added or removed.
+- **`generate.html` hidden `<main>` block** — The visually hidden semantic HTML block (right after `<body>`) describes the app for crawlers. Update its feature list, use cases, or description when the app's capabilities change meaningfully.
 - **`llms.txt`** — A plain-text file at the project root that describes the tool for AI assistants. Update its feature list, "who it's for" section, or technical details when capabilities change. Keep it concise and factual.
 - **`sitemap.xml`** — Update the `<lastmod>` date when deploying significant changes.
 

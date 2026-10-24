@@ -62,8 +62,8 @@ Click **Build New World** to create a new random planet. The button changes colo
 ### Navigation
 
 A top navigation bar connects the pages:
-- **Studio** (`/studio`) — the three tools side by side, what each is for, and curated worldbuilding resources (blogs, YouTube channels, other tools)
-- **Generate** (`/`) — procedural planet generation with tectonic plates, erosion, and climate
+- **Studio** (`/`, the home page) — the three tools side by side, what each is for, and curated worldbuilding resources (blogs, YouTube channels, other tools); a Generate link from before Generate moved (`/#code`) goes on to `/generate#code`
+- **Generate** (`/generate`) — procedural planet generation with tectonic plates, erosion, and climate
 - **Import** (`/import`) — import your own equirectangular B&W heightmap, view it on a 3D globe, and run climate simulation. Black (0) = ocean, brighter = higher elevation. Supports PNG, JPEG, and WebP.
 - **Evolution** (`/evolution`, in beta and best on a desktop for now; tagged so on its page and the Studio card) — watch a planet's tectonic history unfold, stop on a moment and add detail (rivers, glaciers, its own climate, a satellite view), then export it (the same export panel as Generate: every map as colour or data, in ten projections); its seed is a number up to 2,147,483,645 or any word or phrase (hashed to a number: the same word, the same world); save the planet — its whole history and the detailed moment — as one `.orogen` file from the export panel, and open it again later with **Load Planet…** (Settings → World) or by dropping it on the page, with no waiting for either (the history exactly as saved, in any browser; Extend history runs it again from its seed first, and runs on where it matches); its map view can be shown in any of the projections too (a Projection picker beside Center Longitude); a Hillshade toggle in its settings turns the relief shading off for flat-colour views (the export has its own); its Climate tab has every climate layer Generate's Inspect has; see `v2/README.md`
 
@@ -75,7 +75,7 @@ Every generated planet produces a **planet code** (shown below the Build button)
 
 - **Copy** the code with the copy button and send it to someone
 - **Load** a code by pasting it into the planet code field and clicking Load (or pressing Enter). The Load button turns blue when a new code is ready to apply.
-- **URL sharing** — the code is also stored in the URL hash (e.g. `#a7f3kq9xp2b`), so you can share the full URL directly. Opening a URL with a valid hash auto-loads that planet, including any plate edits.
+- **URL sharing** — the code is also stored in the URL hash (e.g. `#a7f3kq9xp2b`), so you can share the full URL directly (`orogen.studio/generate#…`; a link from before Generate moved there, `orogen.studio/#…`, is sent on to it by the home page). Opening a URL with a valid hash auto-loads that planet, including any plate edits.
 
 ## Controls
 
@@ -239,10 +239,11 @@ World Orogen is fully usable on phones and tablets:
 ## Project Structure
 
 ```
-index.html              Main page — HTML markup + import map + structured data
+index.html              Home page: the Studio — the tools explained + curated resources; sends Generate's old links (/#code) on to /generate
+generate.html           Generate page — HTML markup + import map + structured data
 import.html             Import page — heightmap upload + climate visualization
 evolution.html          Evolution page — a planet's tectonic history (v2/)
-studio.html             Studio page — the tools explained + curated resources
+studio.html             The Studio's old address (/studio): sends on to /
 studio.css              Studio page styles
 assets/studio/          Screenshots of each tool for the Studio cards
 styles.css              Shared CSS (all pages)

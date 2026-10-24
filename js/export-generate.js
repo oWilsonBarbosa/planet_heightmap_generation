@@ -64,7 +64,7 @@ export function initGenerateExport({ page, ensureClimate, code }) {
         begin: async (W, opts) => ({ render: beginExportRender(W, opts.centerLon), opts, sat: {}, values: {} }),
         end: async (rctx) => { endExportRender(rctx.render); rctx.sat = rctx.values = null; },
         names: (ctx, opts) => ({ start: ['orogen', page === 'import' ? 'import' : null], end: [code(), exportCentreTag(opts.centerLon)] }),
-        about: (ctx, opts) => { const c = code(); return { page: page === 'import' ? 'Import Heightmap' : 'Generate', planet: c ? `planet code ${c}` : 'an imported heightmap', link: c ? `https://orogen.studio/#${c}` : null, notes: [] }; },
+        about: (ctx, opts) => { const c = code(); return { page: page === 'import' ? 'Import Heightmap' : 'Generate', planet: c ? `planet code ${c}` : 'an imported heightmap', link: c ? `https://orogen.studio/generate#${c}` : null, notes: [] }; },
         produce: async (rctx, job, progress) => {
             const data = state.curData, { r_elevation: elev, r_plate, debugLayers } = data, koppenArr = debugLayers && debugLayers.koppen, s = job.season || 'year', id = job.row.id;
             const render = (spec) => renderExportLayer(rctx.render, spec, progress);
