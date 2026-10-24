@@ -49,7 +49,11 @@ node tuning/water/earth-rivers.mjs --tune [--grid baseflowShare=0.5/0.7,baseflow
 | observed climate, `WATER`: and the water's way down at 40 km a day | 82 % (×0.92) | 0.89 | 87 % | ×0.92 | ×0.89 | 0.13 (0.07) |
 | simulated climate, the Evolution's constants | 52 % (×0.79) | 0.53 | 51 % | ×0.64 | ×1.84 | |
 | simulated climate, dry basins, baseflow 0.7, 3 months | 52 % (×0.79) | 0.60 | 56 % | ×1.00 | ×0.75 | 0.18 (1.14) |
-| simulated climate, `WATER` | 52 % (×0.79) | 0.66 | 61 % | ×0.93 | ×0.78 | −0.01 (0.36) |
+| simulated climate, `WATER` | 52 % (×0.77) | 0.66 | 60 % | ×0.94 | ×0.78 | 0.01 (0.36) |
+
+The last row is the simulated climate as it is now, the snowmelt on frozen ground mostly running off (`RAIN_MELT_SOAK`,
+`v2/js/climate/config.js`); the simulated rows above it are with the climate before, with which `WATER` scored 52 %
+(×0.79), 0.66, 61 %, ×0.93, ×0.78 and −0.01 (0.36). The observed climate's rows do not depend on it.
 
 The Evolution's constants even out the months more the finer the mesh (the range ×0.86 at 640K, ×0.64 at 2.56M): the
 basins the rivers cut through, more of them at finer detail, pass on their water as lakes would. Without that the
