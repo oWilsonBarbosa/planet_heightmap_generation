@@ -9,6 +9,7 @@ import { updateHoverHighlight, updateMapHoverHighlight, updatePendingHighlight, 
 import { KOPPEN_CLASSES } from './koppen.js';
 import { elevToHeightKm } from './color-map.js';
 import { climateReadoutLines } from './climate-layers.js';
+import { mapLonLatAt } from './map-projection.js';
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -72,20 +73,10 @@ function getHitInfoMap(event) {
     const o = raycaster.ray.origin, d = raycaster.ray.direction;
     if (Math.abs(d.z) < 1e-10) return null;
     const t = -o.z / d.z;
-    const wx = o.x + t * d.x;
-    const wy = o.y + t * d.y;
-
-    // Inverse equirectangular: map coords → lon/lat → unit sphere xyz
-    const PI = Math.PI;
-    const sx = 2 / PI;
-    let lon = wx / sx + (state.mapCenterLon || 0);
-    const lat = wy / sx;
-    if (lat < -PI / 2 || lat > PI / 2) return null;
-    // Wrap lon back to [-PI, PI]
-    if (lon > PI) lon -= 2 * PI;
-    else if (lon < -PI) lon += 2 * PI;
-
-    const cosLat = Math.cos(lat);
+    // map coords → lon/lat, through the map's projection (js/map-projection.js) → unit sphere xyz
+    const ll = mapLonLatAt(o.x + t * d.x, o.y + t * d.y);
+    if (!ll) return null;
+    const [lon, lat] = ll, cosLat = Math.cos(lat);
     return findNearestRegion(
         cosLat * Math.sin(lon),
         Math.sin(lat),

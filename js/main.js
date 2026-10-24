@@ -14,7 +14,8 @@ import { detailFromSlider, sliderFromDetail } from './detail-scale.js';
 import { KOPPEN_CLASSES } from './koppen.js';
 import { needsClimate, climateLayer, climateLegendHTML, satelliteLegendHTML, showClimateArrows, initSeasonPicker } from './climate-layers.js';
 import { initLayerBar } from './layer-bar.js';
-import { initViewStrip } from './view-strip.js';
+import { initViewStrip, initProjectionPicker } from './view-strip.js';
+import { renderView, setProjection } from './map-projection.js';
 import { elevationToColor } from './color-map.js';
 import { showBuildError, clearBuildError, describeFailure, holdControls } from './build-error.js';
 
@@ -237,6 +238,7 @@ function applyLayer(layer) {
 
 const layerBar = initLayerBar(switchVisualization);
 initViewStrip();
+initProjectionPicker(setProjection);
 /** The bar, its season and the Inspect list, for the layer shown. */
 function syncTabsToLayer(layer) {
     layerBar.sync(layer);
@@ -986,7 +988,7 @@ function animate() {
         if (state.oceanCurrentArrowGroup) state.oceanCurrentArrowGroup.rotation.y = state.planetMesh.rotation.y;
         if (state.globeGridMesh) state.globeGridMesh.rotation.y = state.planetMesh.rotation.y;
     }
-    renderer.render(scene, state.mapMode ? mapCamera : camera);
+    renderView();
 }
 
 // Resize handler
@@ -1230,7 +1232,7 @@ window.takePreview = function(width = 1200, height = 630) {
     renderer.setSize(savedW / savedPixelRatio, savedH / savedPixelRatio);
     fitCamera(innerWidth, innerHeight);
     for (const { el, prev } of hiddenEls) el.style.display = prev;
-    renderer.render(scene, state.mapMode ? mapCamera : camera);
+    renderView();
     console.log('preview.png downloaded!');
 };
 

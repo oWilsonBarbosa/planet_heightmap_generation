@@ -131,3 +131,41 @@ Each phase stops for the developer to check it in the browser before the next.
   - an Earth import on Import: held, then released;
   - at 400 px: the strip in the sheet, the arrow's row hidden;
   - no console errors.
+
+## Follow-up 2: projections on every map, zoom on Evolution's (2026-10-24)
+
+The developer: "the projections are only on evolution not import of generate. Can we fix that?", then "and enable zooming
+in and around on the map for evolution as well".
+
+- **Generate and Import** (`js/map-projection.js`):
+  - **Equirectangular** stays the flat map mesh, unchanged.
+  - **Any other projection:**
+    - the part of the flat map on screen is drawn into an off-screen picture at 1.5× the screen's resolution;
+    - the picture is shown through the projection's inverse, Evolution's shader (`v2/js/view/projection-glsl.js`), so it stays sharp at any zoom;
+    - the lines (super-plate borders, wind and current arrows, ITCZ) are forward-projected over it, a screen pixel wide;
+    - the grid is drawn by the shader.
+  - Hover and Ctrl-click go through the inverse (`mapLonLatAt`), and the export opens on the view's projection.
+- **One picker for the three pages:** `initProjectionPicker` in `js/view-strip.js`, remembered under `orogen.projection`. It reads Evolution's old key once.
+- **Evolution's map** (`v2/js/app/globe-view.js`):
+  - the wheel zooms toward the pointer (1×–20×, eased);
+  - a drag pans, and two fingers pinch;
+  - equirectangular wraps east–west;
+  - the whole map comes back when its shape changes.
+- **Phones:** the strip's sliders now get a 44 px touch height in the sheet.
+- **Checked in Chrome:**
+  - Generate:
+    - Robinson, Orthographic (both disks), Mercator, Azimuthal and Mollweide;
+    - sharp cells at 20×;
+    - Ctrl-click on both Orthographic disks (Rebuild (2));
+    - wind arrows, the ITCZ and borders projected;
+    - the Centre slider;
+    - the export opening on Robinson.
+  - Import: Earth in Orthographic, with hover coordinates matching what's drawn on both disks.
+  - Evolution:
+    - zoom about the pointer (the readout under it unchanged);
+    - drag;
+    - Robinson zoom;
+    - back to the globe.
+  - Phone width: every strip control 44 px.
+  - No console errors.
+- **Not checked:** a real touch pinch, Firefox and Safari.

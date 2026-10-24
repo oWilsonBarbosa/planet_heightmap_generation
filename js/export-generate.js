@@ -93,5 +93,6 @@ export function initGenerateExport({ page, ensureClimate, code }) {
         },
     };
     return initExportPanel({ host: document.getElementById('exportCard'), overlay: document.getElementById('exportOverlay'), catalogue: CATALOGUE, adapter,
-        onOpen: () => (state.curData ? {} : null), getCenterLon: () => Math.round((state.mapCenterLon || 0) * 180 / Math.PI) });
+        onOpen: () => (state.curData ? {} : null), getCenterLon: () => Math.round((state.mapCenterLon || 0) * 180 / Math.PI),
+        getProjection: () => (state.mapMode ? { id: state.mapProjection, opts: state.mapProjOpts } : null) });
 }

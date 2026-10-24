@@ -52,7 +52,7 @@
             "Equirectangular heightmap import with automatic climate simulation",
             "Tectonic history simulation: watch continents break up and collide, then sculpt any moment in detail, and save the planet as a file to open again later",
             "Map export up to 65536px: every map as colour or 16-bit data, in ten projections (equirectangular, Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, orthographic, azimuthal equidistant, Van der Grinten), one PNG or a ZIP with a README",
-            "Multiple visualization modes (terrain, satellite with summer and winter, climate, heightmap)",
+            "Multiple visualization modes (terrain, satellite with summer and winter, climate, heightmap), on a 3D globe or a map in ten projections",
             "Shareable planet codes"
         ],
         "screenshot": "https://orogen.studio/preview.png",
@@ -333,6 +333,7 @@
                 <option value="globe">Globe</option>
                 <option value="map">Map</option>
             </select>
+            <span class="vs-item" id="mapProjectionGroup" data-view="map" title="The map's shape: equirectangular (the plain 2 : 1 map), Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, the globe as two hemispheres, an azimuthal (polar) map, or Van der Grinten's world in a circle. Each has its own options; the export offers the same"><label for="mapProjection">Projection</label> <select id="mapProjection"></select><span id="mapProjOpts" class="xp-proj-opts" hidden></span></span>
             <label class="vs-item" id="mapCenterLonGroup" data-view="map">Centre <input type="range" id="sMapCenterLon" min="-180" max="180" value="0" step="5" aria-label="Centre longitude"><span class="v" id="vMapCenterLon">0&deg;</span></label>
             <label class="toggle-label" data-view="globe"><input type="checkbox" id="chkRotate"><span class="toggle-track"><span class="toggle-thumb"></span></span>Auto-Rotate</label>
             <label class="toggle-label"><input type="checkbox" id="chkGrid" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Grid Lines</label>
@@ -345,7 +346,7 @@
             </select></span>
         </div>
         <div class="layer-row">
-            <button type="button" id="viewFold" class="vs-fold" aria-controls="viewStrip" aria-expanded="false" aria-label="View options" title="View options: globe or map, auto-rotate, grid lines"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M3.5 1.5 7 5 3.5 8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button type="button" id="viewFold" class="vs-fold" aria-controls="viewStrip" aria-expanded="false" aria-label="View options" title="View options: globe or map, projection, auto-rotate, grid lines"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M3.5 1.5 7 5 3.5 8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             <div class="map-tabs" id="mapTabs">
                 <button class="map-tab active" data-layer="">Terrain</button>
                 <button class="map-tab" data-layer="biome" title="The planet as from space, cloud-free: each climate's colours climbing with the land to rock and snow, for the year, January or July">Satellite</button>
@@ -429,7 +430,7 @@
             </div>
             <div class="tutorial-step" data-step="3">
                 <h3>Visualize Your World</h3>
-                <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, and <strong>Heightmap</strong> views, and <strong>Plates</strong>, with the tabs over the planet. <strong>Climate</strong> opens its own row of maps &mdash; K&ouml;ppen, temperature, rain, wind, currents, and under <strong>More&hellip;</strong> pressure, sea ice, aridity, growing season and more &mdash; each for the year, January or July (the Satellite view too). The arrow at the tabs' left opens the view options above them: <strong>Globe</strong> or <strong>Map</strong>, the map's centre and the grid; the terrain's inner layers are in <strong>Inspect (advanced)</strong> in the sidebar.</p>
+                <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, and <strong>Heightmap</strong> views, and <strong>Plates</strong>, with the tabs over the planet. <strong>Climate</strong> opens its own row of maps &mdash; K&ouml;ppen, temperature, rain, wind, currents, and under <strong>More&hellip;</strong> pressure, sea ice, aridity, growing season and more &mdash; each for the year, January or July (the Satellite view too). The arrow at the tabs' left opens the view options above them: <strong>Globe</strong> or <strong>Map</strong>, the map in any of ten <strong>projections</strong>, its centre and the grid; the terrain's inner layers are in <strong>Inspect (advanced)</strong> in the sidebar.</p>
                 <p>The climate takes a few seconds at any detail. On phones, at the very highest detail it is computed when you first switch to a climate view.</p>
             </div>
             <div class="tutorial-step" data-step="4">

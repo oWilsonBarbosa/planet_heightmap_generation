@@ -22,6 +22,8 @@ export const state = {
     gridSpacing: 15,
     mapMode: false,
     mapCenterLon: 0,
+    mapProjection: 'equirect',  // the map view's projection and its options (js/map-projection.js)
+    mapProjOpts: {},
     dragStart: null,
     debugLayer: '',
     showPlates: false,          // the Plates tab (Generate): the plate colours, with no other layer

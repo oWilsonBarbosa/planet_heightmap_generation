@@ -134,7 +134,8 @@ you look at sits over the planet — the **view strip**, the **layer bar** under
   - **Heightmap** — black-to-white gradient on a fixed absolute scale (-5 km ocean floor to 6 km peaks), so the same physical height always maps to the same shade
   - **Plates** (Generate) — the regions colored by plate (green shades = land, blue shades = ocean), with black super plate boundary lines showing tectonic super-groups. Ctrl-click (⌘-click on a Mac) plates to reshape them works in every view.
 - **View strip** (`js/view-strip.js`) — above the layer tabs, folded behind the **arrow** at their left; opened, the tabs move down to make room (the browser remembers which). It shows only what applies:
-  - **Globe | Map** (Map: the equirectangular projection)
+  - **Globe | Map**
+  - **Projection** (map only) — the ten the export offers: equirectangular, Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, the globe as two hemispheres, azimuthal equidistant and Van der Grinten, each with its own options (Mercator's max latitude, Orthographic's centre latitude and hemispheres…). The browser remembers it, the same on all three pages, and the export opens on it. Scroll to zoom and drag to pan in any projection; hover readouts and Ctrl-click plate editing work in every one. (`js/map-projection.js`: equirectangular is the flat map mesh itself; any other projection draws the part of the flat map on screen into an off-screen picture at 1.5× the screen's resolution — so it stays sharp at any zoom — and shows it through the projection's inverse, the same shader as Evolution's; the borders, arrows and ITCZ are projected point by point over it, a screen pixel wide, and the grid is drawn by the shader.)
   - **Centre** (map only) — shifts the map's central meridian to any longitude from 180°W to 180°E, scrolling the projection so the chosen longitude is centered. Exports are centred the same way (the file name notes it, e.g. `-c120E`).
   - **Auto-Rotate** (globe only) — spin the globe continuously
   - **Grid Lines** and the **grid spacing** — a latitude/longitude grid on both globe and map views, every 30°, 15°, 10°, 5° or 2.5°
@@ -158,7 +159,7 @@ Click **Export Map** (at the foot of the sidebar) to open the export panel (`v2/
 
 - **Width** — 1024 to 65536 px (8192 on phones); the height follows the projection (width / 2 for equirectangular). Large maps are rendered in tiles.
 - **Projection** — equirectangular, Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, orthographic hemispheres, azimuthal equidistant (polar) and Van der Grinten; each with its own options where it has them (Mercator's max latitude, Winkel's standard parallel, the azimuthals' centre latitude and extent, one or two orthographic hemispheres). Equirectangular is the plain 2 : 1 map that re-imports; the others are drawn from it pixel by pixel through the projection's inverse (`v2/js/view/projections.js`), colours and classes by the nearest pixel, numbers bilinearly, the outside transparent.
-- **Centre longitude** — the map view's Center Longitude when the panel opens; any longitude. The file name notes it (`-c90E`).
+- **Centre longitude** — the map view's Center Longitude when the panel opens; any longitude. The file name notes it (`-c90E`). (On the map view, the projection opens as the view's too.)
 - **Season** — Year, January, July, or all three as separate files, for the maps marked ☼.
 - **The maps**, in groups, each with a **Colour** box (as shown, in its legend's exact colours) and / or a **Data** box (a greyscale on a fixed scale; the scale is in the README.txt and in the row's tooltip):
   - *Maps* — Colour Map, Satellite (☼), Climate zones (Köppen; data: the class index, 8-bit)
@@ -273,7 +274,8 @@ js/
   climate-new.js        The climate for Generate and Import — runs the new climate (v2/js/climate/) on a V1 planet: Köppen, per-region months, the 1° grid
   climate-layers.js     The climate's Inspect layers — colours, legends, hover lines, arrows, the season picker
   layer-bar.js          The layer bar over the planet (Generate, Import): tabs, the Climate row and season, the phone's list
-  view-strip.js         The view strip above the layer tabs (every page), folded behind an arrow: Globe | Map and what applies; in the sheet on phones
+  view-strip.js         The view strip above the layer tabs (every page), folded behind an arrow: Globe | Map and what applies, the projection picker; in the sheet on phones
+  map-projection.js     Generate's and Import's map view in any of the ten projections: the flat map drawn off-screen, shown through the projection's inverse; hover and Ctrl-click through it
   climate-config.js     The OLD climate's parameters (no longer run by the app; kept for the old tuning diagnostics)
   climate-util.js       Shared climate utilities — smoothing, ITCZ lookup, percentile selection
   wind.js … temperature.js  The OLD climate (wind, ocean, precipitation, heuristic-precip, temperature) — no longer run by the app

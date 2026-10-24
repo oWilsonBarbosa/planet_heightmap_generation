@@ -27,9 +27,7 @@ import { FinishService, paintFinished, riverPaths, drawRivers, riverAt, finished
 import { FRAME_FIELDS } from '../terrain/terrain-pool.js';
 import { STAGES as FINISH_STAGES } from '../finish/finish.js';
 import { initEvolutionExport } from './export.js';
-import { PROJECTIONS } from '../view/projections.js';
-import { renderProjectionOptions } from '../view/export-panel.js';
-import { initViewStrip } from '../../../js/view-strip.js';
+import { initViewStrip, initProjectionPicker } from '../../../js/view-strip.js';
 import { downloadBlob } from '../view/png.js';
 import { savePlanet, planetBytes, openPlanet } from '../save/planet-file.js';
 import { PackedFrame } from '../tectonics/frame-pack.js';
@@ -1090,21 +1088,8 @@ $('viewMode').addEventListener('change', e => {
     ui.hover.style.display = 'none';
     showMap();
 });
-// the map view's projection (projections.js), with its own options; remembered
-const PROJECTION_KEY = 'orogen.evolution.projection';
-{
-    const sel = $('mapProjection'), optsEl = $('mapProjOpts');
-    for (const p of PROJECTIONS) { const o = document.createElement('option'); o.value = p.id; o.textContent = p.label; sel.appendChild(o); }
-    let stored = null;
-    try { stored = JSON.parse(localStorage.getItem(PROJECTION_KEY) || 'null'); } catch { stored = null; }
-    if (stored?.id && PROJECTIONS.some(p => p.id === stored.id)) { view.projection = stored.id; view.projOpts = stored.opts || {}; }
-    sel.value = view.projection;
-    let getOpts = () => ({});
-    const apply = () => { view.projOpts = getOpts(); showMap(); try { localStorage.setItem(PROJECTION_KEY, JSON.stringify({ id: view.projection, opts: view.projOpts })); } catch { /* (remembered only where the browser allows) */ } };
-    const build = (initial) => { getOpts = renderProjectionOptions(optsEl, view.projection, initial, apply); view.projOpts = getOpts(); };
-    build(view.projOpts);
-    sel.addEventListener('change', () => { view.projection = sel.value; build(null); apply(); });
-}
+// the map view's projection (projections.js), with its own options; remembered, the same on the three pages
+initProjectionPicker((id, opts) => { view.projection = id; view.projOpts = opts; showMap(); });
 $('sMapCenterLon').addEventListener('input', e => {
     view.centerLon = Number(e.target.value);
     $('vMapCenterLon').textContent = `${view.centerLon}°`;
