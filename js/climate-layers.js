@@ -6,6 +6,7 @@
 // the sea, and the winds and currents, are sampled from the 1° climate grid at the region's latitude and longitude.
 
 import { RAMP_FAMILIES } from '../v2/js/evolution/sat-style.js';
+import { RAMPS } from '../v2/js/climate-lab/palettes.js';
 
 export const CLIMATE_INSPECT = [
     { id: 'pressure',    label: 'Pressure',          seasonal: true,  arrows: 'wind', itcz: true },
@@ -69,10 +70,10 @@ function ramp(stops) {
 /** Discrete classes: [upper bound, colour, label] — the first whose bound the value is below. */
 const classes = (list) => (v) => { if (!(v === v)) return LAND; for (const [b, c] of list) if (v < b) return c; return list[list.length - 1][1]; };
 
-// temperature: V1's bands (as climate maps draw them), now in °C
-const TEMP_BANDS = [[-38, [0.78, 0.78, 0.78], '< −38'], [0, [0.00, 0.00, 0.50], '−38–0'], [10, [0.53, 0.81, 0.92], '0–10'], [18, [1.00, 1.00, 0.00], '10–18'],
-    [22, [1.00, 0.65, 0.00], '18–22'], [32, [1.00, 0.00, 0.00], '22–32'], [40, [0.55, 0.00, 0.00], '32–40'], [Infinity, [0.20, 0.00, 0.00], '> 40']];
-const tempColor = classes(TEMP_BANDS);
+// temperature, °C: Evolution's ramp (v2/js/climate-lab/palettes.js), smooth from deep purple at −40 through white at 0
+// to dark red at +40
+const TEMP_STOPS = RAMPS.temperature.stops.map(([v, c]) => [v, c.map(x => x / 255)]);
+const tempColor = ramp(TEMP_STOPS);
 // rain, mm/month: V1's brown → green → blue, on a square-root scale
 const RAIN_STOPS = [[0, [0.76, 0.60, 0.42]], [10, [0.60, 0.55, 0.30]], [40, [0.30, 0.75, 0.25]], [100, [0.15, 0.65, 0.65]], [250, [0.10, 0.30, 0.85]], [400, [0.08, 0.15, 0.55]]];
 const rainColor = ramp(RAIN_STOPS);
@@ -165,7 +166,7 @@ export function climateLegendHTML(id, season) {
     const L = BY_ID[id]; if (!L) return '';
     const sn = L.seasonal ? ` · ${SEASON_LABELS[season] ?? 'Year'}` : '';
     switch (id) {
-        case 'temperature': return swatches(TEMP_BANDS.map(([b, c, l]) => [b, c, l])) + note(`Air temperature, °C${sn} — over the sea, its surface`);
+        case 'temperature': return gradient(TEMP_STOPS, -40, 40, ['−40', '−20', '0', '20', '40 °C']) + note(`Air temperature, °C${sn} — over the sea, its surface`);
         case 'precip': return gradient(RAIN_STOPS, 0, 400, season === 'year' ? ['0', '600', '1,800', '4,800 mm/yr'] : ['0', '50', '150', '400 mm/month']) + note(`Precipitation${sn}`);
         case 'pressure': return gradient(PRESSURE_STOPS, 995, 1030, ['995', '1013', '1030 hPa']) + note(`Sea-level pressure${sn} · arrows: the wind · green line: the ITCZ`);
         case 'wind': return gradient(WIND_STOPS, 0, 16, ['0', '8', '16 m/s']) + note(`Surface wind speed${sn} · arrows: its direction`);
