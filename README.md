@@ -263,7 +263,8 @@ js/
                         planet as it is, fed by the new climate's twelve months (evaporation month by month): discharge, drainage,
                         lakes (the planet's inland seas spill on to the sea or end their rivers as salt lakes — brackish where the
                         climate is humid; their beds filled with sediment toward ~1 km deep; the level a lake with no outflow
-                        would shrink to at its water balance; its coasts unchanged), river polylines
+                        would shrink to at its water balance; its coasts unchanged; a dry basin on land its rivers cannot fill
+                        is where they end, a salt lake or a salt pan), river polylines
                         with their seasons, each month's water reaching a river point as late as its way down takes (checked
                         against measured flows: tuning/water/); optionally the land first shaped by the Evolution's last ice
                         age — troughs, scoured hollows, moraines — for its lake districts. Not run by the pages yet: for
@@ -296,7 +297,7 @@ tuning/
                         parameters to match (see tuning/climate/README.md)
   water/                The rivers check — scores js/water-new.js's rivers on an imported Earth heightmap against
                         the measured flows of ~130 great rivers (Dai & Trenberth, NCAR), with the simulated and the
-                        observed climate (see tuning/water/README.md)
+                        observed climate, and its closed basins against Earth's (see tuning/water/README.md)
   relief/               Earth's hypsometry for js/earth-relief.js — downloads a sample of ETOPO 2022 (NOAA NCEI) and
                         computes how much of Earth's land lies below each height, and of its sea floor above each depth
                         (see tuning/relief/README.md)

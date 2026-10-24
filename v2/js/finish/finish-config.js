@@ -122,6 +122,14 @@ export const FINISH = {
     // cells and lakeMinDepthM, as any hollow — a smaller one holds no water. On for Generate, js/water-new.js, which keeps
     // the water where the pages draw it: there such a remnant, never full, was where its rivers ended)
     seaRemnantAnySize: false,
+    // a basin on land its rivers cannot fill — what flows in less than what it would evaporate full — is where they end: a
+    // salt lake at its balance, or a salt pan where that keeps less than a lake the map can show (off: the developer's
+    // rule, "every river needs to end at ocean not lake" — it is cut through. On for Generate, js/water-new.js)
+    closedBasins: false,
+    closedBasinPluvial: 2,      // …where its rivers would not fill it with this many times what they bring either: wetter
+                                // times (the ice ages' pluvials) overfilled the basins a little short of full, and they cut
+                                // their way out. On real Earth's map (tuning/water/earth-rivers.mjs, observed climate) 2
+                                // leaves 19 % of the land draining to closed basins (Earth: ≈ 18–20 %), 1 24 %, 3 18 %
     // Where a river must cut through — a basin it drains, a pocket in it — its gorge keeps the river's own course, every bend
     // of it, unless a shortcut is enough less work: the rock it cuts, and gorgeLengthKm for each km of its length (developer:
     // rivers "that go back and forth"; then "there should be some balance … between the 'true down' path and the 'shortcut'

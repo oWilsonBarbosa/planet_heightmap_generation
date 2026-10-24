@@ -9,7 +9,7 @@
 //              its surface (km); lakeOutlet the region its outflow leaves by (its discharge there: q), −1 if it has none;
 //              balanceLevel, on a lake with no outflow, the level at which what flows in would balance what it
 //              evaporates (km; its bed below it under water, above it dry: a salt flat; its surface where what flows in
-//              keeps it full) — NaN elsewhere
+//              keeps it full; a salt pan's lowest ground) — NaN elsewhere
 //   q          the year's mean discharge (m³/s): the runoff — rain less evaporation (potential evaporation month by
 //              month), Budyko's curve — of everything upstream, less what a river loses along its bed in dry country;
 //              area: what drains there (km²)
@@ -28,8 +28,9 @@
 // sea — fills its basin and spills on toward the sea if its rivers bring more than it evaporates (a fresh lake, its
 // outflow running on: every big river reaches the sea); else its rivers end in it (a salt lake, or brackish where its
 // climate is humid). A hollow on land holds a lake by its water balance and size, as in the Evolution — or its river
-// cuts through it. V1's erosion drains almost every hollow on land; with options.iceAge the Evolution's last ice age
-// shapes the land first, and the hollows it scoured are lake districts, as on Earth's shields.
+// cuts through it — unless they cannot fill it: then they end in it, a salt lake at its balance or a salt pan, as in
+// Earth's closed basins. V1's erosion drains almost every hollow on land; with options.iceAge the Evolution's last ice
+// age shapes the land first, and the hollows it scoured are lake districts, as on Earth's shields.
 
 import { FINISH } from '../v2/js/finish/finish-config.js';
 import { hydrology, openStraits, Water as HydroWater } from '../v2/js/finish/finish-hydro.js';
@@ -68,9 +69,15 @@ export const Water = Object.freeze({ ...HydroWater, BRACKISH: 4 });
  * And an inland sea is a lake whatever its size (seaRemnantAnySize): the Evolution's hydrology keeps no lake smaller than
  * lakeMinKm2, two cells and lakeMinDepthM, so such a remnant was never full and its rivers ended in it — on that planet
  * 83 of its 189 closed lakes, one to ten regions a few metres deep, that their rivers would fill many times over (one
- * took in 37,000 m³/s): 14 % of its land drained to them.
+ * took in 37,000 m³/s): 14 % of its land drained to them. And a basin on land its rivers cannot fill is where they end
+ * (closedBasins: the Evolution cuts it through, "every river needs to end at ocean"): a salt lake at its balance, or a
+ * salt pan — unless twice what they bring would fill it (closedBasinPluvial: wetter times breached it). On real Earth's
+ * map, with the observed climate, 19 % of the land then drains to closed basins (Earth: ≈ 18–20 %; 3 % without, to seas
+ * the coarse map encloses) — the Tarim's, Balkhash's, Lake Eyre's (a pan), the Great Basin's, Sistan's, the Dead Sea's,
+ * Urmia's; on planet 06cy8w6z6a89kow6psje93 4 %, half of it to basins on land (6 salt lakes, 109 pans): its erosion
+ * drained most hollows.
  */
-export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowShare: 0.7, baseflowMonths: 3, riverSpeedKmDay: 40, drainBelowFloor: true, seaRemnantAnySize: true });
+export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowShare: 0.7, baseflowMonths: 3, riverSpeedKmDay: 40, drainBelowFloor: true, seaRemnantAnySize: true, closedBasins: true });
 
 /**
  * Rivers and lakes on a V1 planet.
@@ -219,6 +226,21 @@ export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: r
                 if (lost > inflow[i]) { level = k ? z[cs[k - 1]] + BALANCE_EPS_KM : z[cs[0]]; break; }
             }
             for (const c of cs) balanceLevel[c] = level;
+        }
+        // (a closed basin on land, where its rivers end (closedBasins), is drawn at its balance already: a salt lake at its
+        // level; a salt pan — a playa its water spreads over and dries from — at its lowest ground, no water standing)
+        const seen = new Uint8Array(n);
+        for (let s = 0; s < n; s++) {
+            if (sink[s] || seen[s] || !(lake[s] === Water.SALT || lake[s] === Water.PAN)) continue;
+            const cells = [s];
+            seen[s] = 1;
+            for (let i = 0; i < cells.length; i++) for (let k = adjOffset[cells[i]]; k < adjOffset[cells[i] + 1]; k++) {
+                const nb = adjList[k];
+                if (!seen[nb] && !sink[nb] && lake[nb] === lake[s] && lakeLevel[nb] === lakeLevel[s]) { seen[nb] = 1; cells.push(nb); }
+            }
+            let floor = Infinity;
+            for (const c of cells) if (z[c] < floor) floor = z[c];
+            for (const c of cells) balanceLevel[c] = lake[s] === Water.PAN ? floor : lakeLevel[s];
         }
     }
     return {

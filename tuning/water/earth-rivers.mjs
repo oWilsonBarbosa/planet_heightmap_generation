@@ -13,6 +13,8 @@
  *            (coefficient of variation of the months, simulated ÷ measured) and the low flow (the lowest month ÷ the
  *            mean, simulated ÷ measured); how early the simulated year comes (the shift, in months, that best
  *            correlates it with the measured: the mean over all gauges, and over the great basins, from 500,000 km²)
+ * And the closed basins: the share of the land (without Antarctica) whose water ends in a lake with no outflow (Earth:
+ * ≈ 18–20 %, Wang et al. 2018), and which of Earth's own closed basins close (CLOSED).
  *
  *   node tuning/water/earth-rivers.mjs [--n 640000] [--climate obs|sim|both] [--min-area 25000] [--set key=value,…]
  *                                      [--tune [--grid key=v/v/v,…]] [--list]
@@ -43,7 +45,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIONS = path.join(__dirname, 'data', 'stations.json');
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const N = Number(arg('--n', 640000)), CLIMATE = arg('--climate', 'both'), MIN_AREA = Number(arg('--min-area', 25000)), TUNING = process.argv.includes('--tune'), LIST = process.argv.includes('--list');
-const SET = Object.fromEntries((arg('--set', '') || '').split(',').filter(Boolean).map(kv => { const [k, v] = kv.split('='); return [k, Number(v)]; }));
+const SET = Object.fromEntries((arg('--set', '') || '').split(',').filter(Boolean).map(kv => { const [k, v] = kv.split('='); return [k, v === 'true' ? true : v === 'false' ? false : Number(v)]; }));
 for (const k of Object.keys(SET)) if (!(k in WATER)) throw new Error(`--set: no constant ${k} in WATER`);
 const RADIUS_KM = 100, AREA_TOL = 1.5, R = 6371, SEC = 3.15576e7;
 /** The constants of the rivers' year searched by --tune, each one's values (--grid key=v/v/v,… instead). */
@@ -165,6 +167,36 @@ function summary(rows) {
         + `, early ${mean(yr.map(x => x.early)).toFixed(2)} months (great basins ${mean(yr.filter(x => x.great).map(x => x.early)).toFixed(2)}, ${yr.filter(x => x.great).length})`;
 }
 const run = (climate, F) => runNewWater({ r_xyz: xyz, r_elevation: E.r_elevation, ...adj, climate }, { F, riverMonths: true });
+/** Earth's closed basins, a place on each one's floor or terminal lake (the Caspian and the Aral are water on the map: an
+ *  enclosed sea, if the map closes it) */
+const CLOSED = [['Tarim', 40.5, 88], ['Balkhash', 46.5, 74.5], ['Eyre', -28.4, 137.3], ['Great Basin', 40, -116], ['Great Salt Lake', 41.1, -112.5],
+    ['Sistan', 31, 61.5], ['Dead Sea', 31.5, 35.5], ['Urmia', 37.7, 45.4], ['Altiplano', -18.7, -67.1], ['Chad', 13, 14.5], ['Okavango', -19.5, 23],
+    ['Turkana', 3.6, 36.1], ['Issyk-Kul', 42.4, 77.3], ['Aral', 45, 60], ['Caspian', 42, 51]];
+/** The land (without Antarctica) whose water, followed down, ends in a lake with no outflow rather than the sea; and
+ *  whether each of Earth's closed basins does (its nearest region not the sea) */
+function closedBasins(W) {
+    const end = new Int32Array(n).fill(-2), trail = [];
+    for (let s = 0; s < n; s++) {
+        if (end[s] !== -2) continue;
+        trail.length = 0;
+        let c = s;
+        while (c >= 0 && end[c] === -2) { end[c] = -3; trail.push(c); const r = W.recv[c]; if (r < 0) break; c = r; }
+        const e = end[c] >= 0 ? end[c] : c;
+        for (const t of trail) end[t] = e;
+    }
+    let all = 0, closed = 0;
+    for (let c = 0; c < n; c++) if (land[c] && !W.lake[c] && lat[c] >= -60) { all++; if (!W.ocean[end[c]]) closed++; }
+    const named = CLOSED.map(([name, la, lo]) => {
+        let best = -1, bd = Infinity;
+        for (let a = Math.floor(la) - 1; a <= Math.floor(la) + 1; a++) for (let o = Math.floor(lo) - 1; o <= Math.floor(lo) + 1; o++) for (const r of buckets.get(bkey(a, o)) ?? []) {
+            if (W.ocean[r]) continue;
+            const d = (lat[r] - la) ** 2 + ((lon[r] - lo) * Math.cos(la * Math.PI / 180)) ** 2;
+            if (d < bd) { bd = d; best = r; }
+        }
+        return [name, best >= 0 && !W.ocean[end[best]]];
+    });
+    return `closed basins: ${(100 * closed / Math.max(1, all)).toFixed(1)} % of the land drains to them (Earth ≈ 18–20 %); of Earth's own closed ${named.filter(x => x[1]).map(x => x[0]).join(', ') || 'none'}; open ${named.filter(x => !x[1]).map(x => x[0]).join(', ') || 'none'}`;
+}
 
 if (TUNING) {
     // ── every combination of TUNE's values, with the observed climate ──
@@ -182,8 +214,9 @@ if (TUNING) {
     console.log(`${gauges.length} gauges draining ≥ ${MIN_AREA.toLocaleString()} km²; Earth at ${n.toLocaleString()} regions${Object.keys(SET).length ? `; ${JSON.stringify(SET)}` : ''}`);
     for (const [label, climate] of [['observed climate', obs], ['simulated climate', CLIMATE === 'obs' ? null : sim]]) {
         if (!climate) continue;
-        const rows = score(run(climate, { ...WATER, ...SET }));
+        const W = run(climate, { ...WATER, ...SET }), rows = score(W);
         console.log(`── ${label}: year score ${yearScore(rows).toFixed(3)}`);
+        console.log(`  ${closedBasins(W)}`);
         console.log(`  all      ${summary(rows)}`);
         console.log(`  no lake  ${summary(rows.filter(x => !x.lake))}`);
         for (const z of ZONES) { const zr = rows.filter(x => x.zone === z); if (zr.length >= 3) console.log(`  zone ${z}   ${summary(zr)}`); }

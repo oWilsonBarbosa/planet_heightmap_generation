@@ -23,6 +23,9 @@ By the climate zone at the gauge (Beck's Köppen group A–E):
 - `early` — how many months later the simulated year best matches the measured (the shift that correlates them best;
   positive: the simulated comes early): the mean over the gauges, and over the great basins, from 500,000 km²
 
+And the **closed basins**: the share of the land (without Antarctica) whose water ends in a lake with no outflow — Earth's
+≈ 18–20 % (Wang et al. 2018) — and which of fifteen of Earth's closed basins close (`CLOSED` in `earth-rivers.mjs`).
+
 The **year's score** — per gauge `r − |ln range| − ½ |ln low flow|`, the median over the gauges — ranks `--tune`.
 The rivers' year (`baseflowShare`, `baseflowMonths`, `monthEvapShare`, `snowMeltMmPerC`, `lakeRegulation…`,
 `riverSpeedKmDay`) does not change the year's flows.
@@ -49,11 +52,31 @@ node tuning/water/earth-rivers.mjs --tune [--grid baseflowShare=0.5/0.7,baseflow
 | observed climate, `WATER`: and the water's way down at 40 km a day | 82 % (×0.92) | 0.89 | 87 % | ×0.92 | ×0.89 | 0.13 (0.07) |
 | simulated climate, the Evolution's constants | 52 % (×0.79) | 0.53 | 51 % | ×0.64 | ×1.84 | |
 | simulated climate, dry basins, baseflow 0.7, 3 months | 52 % (×0.79) | 0.60 | 56 % | ×1.00 | ×0.75 | 0.18 (1.14) |
-| simulated climate, `WATER` | 52 % (×0.77) | 0.66 | 60 % | ×0.94 | ×0.78 | 0.01 (0.36) |
+| simulated climate, `WATER` before closed basins | 52 % (×0.77) | 0.66 | 60 % | ×0.94 | ×0.78 | 0.01 (0.36) |
+| observed climate, `WATER`: inland seas of any size | 82 % (×0.92) | 0.89 | 87 % | ×0.91 | ×0.90 | 0.13 (0.07) |
+| observed climate, `WATER`: closed basins (122 gauges) | 84 % (×0.91) | 0.90 | 88 % | ×0.94 | ×0.88 | 0.07 (0.00) |
+| simulated climate, `WATER`: closed basins (126 gauges) | 53 % (×0.79) | 0.68 | 61 % | ×0.94 | ×0.75 | −0.02 (0.38) |
 
-The last row is the simulated climate as it is now, the snowmelt on frozen ground mostly running off (`RAIN_MELT_SOAK`,
-`v2/js/climate/config.js`); the simulated rows above it are with the climate before, with which `WATER` scored 52 %
-(×0.79), 0.66, 61 %, ×0.93, ×0.78 and −0.01 (0.36). The observed climate's rows do not depend on it.
+The simulated rows from "`WATER` before closed basins" on are with the simulated climate as it is now, the snowmelt on
+frozen ground mostly running off (`RAIN_MELT_SOAK`, `v2/js/climate/config.js`); those above it with the climate before,
+with which `WATER` scored 52 % (×0.79), 0.66, 61 %, ×0.93, ×0.78 and −0.01 (0.36). The observed climate's rows do not
+depend on it.
+
+**Closed basins** (`closedBasins`, `closedBasinPluvial` in `v2/js/finish/finish-config.js`): a basin on land its rivers
+cannot fill — not even with twice what they bring, as in the ice ages' wetter times — is where they end, a salt lake at
+its balance or a salt pan; the Evolution's rule cuts every basin through to the sea. With them 18.8 % of the land drains
+to closed basins with the observed climate (19.5 % simulated; 17.5 % at 640K), and Earth's own close: the Tarim's,
+Balkhash's, Lake Eyre's (a pan, as it is in most years), the Great Basin's, the Great Salt Lake's, Sistan's, the Dead
+Sea's, Urmia's; the Altiplano's, Lake Chad's, the Okavango's, Turkana's and Issyk-Kul's do not (the Caspian and the Aral
+are sea on the map). Without them 2.9 % did (2.3 % simulated), to seas the coarse map encloses (the Persian Gulf, the
+head of the Gulf of California), and none of Earth's own closed; before inland seas of any size (`seaRemnantAnySize`),
+12.1 %, most of it the Ob's and the Paraná's, ending in an estuary of one region. `closedBasinPluvial` 1 closes 23.9 %
+of the land, 3 17.6 %, 5 15.9 %. With 2 the year's score is unchanged with the observed climate (0.252) and better with
+the simulated one (−0.231 → −0.179; both before closed basins with inland seas of any size). The gauges lost with the
+observed climate (130 → 122) are of rivers that end, on the coarse map, in a dry basin upstream: Western Australia's
+(the Avon, the Gascoyne, the Murchison, the de Grey, the Ashburton's flow) — their headwaters really are chains of salt
+lakes that seldom flow — and the Indus, the Juba, the Colorado of Argentina, the Burdekin, the Itapicuru and the Tapi,
+whose courses cross basins the map's 20 km pixels close (a gorge narrower than a region, a terrace of its 8-bit steps).
 
 The Evolution's constants even out the months more the finer the mesh (the range ×0.86 at 640K, ×0.64 at 2.56M): the
 basins the rivers cut through, more of them at finer detail, pass on their water as lakes would. Without that the

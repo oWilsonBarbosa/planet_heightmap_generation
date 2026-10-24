@@ -355,19 +355,24 @@ export function hydrology(ctx, F) {
             // A remnant of the sea (developer, 2026-10-15: inland seas "COMPLETELY dried out … leaving holes in the ground")
             // is its hole — the basin's cells below sea level — and its water stays in it (developer: the lakes over trapped
             // seas were "just too enormous": filled to the basin's sill they drowned the whole lowland round the hole)
-            let hole = null, fullHole = 0;
+            // (where F.closedBasins, a basin on land its rivers cannot fill — not with F.closedBasinPluvial times what they
+            // bring — is where they end, as a remnant of the sea's hole is: Earth's closed basins, a fifth of its land, the
+            // Tarim's, Lake Eyre's, the Great Basin's. Off, the Evolution's rule: every river ends at the sea)
+            const closed = !!F.closedBasins && !h.sea && !drained && h.inflow * F.closedBasinPluvial < full;
+            let hole = null, fullHole = 0, low = null, kLow = -1;
             if (h.sea) {
                 hole = h.cells.filter(x => z[x] < 0);
                 for (const x of hole) fullHole += lakeDeficit(x) * cellKm2 * 1e3 / SEC_PER_YEAR;
-            }
-            if (h.sea && h.inflow < fullHole) {
+            } else if (closed) { hole = h.cells.slice(); fullHole = full; }
+            if (hole && h.inflow < fullHole) {
                 // short of filling it, it shrinks to where what flows in balances what evaporates — the lowest cells, as
                 // much area as its inflow keeps wet. A terminal salt sea where that is big for its river, or the basin an old
                 // sea floor deep enough (the Caspian, the Dead Sea — developer: "allow terminal salt seas"); else a salt pan,
                 // its floor filled toward a flat (below). Its rivers end there
-                const low = hole.sort((a, b) => z[a] - z[b]);
+                low = hole.sort((a, b) => z[a] - z[b]);
                 let evap = 0, k = -1;
                 for (let i = 0; i < low.length; i++) { const e = lakeDeficit(low[i]) * cellKm2 * 1e3 / SEC_PER_YEAR; if (evap + e > h.inflow) break; evap += e; k = i; }
+                kLow = k;
                 outflow = 0; toBasins += h.inflow; from = h.deepCell;
                 if (k >= 1 && ((k + 1) * cellKm2 >= keepKm2 || smooth(F.saltSeaDeepKm[0], F.saltSeaDeepKm[1], -h.floor) >= 0.5)) { kind = Water.SALT; level = z[low[k]] + 1e-5; }
                 else { kind = Water.PAN; level = h.floor; h.pan = true; }
@@ -414,10 +419,16 @@ export function hydrology(ctx, F) {
             // (a river's pond — what water a partly cut basin keeps, small for its river — cut through too: the size that
             // counts is the water left, not the basin's)
             // (a remnant of the sea keeps its water whatever its size: no gorge could drain it)
-            if (!h.sea && water.length && water.length * cellKm2 < keepKm2) { cut(h.deepCell, h.floor); level = h.floor; water.length = 0; }
+            if (!h.sea && !closed && water.length && water.length * cellKm2 < keepKm2) { cut(h.deepCell, h.floor); level = h.floor; water.length = 0; }
             if (kind === Water.SALT && !water.length) { kind = Water.PAN; h.pan = true; }
+            // (a closed basin on land that keeps no lake the map can show: a salt pan on its floor — its lowest cells, as
+            // many as what flows in wets in the year, its deepest at least — one flat, where its rivers end)
+            if (closed && kind === Water.PAN) {
+                for (let i = 0; i <= Math.max(0, kLow); i++) water.push(low[i]);
+                level = z[low[Math.max(0, kLow)]] + 1e-3;
+            }
             for (const x of water) { lakeKind[x] = kind; lakeLevel[x] = level; }
-            if (h.sea ? kind === Water.FRESH : !water.length) cutPockets(h, id, c);
+            if (h.sea ? kind === Water.FRESH : !closed && !water.length) cutPockets(h, id, c);
             h.kind = water.length ? kind : h.pan ? Water.PAN : Water.NONE; h.levelNow = level; h.outflow = outflow; h.fullEvap = full; h.outletIn = h.inflow;
             q[c] = outflow; qw[c] = h.seasonW; area[c] = h.area;
             if (!(outflow > 0)) continue;
