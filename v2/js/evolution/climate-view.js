@@ -19,7 +19,10 @@ import { QUANTITY_COLORS, ICE_SHEET_RGB, SNOW_RGB, climateLegendHTML, classLabel
 const STAT_KEY = { tempRange: 'tRange', aridity: 'aridity', growing: 'growing', rainSeason: 'rainSeason' };
 export const CLIMATE_LAYERS = new Set(['satellite', 'koppen', 'temperature', 'rain', 'wind', 'currents',
     'pressure', 'upwelling', 'ice', 'tempRange', 'rainShadow', 'aridity', 'growing', 'rainSeason']);
-export const SEASONAL_LAYERS = new Set(['satellite', 'temperature', 'rain', 'wind', 'currents', 'pressure', 'upwelling', 'ice']);
+export const SEASONAL_LAYERS = new Set(['satellite', 'temperature', 'rain', 'wind', 'currents', 'pressure', 'upwelling', 'ice', 'rainShadow']);
+/** The mountains' share of the rain in a season (climate-fields.js): the year's where the climate has no seasons of it —
+ *  a planet file saved before it had them. */
+const orographicOf = (C, season) => (season !== 'year' && C.orographicSeasons?.[season]) || C.orographic;
 /** The layers drawn with arrows, and which: the winds or the currents. */
 export const ARROW_LAYERS = { wind: 'wind', pressure: 'wind', currents: 'currents' };
 /** Layers only a finished moment has (its land's cover — plans/V2_SATELLITE_PLAN.md): greyed on the live timeline. */
@@ -193,7 +196,7 @@ export function paintClimate(layer, season, C, terrain, tMesh, out, relief) {
         for (let c = 0; c < n; c++) {
             const k = shadeOf(terrain, c);
             if (h[c] <= 0) { out[3 * c] = SEA_DIM[0] * k; out[3 * c + 1] = SEA_DIM[1] * k; out[3 * c + 2] = SEA_DIM[2] * k; continue; }
-            const v = layer === 'rainShadow' ? at(C.orographic, p, c) : st ? statValue(st, key, c) : NaN;
+            const v = layer === 'rainShadow' ? at(orographicOf(C, season), p, c) : st ? statValue(st, key, c) : NaN;
             if (v === v) put(out, c, T, v, k);
             else { out[3 * c] = out[3 * c + 1] = out[3 * c + 2] = 105 * k; }
         }
@@ -399,7 +402,7 @@ export function finishedClimateColor(layer, season, C, W, lut, fin = null) {
         } else {
             // (the land's own measures; the sea dark)
             if (i < 0) { const k = shadeK(kk); out[o] = SEA_DIM[0] * k; out[o + 1] = SEA_DIM[1] * k; out[o + 2] = SEA_DIM[2] * k; out[o + 3] = 255; return; }
-            const v = layer === 'rainShadow' ? g(C.orographic, x, y) : st ? statValue(st, key, i) : NaN;
+            const v = layer === 'rainShadow' ? g(orographicOf(C, season), x, y) : st ? statValue(st, key, i) : NaN;
             if (v === v) putPx(out, o, kk, v); else rgbPx(out, o, kk, [105, 105, 105]);
         }
     };
@@ -440,7 +443,7 @@ export function finishedClimateValue(key, season, C, W) {
         case 'seaIce': return (x, y, wet) => (wet ? g(C.seaIce[s], x, y) : 0);
         case 'snow': return (x, y, wet) => (wet || !C.snow ? 0 : g(C.snow[s], x, y));
         case 'iceSheet': return (x, y, wet) => (wet ? 0 : g(C.iceSheet, x, y));
-        case 'rainShadow': return (x, y, wet) => (wet ? NaN : g(C.orographic, x, y));
+        case 'rainShadow': { const og = orographicOf(C, s); return (x, y, wet) => (wet ? NaN : g(og, x, y)); }
         case 'tempRange': case 'aridity': case 'growing': case 'rainSeason': {
             const sk = STAT_KEY[key];
             return (x, y, wet) => { if (wet || !st?.[sk]) return NaN; const i = land(x, y); return i >= 0 ? statValue(st[sk], sk, i) : NaN; };
@@ -554,8 +557,8 @@ function layerLine(layer, season, C, g, land, stat) {
         case 'ice': return land ? (g(C.iceSheet) > 0.05 ? L('Ice', 'an ice sheet') : C.snow && g(C.snow[season]) > 0.05 ? L('Snow', `${fmt(100 * Math.min(1, g(C.snow[season])))} %${sn}`) : null) : L('Sea ice', `${fmt(100 * Math.max(0, Math.min(1, g(C.seaIce[season]))))} %${sn}`);
         case 'rainShadow': {
             if (!land) return null;
-            const r = g(C.orographic);
-            return L('Mountains', r >= 1 ? `${fmt(100 * (r - 1))} % more rain` : `${fmt(100 * (1 - r))} % less rain`);
+            const r = g(orographicOf(C, season));
+            return L('Mountains', `${r >= 1 ? `${fmt(100 * (r - 1))} % more rain` : `${fmt(100 * (1 - r))} % less rain`}${sn}`);
         }
         case 'tempRange': return land ? L('Range', `${fmt(stat('tRange'), 1)} °C warmest − coldest month`) : null;
         case 'aridity': { const v = stat('aridity'); return land && v === v ? L('Aridity', `${classLabel('aridity', v)} (${fmt(v, 2)})`) : null; }

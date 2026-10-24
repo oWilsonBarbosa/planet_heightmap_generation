@@ -44,7 +44,7 @@ function valueFns(data, s) {
         sstAnom: (r) => (sea(r) ? at(g.sstAnom[s], r) : NaN), currentU: (r) => (sea(r) ? at(g.currentU[s], r) : NaN), currentV: (r) => (sea(r) ? at(g.currentV[s], r) : NaN),
         upwelling: (r) => (sea(r) ? at(g.upwelling[s], r) : NaN),
         seaIce: (r) => (sea(r) ? at(g.seaIce[s], r) : 0), snow: (r) => (sea(r) || !g.snow ? 0 : at(g.snow[s], r)), iceSheet: (r) => (sea(r) || !g.iceSheet ? 0 : at(g.iceSheet, r)),
-        tempRange: (r) => (sea(r) ? NaN : cells.tRange[r]), rainShadow: (r) => (sea(r) ? NaN : at(g.orographic, r)),
+        tempRange: (r) => (sea(r) ? NaN : cells.tRange[r]), rainShadow: (r) => (sea(r) ? NaN : at(s === 'year' ? g.orographic : g.orographicSeasons[s], r)),
         aridity: (r) => (sea(r) ? NaN : cells.aridity[r]), growing: (r) => (sea(r) ? NaN : cells.growing[r]), rainSeason: (r) => (sea(r) ? NaN : cells.rainSeason[r]),
     };
 }

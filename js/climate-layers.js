@@ -16,7 +16,7 @@ export const CLIMATE_INSPECT = [
     { id: 'temperature', label: 'Temperature',       seasonal: true },
     { id: 'precip',      label: 'Precipitation',     seasonal: true },
     { id: 'tempRange',   label: 'Temperature Range', seasonal: false },
-    { id: 'rainShadow',  label: 'Rain Shadow',       seasonal: false },
+    { id: 'rainShadow',  label: 'Rain Shadow',       seasonal: true },
     { id: 'aridity',     label: 'Aridity',           seasonal: false },
     { id: 'growing',     label: 'Growing Season',    seasonal: false },
     { id: 'rainSeason',  label: 'Rain Seasonality',  seasonal: false },
@@ -142,7 +142,7 @@ export function climateColorFn(id, season, data) {
         case 'ice': return (r) => (sea(r) ? seaIceColor(at(g.seaIce[s], r))
             : lerp3(g.snow ? lerp3(LAND, SNOW_RGB, Math.max(0, Math.min(1, at(g.snow[s], r)))) : LAND, ICE_SHEET_RGB, Math.max(0, Math.min(1, at(g.iceSheet, r)))));
         case 'tempRange': return (r) => (sea(r) ? SEA : rangeColor(cells.tRange[r]));
-        case 'rainShadow': return (r) => (sea(r) ? SEA : QUANTITY_COLORS.rainShadow(at(g.orographic, r)));
+        case 'rainShadow': { const og = s === 'year' ? g.orographic : g.orographicSeasons[s]; return (r) => (sea(r) ? SEA : QUANTITY_COLORS.rainShadow(at(og, r))); }
         case 'aridity': return (r) => (sea(r) ? SEA : aridityColor(cells.aridity[r]));
         case 'growing': return (r) => (sea(r) ? SEA : growColor(cells.growing[r]));
         case 'rainSeason': return (r) => (sea(r) ? SEA : seasonColor(cells.rainSeason[r]));
@@ -173,7 +173,7 @@ export function climateLegendHTML(id, season) {
         case 'upwelling': return gradient(UPWELL_STOPS, 0, 2, ['0', '1', '2 m/day']) + note(`Cold, nutrient-rich water rising where the wind pushes the surface away${sn}`);
         case 'ice': return gradient([[0, SEA_ICE_RGB[0]], [1, SEA_ICE_RGB[1]]], 0, 1, ['Open sea', 'Sea ice']) + note(`Sea ice${sn}; on land, snow${sn} and the ice sheets`);
         case 'tempRange': return gradient(RANGE_STOPS, 0, 55, ['0', '20', '40 °C']) + note('Warmest month minus coldest — continentality: small by the sea, large deep inland');
-        case 'rainShadow': return gradient(OROG_STOPS, -1.5, 1.5, ['Rain shadow', 'No effect', 'Windward']) + note('How mountains move the rain: wetter windward slopes, drier lands in their lee');
+        case 'rainShadow': return gradient(OROG_STOPS, -1.5, 1.5, ['Rain shadow', 'No effect', 'Windward']) + note(`How mountains move the rain${sn}: wetter windward slopes, drier lands in their lee`);
         case 'aridity': return swatches(ARIDITY) + note('UNEP aridity index: precipitation ÷ potential evaporation');
         case 'growing': return gradient(GROW_STOPS, 0, 12, ['0', '6', '12 months']) + note('Months warmer than 10 °C — where forests and crops can grow');
         case 'rainSeason': return swatches(SEASONALITY) + note('Rain seasonality (Walsh & Lawler): how unevenly the rain falls through the year');
