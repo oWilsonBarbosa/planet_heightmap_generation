@@ -6,7 +6,9 @@
 //   ocean      1 on the sea: the open ocean, and the water behind a barrier lower and shorter than a strait the mesh
 //              could show (the Evolution's strait rule: a lagoon's mouth, a narrow strait)
 //   lake       the rest of the water (Water: 0 none, 1 fresh lake, 2 salt lake, 3 salt pan, 4 brackish lake); lakeLevel
-//              its surface (km); lakeOutlet the region its outflow leaves by (its discharge there: q), −1 if it has none
+//              its surface (km); lakeOutlet the region its outflow leaves by (its discharge there: q), −1 if it has none;
+//              balanceLevel, on a lake with no outflow, the level at which what flows in would balance what it
+//              evaporates (km; its bed below it under water, above it dry: a salt flat) — NaN elsewhere
 //   q          the year's mean discharge (m³/s): the runoff — rain less evaporation (potential evaporation month by
 //              month), Budyko's curve — of everything upstream, less what a river loses along its bed in dry country;
 //              area: what drains there (km²)
@@ -189,8 +191,33 @@ export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: r
         const d = lakeLevel[c] - z[c];
         if (lake[c] && d > 0) z[c] = lakeLevel[c] - F.seaFillKm * Math.tanh(d / F.seaFillKm);
     }
+    // (a closed lake as its water balance leaves it: what flows in evaporates off its lowest ground, the lake shrunk to
+    // where the two balance — as the Caspian and the Dead Sea have, far below their old shores — the rest of its bed dry,
+    // a salt flat (a mudflat where it is brackish). The site draws it full: here only the level it would stand at.
+    // What flows in: the rivers and shores draining into it; what it loses: open water's evaporation less the rain on it)
+    const balanceLevel = new Float32Array(n).fill(NaN);
+    {
+        const cellKm2 = 4 * Math.PI * R_KM * R_KM / n, inflow = new Float64Array(B), cellsOf = Array.from({ length: B }, () => []);
+        for (let c = 0; c < n; c++) {
+            if (sink[c] && !ocean[c]) { cellsOf[body[c]].push(c); continue; }
+            const r = Hy.recv[c];
+            if (!ocean[c] && r >= 0 && sink[r] && !ocean[r]) inflow[body[r]] += Hy.q[c];        // (a lake upstream: its outlet)
+        }
+        for (let i = 0; i < B; i++) {
+            const cs = cellsOf[i];
+            if (!cs.length) continue;
+            cs.sort((x, y) => z[x] - z[y]);
+            let lost = 0, level = z[cs[0]];
+            for (const c of cs) {
+                lost += Math.max(0, F.lakeEvapShare * pet[c] - Math.max(0, pAnn[c])) * cellKm2 * 1e3 / SEC_PER_YEAR;
+                if (lost > inflow[i]) break;
+                level = z[c] + BALANCE_EPS_KM;
+            }
+            for (const c of cs) balanceLevel[c] = level;
+        }
+    }
     return {
-        heightKm: z, ocean, lake, lakeLevel, lakeOutlet: Hy.lakeOutlet, q: Hy.q, area: Hy.area, recv: Hy.recv, rivers: Hy.rivers, glaciated,
+        heightKm: z, ocean, lake, lakeLevel, balanceLevel, lakeOutlet: Hy.lakeOutlet, q: Hy.q, area: Hy.area, recv: Hy.recv, rivers: Hy.rivers, glaciated,
         stats: { ...Hy.stats, inlandSeas: { spilling: spilled, salt, brackish, rounds, unsettled: short }, ...(iceAgeOut ? { iceAge: iceAgeOut.stats } : {}) },
         timing: { total: performance.now() - t0 },
     };
@@ -234,6 +261,10 @@ function lakeDistricts({ mesh, z0, r_elevation, res, lat, lon, rain, seed }, F) 
     return { ice: I.ice, stats: { iceKm2: Math.round(I.iceKm2), sheets: I.sheets, landShareIced: iced / Math.max(1, land), landLowered: lowered, landRaised: raised,
         mostLoweredKm: +(-deepest).toFixed(3), mostRaisedKm: +highest.toFixed(3) } };
 }
+
+/** A closed lake's level at its balance stands this much over its highest bed still under water (km). */
+const BALANCE_EPS_KM = 1e-6;
+const SEC_PER_YEAR = 3.156e7;
 
 /** The lowest the ice age leaves land (km), so that it stays above the sea. */
 const ICE_AGE_LAND_FLOOR_KM = 1e-4;

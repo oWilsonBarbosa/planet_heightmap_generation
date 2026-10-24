@@ -262,7 +262,8 @@ js/
   water-new.js          Rivers and lakes for a Generate or Import planet — the Evolution's hydrology (v2/js/finish/finish-hydro.js) on a V1
                         planet as it is, fed by the new climate's twelve months (evaporation month by month): discharge, drainage,
                         lakes (the planet's inland seas spill on to the sea or end their rivers as salt lakes — brackish where the
-                        climate is humid; their beds filled with sediment toward ~1 km deep; its coasts unchanged), river polylines
+                        climate is humid; their beds filled with sediment toward ~1 km deep; the level a lake with no outflow
+                        would shrink to at its water balance; its coasts unchanged), river polylines
                         with their seasons, each month's water reaching a river point as late as its way down takes (checked
                         against measured flows: tuning/water/); optionally the land first shaped by the Evolution's last ice
                         age — troughs, scoured hollows, moraines — for its lake districts. Not run by the pages yet: for
