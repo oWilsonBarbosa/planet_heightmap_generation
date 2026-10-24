@@ -585,7 +585,8 @@ export function columnWaterRain() {
         // its subtropical high to its subpolar low that month (≈ 40°–50°, moving with the seasons), brings land a baseline of
         // RAIN_FRONT_MM a month at its centre (Gaussian ±RAIN_FRONT_DEG) — the fronts' own lift as they sweep inland, which
         // the monthly mean budget leaves out — faded under pressure above the latitude's mean (e-folding RAIN_FRONT_HIGH_HPA:
-        // the highs) and in rain shadows (× the mountains' share of the rain, at most 1).
+        // the highs) and in rain shadows (× the mountains' share of that anchor's rain, at most 1: the shadow of its own
+        // winds).
         if (P_.RAIN_FRONT_MM > 0 && winds.belts && winds.slp) {
             const cw = core.w, ch = core.h, lf = ctx.surface.landFrac, sg = P_.RAIN_FRONT_DEG;
             for (let k = 0; k < K; k++) {
@@ -599,7 +600,7 @@ export function columnWaterRain() {
                     for (let i = 0; i < cw; i++) {
                         const c = j * cw + i;
                         if (!(lf[c] > 0)) continue;
-                        Pout[k * core.size + c] += lf[c] * P_.RAIN_FRONT_MM * wf * Math.exp(-Math.max(0, sl[c] - row) / P_.RAIN_FRONT_HIGH_HPA) * Math.min(1, orographic[c]);
+                        Pout[k * core.size + c] += lf[c] * P_.RAIN_FRONT_MM * wf * Math.exp(-Math.max(0, sl[c] - row) / P_.RAIN_FRONT_HIGH_HPA) * Math.min(1, orographicK[k * core.size + c]);
                     }
                 }
             }
