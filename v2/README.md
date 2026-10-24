@@ -43,7 +43,9 @@ which shows the two resolutions), with Build This World and **Load Planet…** (
 or drop one anywhere on the page) — then the **context card**, and **Stats**. The view's
 settings sit in the **view strip** above the layer tabs, folded behind the arrow at their left (`js/view-strip.js`, shared with Generate and Import): Globe |
 Map, the map's projection and centre, auto-rotate, grid, terrain colours, hillshade, and on a detailed moment the
-rivers (Rivers & Lakes, By Regime, density); on a phone at the top of the bottom sheet. Playback speed is on the timeline. The context card names the moment shown, a **Preview** or
+rivers (Rivers & Lakes, By Regime, density); on a phone at the top of the bottom sheet. The map zooms and pans as Generate's
+does (`js/app/globe-view.js`): the wheel zooms toward the pointer (1× to 20×, eased as the globe's zoom), a drag pans, two
+fingers pinch; the equirectangular map runs on east and west without end; the whole map comes back on changing its shape. Playback speed is on the timeline. The context card names the moment shown, a **Preview** or
 **Detailed** badge, and the one thing to do next — **Add detail** (with its Detail level), **Cancel** while it runs, or
 **Export** — its button mirrored on the timeline, beside the moment; on the detailed moment it holds the rivers' options,
 elsewhere a note that adding detail replaces it, with a link back to it; **Extend history** once the history has reached its end.
