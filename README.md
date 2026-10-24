@@ -301,6 +301,9 @@ tuning/
   relief/               Earth's hypsometry for js/earth-relief.js — downloads a sample of ETOPO 2022 (NOAA NCEI) and
                         computes how much of Earth's land lies below each height, and of its sea floor above each depth
                         (see tuning/relief/README.md)
+  evolution/            The Evolution's regression check — builds and finishes one Evolution world headless and hashes
+                        every output, to show a change to the code it shares leaves it as it was (see
+                        tuning/evolution/README.md)
 ```
 
 ## Dependencies
