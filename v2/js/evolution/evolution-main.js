@@ -1086,6 +1086,7 @@ $('viewMode').addEventListener('change', e => {
     view.mode = e.target.value;
     ui.map.hidden = view.mode !== 'map';                    // (the map's frame: the map is drawn under it, and it takes the pointer)
     ui.hover.style.display = 'none';
+    if (!IS_TOUCH) ui.info.textContent = `Drag to ${view.mode === 'map' ? 'move the map' : 'turn the planet'} · scroll to zoom · hover for details`;
     showMap();
 });
 // the map view's projection (projections.js), with its own options; remembered, the same on the three pages

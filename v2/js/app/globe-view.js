@@ -18,7 +18,7 @@ import { PROJECTION_GLSL, projectionUniforms } from '../view/projection-glsl.js'
 // a wheel's notch (100 px): 14 % nearer or farther — OrbitControls' own was 5 % and felt slow (developer, 2026-10-18:
 // "zooming in is also very slow"); V1's is 8 %. The camera covers this share of the way left each 60th of a second.
 const ZOOM_PER_PX = 0.0015, ZOOM_EASE = 0.15;
-const MAP_ZOOM_MAX = 20;                                           // (the map's zoom: 1, the whole map, to 20, as Generate's)
+const MAP_ZOOM_MIN = 0.5, MAP_ZOOM_MAX = 20;                      // (the map's zoom: 1, the whole map; out to half that, in to 20, as Generate's)
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 export class GlobeView {
@@ -203,14 +203,17 @@ export class GlobeView {
             this.mapScene.background = new THREE.Color(0x000000);
             const u = projectionUniforms();
             this.mapQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
-                uniforms: { map: { value: null }, turn: { value: 0 }, uView: { value: new THREE.Vector4(1, 1, 0, 0) }, uWrap: { value: 0 },
+                uniforms: { map: { value: null }, turn: { value: 0 }, uView: { value: new THREE.Vector4(1, 1, 0, 0) }, uWrap: { value: new THREE.Vector2() },
                     uProj: { value: u.uProj }, uBounds: { value: new THREE.Vector4(...u.uBounds) }, uOpt: { value: new THREE.Vector4(...u.uOpt) } },
                 vertexShader: 'varying vec2 vUv;\nvoid main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-                fragmentShader: `uniform sampler2D map; uniform float turn; uniform vec4 uView; uniform float uWrap; varying vec2 vUv;
+                fragmentShader: `uniform sampler2D map; uniform float turn; uniform vec4 uView; uniform vec2 uWrap; varying vec2 vUv;
 ${PROJECTION_GLSL}
 void main() {
     vec2 m = vUv * uView.xy + uView.zw;                            // (the frame's pixel → its place in the map's box, zoomed and panned)
-    if (uWrap > 0.5) m.x = fract(m.x);
+    if (uWrap.x > 0.5) {                                           // (one turn of the planet about the frame's middle: zoomed out, no place twice)
+        if (m.x < uWrap.y || m.x > uWrap.y + 1.0) discard;
+        m.x = fract(m.x);
+    }
     if (m.x < 0.0 || m.x > 1.0 || m.y < 0.0 || m.y > 1.0) discard;
     vec2 xy = vec2(uBounds.x + m.x * (uBounds.y - uBounds.x), uBounds.z + m.y * (uBounds.w - uBounds.z));
     vec2 ll;
@@ -262,7 +265,7 @@ void main() {
             if (!this.map) return;
             e.preventDefault();
             const px = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1), v = this.mapView;
-            v.zoomTo = clamp(v.zoomTo * Math.exp(-clamp(px, -200, 200) * ZOOM_PER_PX), 1, MAP_ZOOM_MAX);
+            v.zoomTo = clamp(v.zoomTo * Math.exp(-clamp(px, -200, 200) * ZOOM_PER_PX), MAP_ZOOM_MIN, MAP_ZOOM_MAX);
             v.anchor = { cx: e.clientX, cy: e.clientY, m: this.mapFrac(e.clientX, e.clientY) };   // (the place under the pointer stays there)
             this._dirty = true;
         }, { passive: false });
@@ -289,7 +292,7 @@ void main() {
                 const [a, c] = [...down.values()], d = Math.hypot(a[0] - c[0], a[1] - c[1]), m2 = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
                 if (pinch) {
                     const m = this.mapFrac(mid[0], mid[1]);       // (the place under the fingers stays under them)
-                    v.zoom = v.zoomTo = clamp(v.zoom * d / pinch, 1, MAP_ZOOM_MAX);
+                    v.zoom = v.zoomTo = clamp(v.zoom * d / pinch, MAP_ZOOM_MIN, MAP_ZOOM_MAX);
                     this.panTo(m, m2[0], m2[1]);
                 }
                 pinch = d; mid = m2;
@@ -314,7 +317,11 @@ void main() {
     /** On the map view: the texture's place under a client-space point, [u (west → east), v (north → south)] — or null, off the map. */
     mapUvAt(clientX, clientY) {
         let [x, y] = this.mapFrac(clientX, clientY);
-        if (this.map.projection === 'equirect') x -= Math.floor(x);
+        if (this.map.projection === 'equirect') {
+            const p = this.mapView.panX;
+            if (x < p || x > p + 1) return null;
+            x -= Math.floor(x);
+        }
         if (!(x >= 0 && x < 1 && y >= 0 && y < 1)) return null;
         const b = this.map.bounds, ll = PROJ[this.map.projection].inv(b[0] + x * (b[1] - b[0]), b[3] - y * (b[3] - b[2]), this.map.projOpts);
         if (!ll) return null;
@@ -329,7 +336,7 @@ void main() {
         // (the whole frame drawn: its pixels → the box's places, at the zoom and pan; y from the bottom)
         const zw = b.width * v.zoom, zh = b.height * v.zoom;
         u.uView.value.set(f.width / zw, f.height / zh, 0.5 + (f.left - b.left - b.width / 2) / zw + v.panX, 0.5 - (f.top + f.height - b.top - b.height / 2) / zh - v.panY);
-        u.uWrap.value = this.map.projection === 'equirect' ? 1 : 0;
+        u.uWrap.value.set(this.map.projection === 'equirect' ? 1 : 0, v.panX);
         r.setViewport(f.left - c.left, c.height - (f.top - c.top) - f.height, f.width, f.height);      // (from the bottom)
         r.render(this.mapScene, this.camera);                                                         // (its background clears the whole canvas)
         r.setViewport(0, 0, c.width, c.height);
