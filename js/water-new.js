@@ -8,7 +8,8 @@
 //   lake       the rest of the water (Water: 0 none, 1 fresh lake, 2 salt lake, 3 salt pan, 4 brackish lake); lakeLevel
 //              its surface (km); lakeOutlet the region its outflow leaves by (its discharge there: q), −1 if it has none;
 //              balanceLevel, on a lake with no outflow, the level at which what flows in would balance what it
-//              evaporates (km; its bed below it under water, above it dry: a salt flat) — NaN elsewhere
+//              evaporates (km; its bed below it under water, above it dry: a salt flat; its surface where what flows in
+//              keeps it full) — NaN elsewhere
 //   q          the year's mean discharge (m³/s): the runoff — rain less evaporation (potential evaporation month by
 //              month), Budyko's curve — of everything upstream, less what a river loses along its bed in dry country;
 //              area: what drains there (km²)
@@ -64,8 +65,12 @@ export const Water = Object.freeze({ ...HydroWater, BRACKISH: 4 });
  * The year's flows do not depend on them. And a basin that a gorge from upstream drains below its own floor holds no
  * water along that gorge (drainBelowFloor): the Evolution's hydrology takes the gorge's cells under the floor for a lake
  * — on planet 06cy8w6z6a89kow6psje93 with the ice age, a 54,600 km² "lake" over a canyon cut 100 m below its surface.
+ * And an inland sea is a lake whatever its size (seaRemnantAnySize): the Evolution's hydrology keeps no lake smaller than
+ * lakeMinKm2, two cells and lakeMinDepthM, so such a remnant was never full and its rivers ended in it — on that planet
+ * 83 of its 189 closed lakes, one to ten regions a few metres deep, that their rivers would fill many times over (one
+ * took in 37,000 m³/s): 14 % of its land drained to them.
  */
-export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowShare: 0.7, baseflowMonths: 3, riverSpeedKmDay: 40, drainBelowFloor: true });
+export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowShare: 0.7, baseflowMonths: 3, riverSpeedKmDay: 40, drainBelowFloor: true, seaRemnantAnySize: true });
 
 /**
  * Rivers and lakes on a V1 planet.
@@ -207,11 +212,11 @@ export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: r
             const cs = cellsOf[i];
             if (!cs.length) continue;
             cs.sort((x, y) => z[x] - z[y]);
-            let lost = 0, level = z[cs[0]];
-            for (const c of cs) {
-                lost += Math.max(0, F.lakeEvapShare * pet[c] - Math.max(0, pAnn[c])) * cellKm2 * 1e3 / SEC_PER_YEAR;
-                if (lost > inflow[i]) break;
-                level = z[c] + BALANCE_EPS_KM;
+            // (one its inflow keeps full stands as drawn: its surface)
+            let lost = 0, level = lakeLevel[cs[0]];
+            for (let k = 0; k < cs.length; k++) {
+                lost += Math.max(0, F.lakeEvapShare * pet[cs[k]] - Math.max(0, pAnn[cs[k]])) * cellKm2 * 1e3 / SEC_PER_YEAR;
+                if (lost > inflow[i]) { level = k ? z[cs[k - 1]] + BALANCE_EPS_KM : z[cs[0]]; break; }
             }
             for (const c of cs) balanceLevel[c] = level;
         }

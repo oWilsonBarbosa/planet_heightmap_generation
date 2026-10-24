@@ -118,6 +118,10 @@ export const FINISH = {
     // cells under the floor read as a lake strung along it — on for Generate, js/water-new.js; here they make 29 of the
     // 99 fresh lakes of seed 10673275 at 250K cells)
     drainBelowFloor: false,
+    // a remnant of the sea is a lake whatever its size, one cell or a few metres deep too (off: only from lakeMinKm2, two
+    // cells and lakeMinDepthM, as any hollow — a smaller one holds no water. On for Generate, js/water-new.js, which keeps
+    // the water where the pages draw it: there such a remnant, never full, was where its rivers ended)
+    seaRemnantAnySize: false,
     // Where a river must cut through — a basin it drains, a pocket in it — its gorge keeps the river's own course, every bend
     // of it, unless a shortcut is enough less work: the rock it cuts, and gorgeLengthKm for each km of its length (developer:
     // rivers "that go back and forth"; then "there should be some balance … between the 'true down' path and the 'shortcut'

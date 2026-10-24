@@ -281,7 +281,7 @@ export function hydrology(ctx, F) {
         // water balance allows, and is never cut through to its floor, which no gorge could drain)
         const sea = !!ctx.seaBasin && cells.some(c => ctx.seaBasin[c]);
         const origin = sea || glacial >= 0.5 * cells.length || tect >= F.lakeTectonicShare * cells.length || !ctx.tectonic;
-        const lake = origin && cells.length * cellKm2 >= F.lakeMinKm2 && cells.length >= 2 && (L - deepest) * 1000 >= F.lakeMinDepthM;
+        const lake = (sea && F.seaRemnantAnySize) || (origin && cells.length * cellKm2 >= F.lakeMinKm2 && cells.length >= 2 && (L - deepest) * 1000 >= F.lakeMinDepthM);
         if (!origin && ctx.fillHollows) laterCuts.push(id);
         // (old: a hollow of the tectonic surface, glaciated or not; the ice age's own hollows are young)
         hollows.push({ cells, level: L, outlet, deepCell, floor: deepest, lake, inflow: 0, seasonW: 0, area: 0, glacial: glacial >= 0.5 * cells.length, old: sea || (!!ctx.tectonic && tect >= F.lakeTectonicShare * cells.length), sea });
@@ -408,8 +408,9 @@ export function hydrology(ctx, F) {
                 const nb = adjList[k];
                 if (seen[nb] !== id + 1 && hollow[nb] === id && z[nb] < level) { seen[nb] = id + 1; water.push(nb); }
             }
-            // (a lake the map can show: at least lakeMinKm2 and two cells — not a blob on a river)
-            if (water.length < 2 || water.length * cellKm2 < F.lakeMinKm2) water.length = 0;
+            // (a lake the map can show: at least lakeMinKm2 and two cells — not a blob on a river; where F.seaRemnantAnySize, a
+            // remnant of the sea whatever its size)
+            if (!(h.sea && F.seaRemnantAnySize) && (water.length < 2 || water.length * cellKm2 < F.lakeMinKm2)) water.length = 0;
             // (a river's pond — what water a partly cut basin keeps, small for its river — cut through too: the size that
             // counts is the water left, not the basin's)
             // (a remnant of the sea keeps its water whatever its size: no gorge could drain it)
