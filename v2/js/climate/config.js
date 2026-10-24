@@ -140,6 +140,7 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_TROPICAL_RH: 0.3,      // day        … and by tropical disturbances (monsoon depressions, easterly waves), per unit of the
     RAIN_TROPICAL_KM: 600,      // km         low-level winds' cyclonic vorticity (1/day), smoothed over this, within the tropics
                                 //            (the derived winds are smooth: their vorticity is ≈ ¼ of a real monsoon trough's)
+    RAIN_EADY_SMOOTH_DEG: 8,    // °          the storms grow on the zonal-mean temperature gradient smoothed over ± this
     RAIN_WIND_ROT: 0.757,       // –          rotational wind carrying the column's water, as a share of the wind above the friction layer …
     RAIN_WIND_DIV_DRY: 0.3,     // –          … and the divergent (converging / spreading) part, as a share of the near-surface
     RAIN_WIND_DIV_MOIST: 0.6,   //            wind: under dry air (a shallow layer), and in moist convecting air (a deep one)
@@ -155,6 +156,7 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_FRONT_DEG: 10,         // °          … its band (Gaussian σ) …
     RAIN_FRONT_HIGH_HPA: 4,     // hPa        … faded by e per this much pressure above the latitude's mean (the highs)
     RAIN_SOIL_MM: 87.5,         // mm         water the soil holds for evaporation in dry months
+    RAIN_MELT_SOAK: 0.5,        // –          share of the melting snow the ground takes in (the rest runs off over the frozen soil)
     RAIN_LAND_CONVECTION: 0.065, // –         spread of the column's relative humidity by afternoon storms over sunlit, wet land
     RAIN_COLUMN_LOCAL: 0.2,     // –          share of the surface's departure from its latitude's temperature felt through the air column
     RAIN_OROG_STORM: 1,         // –          share of the storms' wind speed (Eady rate × their size) in the lift over mountains
@@ -289,6 +291,8 @@ export const PARAM_PRIORS = Object.freeze({
     RAIN_FRONT_HIGH_HPA: { value: 4, min: 2, max: 8, source: 'fronts steer around blocking and subtropical highs (a few hPa above the zonal mean)' },
     RAIN_SOIL_MM:       { value: 150, min: 50, max: 300, source: 'plant-available soil water capacity ≈ 100–200 mm (e.g. Manabe 1969 bucket: 150 mm)' },
     RAIN_LAND_CONVECTION: { value: 0.08, min: 0, max: 0.12, source: 'daytime convection over wet land: rain over land peaks in the afternoon and picks up at ≈ 5–10 % lower column humidity than over the sea (Schiro et al. 2016; Bergemann & Jakob 2016); soil-moisture–precipitation coupling in monsoon regions (Koster et al. 2004)' },
+    RAIN_MELT_SOAK:     { value: 0.5, min: 0.2, max: 1, source: 'little snowmelt soaks into frozen ground (Woo 1986): the spring flood carries much of the year\'s flow of rivers on frozen soils — the Lena\'s May–June flood about half (Yang et al. 2002)' },
+    RAIN_EADY_SMOOTH_DEG: { value: 8, min: 6, max: 16, source: 'the storm tracks\' baroclinic zones are ≈ 15–25° of latitude wide in the free troposphere; the surface\'s sharpest gradients (sea-ice edges, the Arctic coast in summer) are shallow and grow storms less than in proportion' },
     RAIN_COLUMN_LOCAL:  { value: 0.5, min: 0.2, max: 0.9, source: 'lower-tropospheric temperature anomalies over continents are ≈ 40–60 % of the surface anomaly' },
     RAIN_OROG_STORM:    { value: 1, min: 0.5, max: 1, source: 'orographic precipitation is concentrated in storms with strong cross-barrier flow (≈ 10–20 m/s), not the weak monthly-mean wind (Roe 2005)' },
     RAIN_LEE_PER_KM:    { value: 1, min: 0.3, max: 2, source: 'lee-side rain falls ≈ ×0.2–0.5 of windward within a few hundred km behind 1–2 km of relief (Cascades, Andes, Southern Alps; Roe 2005)' },

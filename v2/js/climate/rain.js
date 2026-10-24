@@ -7,8 +7,9 @@
 //  • Evaporation: from the sea by the bulk formula — faster where the water is warm (Clausius–Clapeyron) and the wind
 //    strong (plus the gusts and storms the monthly means leave out), none under sea ice. From land at the same
 //    potential rate, limited by the water the ground holds (Turc–Pike: water-limited where it is dry, energy-limited
-//    where it is wet) — the month's rain, the snow melting and the soil's store (a small bucket through the year) — so
-//    rain that falls on land is partly returned to the air (recycling), even in a dry summer after a snowy winter.
+//    where it is wet) — the month's rain, the snow melting (what of it soaks in: ground still frozen beneath sheds much of
+//    it as the spring flood) and the soil's store (a small bucket through the year) — so rain that falls on land is
+//    partly returned to the air (recycling), even in a dry summer after a snowy winter.
 //  • Transport: the column moves with the wind above the surface friction layer (the rotational part of the wind);
 //    only a layer near the ground converges into the rain belt and the lows and spreads out of the highs (the divergent
 //    part) — shallow under dry air, deep where the column is moist and convecting. Weather systems mix the water
@@ -298,7 +299,7 @@ export function columnWaterRain() {
             // the moisture (K = K_min + σ·L²) and gust over the sea (speed σ·L).
             const Tz = new Float64Array(h), Tzs = new Float64Array(h), eady = new Float64Array(h);
             for (let j = 0; j < h; j++) { let t = 0; for (let i = 0; i < w; i++) t += Tsl[j * w + i]; Tz[j] = t / w; }
-            const sm = Math.max(1, Math.round(8 / g.step));                          // baroclinic zones are broad (≈ ±8°)
+            const sm = Math.max(1, Math.round(P_.RAIN_EADY_SMOOTH_DEG / g.step));     // baroclinic zones are broad
             for (let j = 0; j < h; j++) { let t = 0, n = 0; for (let d = -sm; d <= sm; d++) { const jj = j + d; if (jj >= 0 && jj < h) { t += Tz[jj]; n++; } } Tzs[j] = t / n; }
             for (let j = 0; j < h; j++) {
                 const jn = Math.max(0, j - 1), js = Math.min(h - 1, j + 1);
@@ -560,8 +561,11 @@ export function columnWaterRain() {
                     snow += Pm * p.snow[c] * dtM;
                     const melt = T > 0 ? Math.min(snow, MELT_MM_PER_C_MONTH * T * dtM) : 0;
                     snow -= melt;
-                    const input = Pm * (1 - p.snow[c]) + melt / dtM;                       // mm/month
-                    if (turn === 1) { ground[k].melt[c] = melt / dtM / SEC; ground[k].soil[c] = S / dtM / SEC; }
+                    // (of the snow melting, the ground takes in RAIN_MELT_SOAK — still frozen beneath, it sheds the rest as
+                    // the spring flood)
+                    const soak = P_.RAIN_MELT_SOAK * melt;
+                    const input = Pm * (1 - p.snow[c]) + soak / dtM;                       // mm/month
+                    if (turn === 1) { ground[k].melt[c] = soak / dtM / SEC; ground[k].soil[c] = S / dtM / SEC; }
                     const et = turcPike(input + S / dtM, Ep);
                     S = Math.min(Smax, Math.max(0, S + (input - et) * dtM));
                 }
