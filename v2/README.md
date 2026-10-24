@@ -41,7 +41,7 @@ previews are worked out again when shown and a detailed moment says it was made 
 `rain=`) — and **Quality** (Fast 20K plates / 160K terrain · Balanced 40K / 160K · Best 80K / 640K · Custom,
 which shows the two resolutions), with Build This World and **Load Planet…** (a planet file saved from the Export panel —
 or drop one anywhere on the page) — then the **context card**, and **Stats**. The view's
-settings sit in the **view strip** under the layer bar (`js/view-strip.js`, shared with Generate and Import): Globe |
+settings sit in the **view strip** above the layer tabs, folded behind the arrow at their left (`js/view-strip.js`, shared with Generate and Import): Globe |
 Map, the map's projection and centre, auto-rotate, grid, terrain colours, hillshade, and on a detailed moment the
 rivers (Rivers & Lakes, By Regime, density); on a phone at the top of the bottom sheet. Playback speed is on the timeline. The context card names the moment shown, a **Preview** or
 **Detailed** badge, and the one thing to do next — **Add detail** (with its Detail level), **Cancel** while it runs, or

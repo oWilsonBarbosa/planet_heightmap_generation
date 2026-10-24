@@ -122,7 +122,7 @@ The climate (temperature, pressure and wind, ocean currents, rain, Köppen class
 ### The view: layers over the planet
 
 Generate, Import and Evolution share one layout (plans/VIEW_UI_PLAN.md): the sidebar holds what builds the world, and what
-you look at sits over the planet — the **layer bar**, the **view strip** under it, and the **legend** beside the planet.
+you look at sits over the planet — the **view strip**, the **layer bar** under it, and the **legend** beside the planet.
 
 - **Layer bar** (`js/layer-bar.js`) — **Terrain** · **Satellite** · **Climate** · **Heightmap** · **Plates** (Generate):
   - **Terrain** — elevation color ramp from deep ocean through sea level to mountain peaks
@@ -133,13 +133,13 @@ you look at sits over the planet — the **layer bar**, the **view strip** under
     - **Land** — Temperature (°C on Evolution's smooth ramp: purple and blue below freezing, white at 0 °C, yellow through red above; the sea's surface temperature at sea), Precipitation (mm/month, or mm/year for the Year; sand when dry, through greens to deep blue when wet), the same ramps as Evolution's for temperature, precipitation, pressure and ocean currents, Temperature Range (warmest month − coldest: continentality), Rain Shadow (how mountains move the rain: blue windward slopes, red-brown rain shadows — for the Year, January or July, so a range whose wet side turns with the monsoon shows it), Aridity (the UNEP aridity index, precipitation ÷ potential evaporation: hyper-arid to humid), Growing Season (months above 10 °C), Rain Seasonality (Walsh & Lawler's index, from even rain to almost all of it in a month or two)
   - **Heightmap** — black-to-white gradient on a fixed absolute scale (-5 km ocean floor to 6 km peaks), so the same physical height always maps to the same shade
   - **Plates** (Generate) — the regions colored by plate (green shades = land, blue shades = ocean), with black super plate boundary lines showing tectonic super-groups. Ctrl-click (⌘-click on a Mac) plates to reshape them works in every view.
-- **View strip** (`js/view-strip.js`), showing only what applies:
+- **View strip** (`js/view-strip.js`) — above the layer tabs, folded behind the **arrow** at their left; opened, the tabs move down to make room (the browser remembers which). It shows only what applies:
   - **Globe | Map** (Map: the equirectangular projection)
   - **Centre** (map only) — shifts the map's central meridian to any longitude from 180°W to 180°E, scrolling the projection so the chosen longitude is centered. Exports are centred the same way (the file name notes it, e.g. `-c120E`).
   - **Auto-Rotate** (globe only) — spin the globe continuously
   - **Grid Lines** and the **grid spacing** — a latitude/longitude grid on both globe and map views, every 30°, 15°, 10°, 5° or 2.5°
 - **Legend** — a card beside the planet (bottom right) for the layer shown.
-- **On phones** — the bar becomes one layer list at the top, the season beneath it and the legend under that; the view strip sits at the top of the bottom sheet, every control a 44 px touch target.
+- **On phones** — the bar becomes one layer list at the top, the season beneath it and the legend under that; the view strip sits at the top of the bottom sheet, never folded, every control a 44 px touch target.
 
 ### Inspect (advanced)
 
@@ -170,7 +170,7 @@ Click **Export Map** (at the foot of the sidebar) to open the export panel (`v2/
 
 ### Sidebar & Loading
 
-The control panel can be collapsed and expanded with the **«** toggle button in the sidebar header. On small screens (≤ 768px) the sidebar becomes a bottom sheet with a drag handle — starts collapsed, showing only the handle and header. Drag up or tap the handle to expand. A fullscreen overlay with spinner, title, and progress bar appears during every generation — fully opaque on initial load, semi-transparent on subsequent builds so the previous planet is dimmed behind it. Stage labels (shaping, plates, oceans, mountains, painting) update as the pipeline progresses.
+The control panel can be collapsed and expanded with the **«** toggle button in the sidebar header. On small screens (≤ 768px) the sidebar becomes a bottom sheet with a drag handle — starts collapsed, showing only the handle and header. Drag up or tap the handle to expand. An overlay with spinner, title, and progress bar covers the planet during every generation and import — fully opaque on initial load, semi-transparent on subsequent builds so the previous planet is dimmed behind it. It sits behind the page's controls: the sidebar, the top bars and the buttons stay in view, held (they take no clicks) until the build is done or has failed. Stage labels (shaping, plates, oceans, mountains, painting) update as the pipeline progresses.
 
 ### Tutorial & Help
 
@@ -273,7 +273,7 @@ js/
   climate-new.js        The climate for Generate and Import — runs the new climate (v2/js/climate/) on a V1 planet: Köppen, per-region months, the 1° grid
   climate-layers.js     The climate's Inspect layers — colours, legends, hover lines, arrows, the season picker
   layer-bar.js          The layer bar over the planet (Generate, Import): tabs, the Climate row and season, the phone's list
-  view-strip.js         The view strip under the layer bar (every page): Globe | Map and what applies; in the sheet on phones
+  view-strip.js         The view strip above the layer tabs (every page), folded behind an arrow: Globe | Map and what applies; in the sheet on phones
   climate-config.js     The OLD climate's parameters (no longer run by the app; kept for the old tuning diagnostics)
   climate-util.js       Shared climate utilities — smoothing, ITCZ lookup, percentile selection
   wind.js … temperature.js  The OLD climate (wind, ocean, precipitation, heuristic-precip, temperature) — no longer run by the app
@@ -282,7 +282,7 @@ js/
   export-generate.js    The export panel on Generate and Import: the catalogue of maps and how each is drawn from the mesh
   edit-mode.js          Ctrl-click plate multi-select + hover info
   detail-scale.js       Non-linear (power-curve) detail slider mapping
-  build-error.js        A failed build, import or export shown in the build overlay, with a Close button
+  build-error.js        A failed build, import or export shown in the build overlay, with a Close button; the controls held during a build
   support-check.js      Classic script run before the modules: a browser that cannot run the app (no import maps, no
                         WebGL) or app code that fails to load gets a plain message instead of a blank page
 v2/                     World Orogen V2 — the Evolution page (/evolution) and the climate every page runs;

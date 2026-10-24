@@ -110,3 +110,24 @@ Each phase stops for the developer to check it in the browser before the next.
   - the strip at the top of the bottom sheet, every control ≥ 44 px.
 
 **Not checked:** a real phone, Firefox and Safari.
+
+## Follow-up (2026-10-24, after the developer's first look)
+
+- **The strip above the tabs, folded.** The developer: the strip is always the longer of the two, so it goes on top; it
+  should fold away, "with like an arrow to the left", and when opened "the climate plate bar moves down to make room".
+  - The arrow hangs off the tabs' left (the tabs stay centred).
+  - It starts folded; the browser remembers open or folded, the same on all three pages.
+  - On a phone the strip stays in the bottom sheet, never folded, and the arrow is hidden.
+- **Generate and Import: the controls stay in view while a build runs.** The developer: "the loading should be 'behind'
+  the elements on the top and the left".
+  - The build overlay now covers the planet only. The sidebar, the top bars and the buttons are drawn over it.
+  - They are held (`inert`) until the build is done or has failed, since a job started mid-build would cross it: a code
+    loaded, a climate slider or tab, the map's first build.
+  - Shared in `js/build-error.js` (`holdControls`).
+- **Checked in Chrome:**
+  - folded and open on all three pages, with Evolution's Climate row and chip under the tabs;
+  - mid-build on Generate: everything held, a real click on a tab does nothing, all released after;
+  - a failure: the controls come free and Close works;
+  - an Earth import on Import: held, then released;
+  - at 400 px: the strip in the sheet, the arrow's row hidden;
+  - no console errors.

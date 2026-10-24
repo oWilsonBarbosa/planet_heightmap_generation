@@ -16,7 +16,7 @@ import { needsClimate, climateLayer, climateLegendHTML, satelliteLegendHTML, sho
 import { initLayerBar } from './layer-bar.js';
 import { initViewStrip } from './view-strip.js';
 import { elevationToColor } from './color-map.js';
-import { showBuildError, clearBuildError, describeFailure } from './build-error.js';
+import { showBuildError, clearBuildError, describeFailure, holdControls } from './build-error.js';
 
 // Slider value displays + stale tracking
 const sliderIds = ['sN','sP','sCn','sJ','sNs','sCsv','sLc'];
@@ -367,6 +367,7 @@ const buildOverlay  = document.getElementById('buildOverlay');
 const buildBarFill  = document.getElementById('buildBarFill');
 const buildBarLabel = document.getElementById('buildBarLabel');
 let overlayActive = true; // starts active (visible in HTML on first load)
+holdControls(true);
 
 function onProgress(pct, label) {
     if (!overlayActive) return;
@@ -385,11 +386,13 @@ function showBuildOverlay() {
     buildBarFill.style.transition = '';
     overlayActive = true;
     buildOverlay.classList.remove('hidden');
+    holdControls(true);
 }
 
 function hideBuildOverlay() {
     setTimeout(() => {
         overlayActive = false;
+        holdControls(false);
         if (buildOverlay) {
             buildOverlay.classList.add('hidden');
             // After first generation, switch from opaque to semi-transparent
@@ -422,6 +425,7 @@ genBtn.addEventListener('generate-done', hideBuildOverlay);
 // a failed build (js/generate.js): the overlay says what happened instead of spinning on over the planet
 window.addEventListener('orogen:build-failed', (e) => {
     overlayActive = false;
+    holdControls(false);
     showBuildError(describeFailure(e.detail.message), e.detail.message);
 });
 genBtn.addEventListener('generate-done', () => {

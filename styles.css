@@ -243,8 +243,9 @@ button#generate.generating {
     background: rgba(68,136,255,0.18); color: #8bf;
 }
 
-/* ── Over the planet, on every page (plans/VIEW_UI_PLAN.md): the layers (Terrain · Satellite · Climate, its own row of
-   maps and the season · Heightmap · Plates), the view strip under them, and the legend beside the planet ── */
+/* ── Over the planet, on every page (plans/VIEW_UI_PLAN.md): the view strip, folded behind the arrow at the tabs' left;
+   the layers (Terrain · Satellite · Climate, its own row of maps and the season · Heightmap · Plates) under it; and the
+   legend beside the planet ── */
 .layer-bar {
     position: fixed; top: 52px; left: 50%; transform: translateX(-50%); z-index: 20;
     display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none;
@@ -256,6 +257,17 @@ button#generate.generating {
     border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 3px;
 }
 .layer-bar .map-tab { flex: none; padding: 7px 16px; font-size: 13px; }
+/* (the arrow hangs off the tabs' left, so the tabs stay centred) */
+.layer-row { position: relative; }
+.vs-fold {
+    position: absolute; top: 0; bottom: 0; right: calc(100% + 6px); width: 34px; display: flex; align-items: center; justify-content: center;
+    background: rgba(8,8,28,0.86); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+    color: #889; cursor: pointer; padding: 0;
+}
+.vs-fold:hover { color: #bcd; }
+.vs-fold svg { transition: transform 0.15s; }
+.vs-fold[aria-expanded="true"] { color: #8bf; }
+.vs-fold[aria-expanded="true"] svg { transform: rotate(90deg); }
 .layer-subbar { display: flex; align-items: center; gap: 8px; }
 .layer-subbar[hidden], .layer-subbar [hidden] { display: none; }
 .layer-subbar .map-tab { padding: 5px 12px; font-size: 12px; }
@@ -265,13 +277,15 @@ button#generate.generating {
 }
 /* (More…: lit as a tab is, while one of its layers is shown) */
 .layer-subbar select.active { background-color: rgba(40,70,150,0.75); color: #8bf; border-color: rgba(100,160,255,0.45); }
-/* the view strip: Globe | Map and what applies to it (js/view-strip.js); on a phone, at the top of the bottom sheet */
+/* the view strip: Globe | Map and what applies to it (js/view-strip.js); on a phone, at the top of the bottom sheet, never
+   folded */
 .view-strip {
     display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 16px;
     background: rgba(8,8,28,0.86); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
     padding: 4px 12px; font-size: 12px; color: #aab; max-width: min(1120px, calc(100vw - 32px));
 }
 .view-strip [hidden] { display: none !important; }
+.view-strip.folded:not(.in-sheet) { display: none; }
 .vs-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .view-strip select { width: auto; padding: 4px 26px 4px 8px; font-size: 12px; background-position: right 9px center; }
 .view-strip input[type=range] { width: 110px; }
@@ -575,11 +589,13 @@ button#generate.generating {
 }
 .btn-primary:hover { filter: brightness(1.15); }
 
-/* Build overlay — unified loading / generation screen */
+/* Build overlay — unified loading / generation screen. It covers the planet only: the panel, the bars over the planet
+   and the buttons stay in view on top of it (z-index 0, and first in the page, so every positioned element after it is
+   drawn over it), held while the build runs (js/build-error.js holdControls) */
 .build-overlay {
     position: fixed; inset: 0;
     background: rgba(3,3,8,0.75);
-    z-index: 100;
+    z-index: 0;
     display: flex; align-items: center; justify-content: center;
     transition: opacity 0.5s ease;
 }
@@ -588,7 +604,6 @@ button#generate.generating {
 }
 .build-overlay.initial {
     background: #030308;
-    z-index: 1000;
 }
 .build-overlay-inner {
     display: flex; flex-direction: column; align-items: center;
@@ -1069,7 +1084,7 @@ button#generate.generating {
     /* the layers: the list at the top (#mobileViewSwitch), the season beneath it, the legend under that; the view
        strip at the top of the bottom sheet */
     .layer-bar { top: 92px; }
-    .layer-bar #mapTabs, .layer-bar #climateTabs, .layer-bar #climateMore { display: none !important; }
+    .layer-bar .layer-row, .layer-bar #climateTabs, .layer-bar #climateMore { display: none !important; }
     .layer-subbar select { min-height: 44px; }
     .legend-card { top: 140px; bottom: auto; left: 8px; right: 8px; width: auto; max-height: 28vh; }
     .view-strip.in-sheet { font-size: 14px; }

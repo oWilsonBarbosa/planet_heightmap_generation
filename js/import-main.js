@@ -15,7 +15,7 @@ import { needsClimate, climateLayer, climateLegendHTML, satelliteLegendHTML, sho
 import { initLayerBar } from './layer-bar.js';
 import { initViewStrip } from './view-strip.js';
 import { elevationToColor, elevToHeightKm } from './color-map.js';
-import { showBuildError, clearBuildError, describeFailure } from './build-error.js';
+import { showBuildError, clearBuildError, describeFailure, holdControls } from './build-error.js';
 
 // ─── File Upload ──────────────────────────────────────────────────
 
@@ -247,6 +247,7 @@ document.body.appendChild(hiddenGenBtn);
 // a failed import (js/generate.js): the overlay says what happened, and Import can be pressed again
 window.addEventListener('orogen:build-failed', (e) => {
     overlayActive = false;
+    holdControls(false);
     importBtn.disabled = !storedGrayscale;
     importBtn.textContent = 'Import';
     showBuildError(describeFailure(e.detail.message, 'import this heightmap'), e.detail.message);
@@ -450,11 +451,13 @@ function showBuildOverlay() {
     buildBarFill.style.transition = '';
     overlayActive = true;
     buildOverlay.classList.remove('hidden');
+    holdControls(true);
 }
 
 function hideBuildOverlay() {
     setTimeout(() => {
         overlayActive = false;
+        holdControls(false);
         if (buildOverlay) {
             buildOverlay.classList.add('hidden');
             buildOverlay.classList.remove('initial');

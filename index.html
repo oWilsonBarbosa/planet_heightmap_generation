@@ -327,12 +327,32 @@
         </div>
     </div>
     <div id="layerBar" class="layer-bar">
-        <div class="map-tabs" id="mapTabs">
-            <button class="map-tab active" data-layer="">Terrain</button>
-            <button class="map-tab" data-layer="biome" title="The planet as from space, cloud-free: each climate's colours climbing with the land to rock and snow, for the year, January or July">Satellite</button>
-            <button class="map-tab" data-layer="climate" title="The climate: K&ouml;ppen zones, temperature, rain, winds and currents &mdash; and under More, pressure, upwelling, ice, aridity and more">Climate</button>
-            <button class="map-tab" data-layer="landheightmap" title="Land heights in grey, the sea black">Heightmap</button>
-            <button class="map-tab" data-layer="plates" title="The plates in their colours &mdash; Ctrl-click (&#8984;-click on a Mac) a plate to raise or sink it, in any view">Plates</button>
+        <div id="viewStrip" class="view-strip" role="toolbar" aria-label="View">
+            <div class="vs-seg" role="group" aria-label="Globe or map"><button type="button" data-mode="globe">Globe</button><button type="button" data-mode="map">Map</button></div>
+            <select id="viewMode" hidden aria-hidden="true" tabindex="-1">
+                <option value="globe">Globe</option>
+                <option value="map">Map</option>
+            </select>
+            <label class="vs-item" id="mapCenterLonGroup" data-view="map">Centre <input type="range" id="sMapCenterLon" min="-180" max="180" value="0" step="5" aria-label="Centre longitude"><span class="v" id="vMapCenterLon">0&deg;</span></label>
+            <label class="toggle-label" data-view="globe"><input type="checkbox" id="chkRotate"><span class="toggle-track"><span class="toggle-thumb"></span></span>Auto-Rotate</label>
+            <label class="toggle-label"><input type="checkbox" id="chkGrid" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Grid Lines</label>
+            <span class="vs-item" id="gridSpacingGroup"><select id="gridSpacing" aria-label="Grid spacing">
+                <option value="30">30&deg;</option>
+                <option value="15" selected>15&deg;</option>
+                <option value="10">10&deg;</option>
+                <option value="5">5&deg;</option>
+                <option value="2.5">2.5&deg;</option>
+            </select></span>
+        </div>
+        <div class="layer-row">
+            <button type="button" id="viewFold" class="vs-fold" aria-controls="viewStrip" aria-expanded="false" aria-label="View options" title="View options: globe or map, auto-rotate, grid lines"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M3.5 1.5 7 5 3.5 8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="map-tabs" id="mapTabs">
+                <button class="map-tab active" data-layer="">Terrain</button>
+                <button class="map-tab" data-layer="biome" title="The planet as from space, cloud-free: each climate's colours climbing with the land to rock and snow, for the year, January or July">Satellite</button>
+                <button class="map-tab" data-layer="climate" title="The climate: K&ouml;ppen zones, temperature, rain, winds and currents &mdash; and under More, pressure, upwelling, ice, aridity and more">Climate</button>
+                <button class="map-tab" data-layer="landheightmap" title="Land heights in grey, the sea black">Heightmap</button>
+                <button class="map-tab" data-layer="plates" title="The plates in their colours &mdash; Ctrl-click (&#8984;-click on a Mac) a plate to raise or sink it, in any view">Plates</button>
+            </div>
         </div>
         <div id="subBar" class="layer-subbar" hidden>
             <div class="map-tabs" id="climateTabs">
@@ -364,23 +384,6 @@
                 <option value="jan">January</option>
                 <option value="jul">July</option>
             </select>
-        </div>
-        <div id="viewStrip" class="view-strip" role="toolbar" aria-label="View">
-            <div class="vs-seg" role="group" aria-label="Globe or map"><button type="button" data-mode="globe">Globe</button><button type="button" data-mode="map">Map</button></div>
-            <select id="viewMode" hidden aria-hidden="true" tabindex="-1">
-                <option value="globe">Globe</option>
-                <option value="map">Map</option>
-            </select>
-            <label class="vs-item" id="mapCenterLonGroup" data-view="map">Centre <input type="range" id="sMapCenterLon" min="-180" max="180" value="0" step="5" aria-label="Centre longitude"><span class="v" id="vMapCenterLon">0&deg;</span></label>
-            <label class="toggle-label" data-view="globe"><input type="checkbox" id="chkRotate"><span class="toggle-track"><span class="toggle-thumb"></span></span>Auto-Rotate</label>
-            <label class="toggle-label"><input type="checkbox" id="chkGrid" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Grid Lines</label>
-            <span class="vs-item" id="gridSpacingGroup"><select id="gridSpacing" aria-label="Grid spacing">
-                <option value="30">30&deg;</option>
-                <option value="15" selected>15&deg;</option>
-                <option value="10">10&deg;</option>
-                <option value="5">5&deg;</option>
-                <option value="2.5">2.5&deg;</option>
-            </select></span>
         </div>
     </div>
     <div id="legendCard" class="legend-card"><div id="vizLegend" class="viz-legend"></div></div>
@@ -426,7 +429,7 @@
             </div>
             <div class="tutorial-step" data-step="3">
                 <h3>Visualize Your World</h3>
-                <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, and <strong>Heightmap</strong> views, and <strong>Plates</strong>, with the tabs over the planet. <strong>Climate</strong> opens its own row of maps &mdash; K&ouml;ppen, temperature, rain, wind, currents, and under <strong>More&hellip;</strong> pressure, sea ice, aridity, growing season and more &mdash; each for the year, January or July (the Satellite view too). The strip under the tabs switches <strong>Globe</strong> and <strong>Map</strong>, centres the map and sets the grid; the terrain's inner layers are in <strong>Inspect (advanced)</strong> in the sidebar.</p>
+                <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, and <strong>Heightmap</strong> views, and <strong>Plates</strong>, with the tabs over the planet. <strong>Climate</strong> opens its own row of maps &mdash; K&ouml;ppen, temperature, rain, wind, currents, and under <strong>More&hellip;</strong> pressure, sea ice, aridity, growing season and more &mdash; each for the year, January or July (the Satellite view too). The arrow at the tabs' left opens the view options above them: <strong>Globe</strong> or <strong>Map</strong>, the map's centre and the grid; the terrain's inner layers are in <strong>Inspect (advanced)</strong> in the sidebar.</p>
                 <p>The climate takes a few seconds at any detail. On phones, at the very highest detail it is computed when you first switch to a climate view.</p>
             </div>
             <div class="tutorial-step" data-step="4">

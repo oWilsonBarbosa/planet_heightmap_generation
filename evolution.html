@@ -197,44 +197,6 @@
         </optgroup>
     </select>
     <div id="layerBar" class="layer-bar">
-        <div class="map-tabs" id="mapTabs">
-            <button class="map-tab active" data-layer="terrain">Terrain</button>
-            <button class="map-tab" data-layer="satellite" title="The planet as from space, cloud-free: each climate's colours climbing with the land to rock and snow, rivers greening dry country, snow and ice from its climate, for the year, January or July. Comes with Add detail">Satellite</button>
-            <button class="map-tab" data-layer="climate" title="The moment's climate: Köppen zones, temperature, rain, winds and currents — and under More, pressure, upwelling, ice, aridity and more">Climate</button>
-            <button class="map-tab" data-layer="heightmap">Heightmap</button>
-            <button class="map-tab" data-layer="plates">Plates</button>
-        </div>
-        <div id="subBar" class="layer-subbar" hidden>
-            <div class="map-tabs" id="climateTabs">
-                <button class="map-tab" data-layer="koppen">Köppen</button>
-                <button class="map-tab" data-layer="temperature">Temperature</button>
-                <button class="map-tab" data-layer="rain">Rain</button>
-                <button class="map-tab" data-layer="wind">Wind</button>
-                <button class="map-tab" data-layer="currents">Currents</button>
-            </div>
-            <select id="climateMore" aria-label="More climate layers" title="More climate layers: pressure, the sea, and what the land's twelve months say">
-                <option value="">More…</option>
-                <optgroup label="Atmosphere">
-                    <option value="pressure">Pressure</option>
-                </optgroup>
-                <optgroup label="Ocean">
-                    <option value="upwelling">Upwelling</option>
-                    <option value="ice">Ice</option>
-                </optgroup>
-                <optgroup label="Land">
-                    <option value="tempRange">Temperature Range</option>
-                    <option value="rainShadow">Rain Shadow</option>
-                    <option value="aridity">Aridity</option>
-                    <option value="growing">Growing Season</option>
-                    <option value="rainSeason">Rain Seasonality</option>
-                </optgroup>
-            </select>
-            <select id="season" aria-label="Season">
-                <option value="year" selected>Year</option>
-                <option value="jan">January</option>
-                <option value="jul">July</option>
-            </select>
-        </div>
         <div id="viewStrip" class="view-strip" role="toolbar" aria-label="View">
             <div class="vs-seg" role="group" aria-label="Globe or map"><button type="button" data-mode="globe">Globe</button><button type="button" data-mode="map">Map</button></div>
             <select id="viewMode" hidden aria-hidden="true" tabindex="-1">
@@ -284,6 +246,47 @@
                 <option value="8">Many</option>
                 </select></span>
             </span>
+        </div>
+        <div class="layer-row">
+            <button type="button" id="viewFold" class="vs-fold" aria-controls="viewStrip" aria-expanded="false" aria-label="View options" title="View options: globe or map, projection, grid lines, colours, hillshade, rivers"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M3.5 1.5 7 5 3.5 8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="map-tabs" id="mapTabs">
+                <button class="map-tab active" data-layer="terrain">Terrain</button>
+                <button class="map-tab" data-layer="satellite" title="The planet as from space, cloud-free: each climate's colours climbing with the land to rock and snow, rivers greening dry country, snow and ice from its climate, for the year, January or July. Comes with Add detail">Satellite</button>
+                <button class="map-tab" data-layer="climate" title="The moment's climate: Köppen zones, temperature, rain, winds and currents — and under More, pressure, upwelling, ice, aridity and more">Climate</button>
+                <button class="map-tab" data-layer="heightmap">Heightmap</button>
+                <button class="map-tab" data-layer="plates">Plates</button>
+            </div>
+        </div>
+        <div id="subBar" class="layer-subbar" hidden>
+            <div class="map-tabs" id="climateTabs">
+                <button class="map-tab" data-layer="koppen">Köppen</button>
+                <button class="map-tab" data-layer="temperature">Temperature</button>
+                <button class="map-tab" data-layer="rain">Rain</button>
+                <button class="map-tab" data-layer="wind">Wind</button>
+                <button class="map-tab" data-layer="currents">Currents</button>
+            </div>
+            <select id="climateMore" aria-label="More climate layers" title="More climate layers: pressure, the sea, and what the land's twelve months say">
+                <option value="">More…</option>
+                <optgroup label="Atmosphere">
+                    <option value="pressure">Pressure</option>
+                </optgroup>
+                <optgroup label="Ocean">
+                    <option value="upwelling">Upwelling</option>
+                    <option value="ice">Ice</option>
+                </optgroup>
+                <optgroup label="Land">
+                    <option value="tempRange">Temperature Range</option>
+                    <option value="rainShadow">Rain Shadow</option>
+                    <option value="aridity">Aridity</option>
+                    <option value="growing">Growing Season</option>
+                    <option value="rainSeason">Rain Seasonality</option>
+                </optgroup>
+            </select>
+            <select id="season" aria-label="Season">
+                <option value="year" selected>Year</option>
+                <option value="jan">January</option>
+                <option value="jul">July</option>
+            </select>
         </div>
         <div id="climateChip" class="evo-chip" hidden><span id="climateChipText"></span><button id="climateChipBtn">Calculate</button></div>
     </div>
@@ -339,7 +342,7 @@
             </div>
             <div class="tutorial-step" data-step="3">
                 <h3>Look Around &amp; Export</h3>
-                <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, <strong>Heightmap</strong> and <strong>Plates</strong> with the tabs over the planet. Climate shows Köppen zones, temperature, rain, wind and currents, with more layers (pressure, upwelling, ice, aridity, growing season and others) under <strong>More…</strong> or in the layer list. Climate also works on a paused preview. The strip under the tabs holds the view: <strong>Globe</strong> or <strong>Map</strong>, the map in any of ten <strong>projections</strong>, the terrain's colours, and <strong>Hillshade</strong>, which turns the relief's shading off for flat colour.</p>
+                <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, <strong>Heightmap</strong> and <strong>Plates</strong> with the tabs over the planet. Climate shows Köppen zones, temperature, rain, wind and currents, with more layers (pressure, upwelling, ice, aridity, growing season and others) under <strong>More…</strong> or in the layer list. Climate also works on a paused preview. The arrow at the tabs' left opens the view options above them: <strong>Globe</strong> or <strong>Map</strong>, the map in any of ten <strong>projections</strong>, the terrain's colours, and <strong>Hillshade</strong>, which turns the relief's shading off for flat colour.</p>
                 <p><strong>Export</strong> saves the detailed moment as map files: a colour map, the Satellite view (the year, January or July), its climate zones, heightmaps with and without the sea floor, a land mask, and its rivers and lakes on their own. Every climate layer can go too, and each map as <strong>Data</strong> &mdash; 16-bit greyscales on fixed scales &mdash; as well as colour; several save as one ZIP with a README, at any width up to 16384 px, in any of ten map projections, centred as you like, with or without the hillshade.</p>
             </div>
             <div class="tutorial-step" data-step="4">
