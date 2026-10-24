@@ -24,6 +24,7 @@ export const state = {
     mapCenterLon: 0,
     dragStart: null,
     debugLayer: '',
+    showPlates: false,          // the Plates tab (Generate): the plate colours, with no other layer
     climateSeason: 'year',       // the climate's Inspect layers: 'year', 'jan' or 'jul' (js/climate-layers.js)
     isTouchDevice: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0),
     editMode: false,

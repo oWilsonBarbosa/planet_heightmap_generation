@@ -29,6 +29,7 @@ import { STAGES as FINISH_STAGES } from '../finish/finish.js';
 import { initEvolutionExport } from './export.js';
 import { PROJECTIONS } from '../view/projections.js';
 import { renderProjectionOptions } from '../view/export-panel.js';
+import { initViewStrip } from '../../../js/view-strip.js';
 import { downloadBlob } from '../view/png.js';
 import { savePlanet, planetBytes, openPlanet } from '../save/planet-file.js';
 import { PackedFrame } from '../tectonics/frame-pack.js';
@@ -1086,8 +1087,6 @@ $('palette').addEventListener('change', e => {
 $('viewMode').addEventListener('change', e => {
     view.mode = e.target.value;
     ui.map.hidden = view.mode !== 'map';                    // (the map's frame: the map is drawn under it, and it takes the pointer)
-    $('mapCenterLonGroup').hidden = view.mode !== 'map';
-    $('mapProjectionGroup').hidden = view.mode !== 'map';
     ui.hover.style.display = 'none';
     showMap();
 });
@@ -1115,6 +1114,8 @@ $('chkGrid').checked = view.grid;
 $('chkGrid').addEventListener('change', e => { view.grid = e.target.checked; dirty = true; $('gridSpacingGroup').hidden = !view.grid; });
 $('gridSpacing').addEventListener('change', e => { view.gridStep = Number(e.target.value); dirty = true; });
 $('statsDetails').addEventListener('toggle', () => { dirty = true; });
+// the view strip under the layer bar (Globe | Map and what applies to it; on a phone, in the bottom sheet)
+initViewStrip();
 
 // ── hover readout (V1's): the crust and plate, height, position, crust age and setting under the pointer ──
 /** Where the pointer is on the texture, as fractions [u (west → east), v (north → south)] — or null, off the planet. */

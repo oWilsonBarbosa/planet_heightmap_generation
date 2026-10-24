@@ -12,7 +12,9 @@ import { buildMesh, updateMeshColors, updateSuperPlateBorders, buildMapMesh, reb
 import { setupEditMode } from './edit-mode.js';
 import { detailFromSlider, sliderFromDetail } from './detail-scale.js';
 import { KOPPEN_CLASSES } from './koppen.js';
-import { needsClimate, climateLayer, climateLegendHTML, satelliteLegendHTML, showClimateArrows, syncSeasonPicker, initSeasonPicker } from './climate-layers.js';
+import { needsClimate, climateLayer, climateLegendHTML, satelliteLegendHTML, showClimateArrows, initSeasonPicker } from './climate-layers.js';
+import { initLayerBar } from './layer-bar.js';
+import { initViewStrip } from './view-strip.js';
 import { elevationToColor } from './color-map.js';
 import { showBuildError, clearBuildError, describeFailure } from './build-error.js';
 
@@ -203,10 +205,11 @@ function shouldSkipClimate() {
 // Layers that need a climate: the Inspect climate layers, Köppen and Satellite (js/climate-layers.js)
 const CLIMATE_LAYERS = { has: needsClimate };
 
-// Map tabs → tab-layer mapping
-const mapTabs = document.getElementById('mapTabs');
+// The layers over the planet (js/layer-bar.js: the tabs, the Climate row and the season, the phone's list) and the
+// sidebar's Inspect list (the terrain's inner layers). 'plates' is the plate colours over no layer (state.showPlates).
 const vizLegend = document.getElementById('vizLegend');
 const debugLayerEl = document.getElementById('debugLayer');
+const shownLayer = () => (state.showPlates ? 'plates' : state.debugLayer);
 
 function switchVisualization(layer) {
     if (CLIMATE_LAYERS.has(layer) && !state.climateComputed) {
@@ -222,46 +225,23 @@ function switchVisualization(layer) {
 }
 
 function applyLayer(layer) {
-    state.debugLayer = layer;
+    state.showPlates = layer === 'plates';
+    state.debugLayer = state.showPlates ? '' : layer;
     state.hoveredKoppen = -1;
     updateMeshColors();
-    showClimateArrows(layer, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
-    syncSeasonPicker(layer);
+    updateSuperPlateBorders();
+    showClimateArrows(state.debugLayer, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
+    syncTabsToLayer(layer);
     updateLegend(layer);
 }
 
+const layerBar = initLayerBar(switchVisualization);
+initViewStrip();
+/** The bar, its season and the Inspect list, for the layer shown. */
 function syncTabsToLayer(layer) {
-    mapTabs.querySelectorAll('.map-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.layer === layer);
-    });
-    // Sync mobile view switcher (only for main views it knows about)
-    const mvs = document.getElementById('mobileViewSwitch');
-    if (mvs && [...mvs.options].some(o => o.value === layer)) {
-        mvs.value = layer;
-    }
+    layerBar.sync(layer);
+    if (debugLayerEl) debugLayerEl.value = [...debugLayerEl.options].some(o => o.value === layer) ? layer : '';
 }
-
-mapTabs.addEventListener('click', (e) => {
-    const tab = e.target.closest('.map-tab');
-    if (!tab) return;
-    const layer = tab.dataset.layer;
-    // Update active tab
-    mapTabs.querySelectorAll('.map-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    // Sync debug dropdown + mobile switcher
-    if (debugLayerEl) debugLayerEl.value = layer;
-    mobileViewSwitch.value = layer;
-    switchVisualization(layer);
-});
-
-// Mobile view switcher
-const mobileViewSwitch = document.getElementById('mobileViewSwitch');
-mobileViewSwitch.addEventListener('change', (e) => {
-    const layer = e.target.value;
-    syncTabsToLayer(layer);
-    if (debugLayerEl) debugLayerEl.value = layer;
-    switchVisualization(layer);
-});
 
 // Koppen climate zone descriptions for hover tooltips
 const KOPPEN_DESCRIPTIONS = {
@@ -373,6 +353,8 @@ function updateLegend(layer) {
     } else if (layer === 'landheightmap') {
         vizLegend.innerHTML = `<div class="legend-gradient" style="background:linear-gradient(to right,#000 0%,#fff 100%)"></div>` +
             `<div class="legend-labels"><span>Ocean / Sea Level</span><span>Peak</span></div>`;
+    } else if (layer === 'plates') {
+        vizLegend.innerHTML = `<div class="legend-note">The plates in their colours. ${state.isTouchDevice ? 'Turn on edit mode (the button at the bottom right), then tap a plate' : 'Ctrl-click (⌘-click on a Mac) a plate'} to raise or sink it &mdash; in any view &mdash; then Rebuild.</div>`;
     } else if (climateLayer(layer)) {
         vizLegend.innerHTML = climateLegendHTML(layer, state.climateSeason);
     } else {
@@ -521,14 +503,11 @@ genBtn.addEventListener('generate-done', () => {
         syncTabsToLayer('');
         updateMeshColors();
     }
-    syncTabsToLayer(state.debugLayer);
-    if (debugLayerEl) debugLayerEl.value = state.debugLayer;
-    updateLegend(state.debugLayer);
+    syncTabsToLayer(shownLayer());
+    updateLegend(shownLayer());
 
     // Rebuild wind/ocean arrows if a relevant debug layer is active
-    const v = state.debugLayer;
-    showClimateArrows(v, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
-    syncSeasonPicker(v);
+    showClimateArrows(state.debugLayer, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
 });
 
 document.addEventListener('plates-edited', () => {
@@ -601,8 +580,7 @@ seedInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') applyCode(seedInput.value);
 });
 
-// View-mode checkboxes
-document.getElementById('chkPlates').addEventListener('change', () => { updateMeshColors(); updateSuperPlateBorders(); });
+// Wireframe (the Inspect section)
 document.getElementById('chkWire').addEventListener('change', buildMesh);
 
 // Grid toggle
@@ -626,7 +604,6 @@ document.getElementById('gridSpacing').addEventListener('change', (e) => {
 });
 
 // Map center longitude slider — translate on drag (instant), rebuild on release
-const mapCenterLonGroup = document.getElementById('mapCenterLonGroup');
 const sMapCenterLon = document.getElementById('sMapCenterLon');
 const vMapCenterLon = document.getElementById('vMapCenterLon');
 
@@ -697,7 +674,6 @@ document.getElementById('viewMode').addEventListener('change', (e) => {
         updateMapCameraFrustum();
         mapCtrl.target.set(0, 0, 0);
         mapCtrl.update();
-        mapCenterLonGroup.style.display = '';
     } else {
         if (state.planetMesh) state.planetMesh.visible = true;
         atmosMesh.visible = true;
@@ -720,23 +696,15 @@ document.getElementById('viewMode').addEventListener('change', (e) => {
                 if (c.name === 'oceanMap') c.visible = false;
             });
         }
-        const showPlates = document.getElementById('chkPlates').checked;
-        waterMesh.visible = !showPlates && !state.debugLayer;
+        waterMesh.visible = !state.showPlates && !state.debugLayer;
         scene.background = new THREE.Color(0x030308);
         mapCtrl.enabled = false;
         ctrl.enabled = true;
-        mapCenterLonGroup.style.display = 'none';
     }
 });
 
-// Debug layer dropdown
-if (debugLayerEl) {
-    debugLayerEl.addEventListener('change', (e) => {
-        const layer = e.target.value;
-        syncTabsToLayer(layer);
-        switchVisualization(layer);
-    });
-}
+// The Inspect list (None: the terrain)
+if (debugLayerEl) debugLayerEl.addEventListener('change', (e) => switchVisualization(e.target.value));
 
 // Season picker (Year · January · July) for the climate's Inspect layers
 initSeasonPicker(state, () => {
@@ -1229,7 +1197,7 @@ window.takePreview = function(width = 1200, height = 630) {
 
     // Hide all UI elements
     const hiddenEls = [];
-    for (const sel of ['#ui', '#topInfo', '#info', '#hoverInfo', '#helpBtn',
+    for (const sel of ['#ui', '#layerBar', '#legendCard', '#info', '#hoverInfo', '#helpBtn',
                         '#editToggle', '#refreshFab', '#rebuildFab', '#mobileViewSwitch',
                         '#buildOverlay', '#tutorialOverlay', '#exportOverlay', '#surveyOverlay', '#whatsNewOverlay']) {
         const el = document.querySelector(sel);

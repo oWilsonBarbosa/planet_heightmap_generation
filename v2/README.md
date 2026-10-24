@@ -40,8 +40,10 @@ options (`greenhouseWm2`: a radiative forcing in the energy balance; `precipScal
 previews are worked out again when shown and a detailed moment says it was made with the old ones (in the link: `greenhouse=`,
 `rain=`) — and **Quality** (Fast 20K plates / 160K terrain · Balanced 40K / 160K · Best 80K / 640K · Custom,
 which shows the two resolutions), with Build This World and **Load Planet…** (a planet file saved from the Export panel —
-or drop one anywhere on the page) — then the **context card**, and **View** (terrain colours,
-globe or map, grid, auto-rotate, playback speed, stats). The context card names the moment shown, a **Preview** or
+or drop one anywhere on the page) — then the **context card**, and **Stats**. The view's
+settings sit in the **view strip** under the layer bar (`js/view-strip.js`, shared with Generate and Import): Globe |
+Map, the map's projection and centre, auto-rotate, grid, terrain colours, hillshade, and on a detailed moment the
+rivers (Rivers & Lakes, By Regime, density); on a phone at the top of the bottom sheet. Playback speed is on the timeline. The context card names the moment shown, a **Preview** or
 **Detailed** badge, and the one thing to do next — **Add detail** (with its Detail level), **Cancel** while it runs, or
 **Export** — its button mirrored on the timeline, beside the moment; on the detailed moment it holds the rivers' options,
 elsewhere a note that adding detail replaces it, with a link back to it; **Extend history** once the history has reached its end.

@@ -78,6 +78,7 @@
             <button id="sidebarToggle" title="Collapse panel">&#x00AB;</button>
         </div>
         <div id="sidebarContent">
+        <div id="viewStripSlot"></div>
         <button id="generate" title="Build a new world from a new random seed">New World</button>
         <div id="buildStatus" class="evo-status" hidden></div>
         <details class="section" id="worldSection">
@@ -158,20 +159,6 @@
                     <option value="10000000">10M cells · 8 km (~1 min)</option>
                 </select>
             </div>
-            <div id="waterGroup">
-                <div class="tg">
-                    <label class="toggle-label"><input type="checkbox" id="chkWater" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Rivers &amp; Lakes</label>
-                    <label class="toggle-label" id="regimeRow"><input type="checkbox" id="chkRegime"><span class="toggle-track"><span class="toggle-thumb"></span></span>Colour by Regime <span class="tip" data-tip="Colour the rivers by their year — each month's rain and snowmelt, run down the rivers: blue, permanent; violet, permanent with a yearly flood season (the Nile's, from rains far upstream; a snowmelt flood); cyan, seasonal — dry some months; brown, dry most of the year. Hover a river for its flood months">?</span></label>
-                </div>
-                <div class="cg" id="riverDensityGroup">
-                    <label>River Density <span class="tip" data-tip="Which rivers are drawn, by how much water they carry: Few — 150 m³/s and more; Normal — 40 m³/s; Many — 8 m³/s. The bigger a river, the stronger its line; seasonal rivers are dashed, and those dry most of the year dotted">?</span></label>
-                    <select id="riverDensity">
-                        <option value="150">Few</option>
-                        <option value="40" selected>Normal</option>
-                        <option value="8">Many</option>
-                    </select>
-                </div>
-            </div>
             <div id="cardDetailed" class="evo-card-note evo-card-replace" hidden></div>
             <button id="cardAction" class="evo-card-btn" disabled>Add detail</button>
             <div id="cardBar" class="evo-finish-bar" hidden><i></i></div>
@@ -179,81 +166,9 @@
             <div id="cardNote" class="evo-card-note" hidden></div>
             <button id="extendBtn" class="evo-card-ghost" hidden>Extend history</button>
         </div>
-        <details class="section" id="viewSection">
-            <summary>View</summary>
-            <div class="section-body">
-                <div class="cg" id="paletteGroup">
-                    <label>Terrain Colours <span class="tip" data-tip="How heights are coloured on the Terrain view — all shaded by the relief">?</span></label>
-                    <select id="palette">
-                        <optgroup label="Maps">
-                            <option value="relief" selected>Relief</option>
-                            <option value="topographic">Topographic</option>
-                            <option value="natural">Natural</option>
-                            <option value="swiss">Swiss</option>
-                            <option value="school">School Atlas</option>
-                            <option value="etopo">ETOPO</option>
-                            <option value="dem">DEM</option>
-                            <option value="scientific">Scientific</option>
-                            <option value="satellite">Blue Marble (by height)</option>
-                            <option value="grey">Grey</option>
-                            <option value="antique">Antique</option>
-                        </optgroup>
-                        <optgroup label="Other worlds">
-                            <option value="arid">Arid</option>
-                            <option value="frozen">Frozen</option>
-                            <option value="lush">Lush</option>
-                            <option value="alien">Alien</option>
-                            <option value="volcanic">Volcanic</option>
-                        </optgroup>
-                    </select>
-                </div>
-                <div class="tg">
-                    <label class="toggle-label"><input type="checkbox" id="chkShade" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Hillshade <span class="tip" data-tip="Shade the planet by its relief, lit from the north-west. Off, every view is flat colour, the mountains shown by their colours alone (a texture to light in a 3D program; the export has its own Hillshade switch)">?</span></label>
-                </div>
-                <div class="cg">
-                    <label>View</label>
-                    <select id="viewMode">
-                        <option value="globe">Globe</option>
-                        <option value="map">Map</option>
-                    </select>
-                </div>
-                <div class="cg" id="mapProjectionGroup" hidden>
-                    <label>Projection <span class="tip" data-tip="The map's shape: equirectangular (the plain 2 : 1 map), Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, the globe as two hemispheres, an azimuthal (polar) map, or Van der Grinten's world in a circle. Each has its own options; the export offers the same">?</span></label>
-                    <select id="mapProjection"></select>
-                    <div id="mapProjOpts" class="xp-proj-opts evo-proj-opts" hidden></div>
-                </div>
-                <div class="cg" id="mapCenterLonGroup" hidden>
-                    <label>Center Longitude <span class="v" id="vMapCenterLon">0°</span></label>
-                    <input type="range" id="sMapCenterLon" min="-180" max="180" value="0" step="5">
-                </div>
-                <div class="tg">
-                    <label class="toggle-label"><input type="checkbox" id="chkRotate"><span class="toggle-track"><span class="toggle-thumb"></span></span>Auto-Rotate</label>
-                    <label class="toggle-label"><input type="checkbox" id="chkGrid" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Grid Lines</label>
-                </div>
-                <div class="cg" id="gridSpacingGroup">
-                    <label>Grid Spacing</label>
-                    <select id="gridSpacing">
-                        <option value="30">30&deg;</option>
-                        <option value="15" selected>15&deg;</option>
-                        <option value="10">10&deg;</option>
-                        <option value="5">5&deg;</option>
-                        <option value="2.5">2.5&deg;</option>
-                    </select>
-                </div>
-                <div class="cg">
-                    <label>Playback Speed</label>
-                    <select id="rate">
-                        <option value="5">5 Myr a second</option>
-                        <option value="10">10 Myr a second</option>
-                        <option value="25" selected>25 Myr a second</option>
-                        <option value="50">50 Myr a second</option>
-                    </select>
-                </div>
-                <details id="statsDetails" class="stats-toggle">
-                    <summary>Stats</summary>
-                    <div id="stats"></div>
-                </details>
-            </div>
+        <details id="statsDetails" class="stats-toggle">
+            <summary>Stats</summary>
+            <div id="stats"></div>
         </details>
         <a id="repoLink" href="https://github.com/raguilar011095/planet_heightmap_generation" target="_blank" rel="noopener">GitHub</a>
         </div>
@@ -281,7 +196,7 @@
             <option value="rainSeason">Rain Seasonality</option>
         </optgroup>
     </select>
-    <div id="layerBar" class="evo-layerbar">
+    <div id="layerBar" class="layer-bar">
         <div class="map-tabs" id="mapTabs">
             <button class="map-tab active" data-layer="terrain">Terrain</button>
             <button class="map-tab" data-layer="satellite" title="The planet as from space, cloud-free: each climate's colours climbing with the land to rock and snow, rivers greening dry country, snow and ice from its climate, for the year, January or July. Comes with Add detail">Satellite</button>
@@ -289,7 +204,7 @@
             <button class="map-tab" data-layer="heightmap">Heightmap</button>
             <button class="map-tab" data-layer="plates">Plates</button>
         </div>
-        <div id="subBar" class="evo-subbar" hidden>
+        <div id="subBar" class="layer-subbar" hidden>
             <div class="map-tabs" id="climateTabs">
                 <button class="map-tab" data-layer="koppen">Köppen</button>
                 <button class="map-tab" data-layer="temperature">Temperature</button>
@@ -320,15 +235,71 @@
                 <option value="jul">July</option>
             </select>
         </div>
+        <div id="viewStrip" class="view-strip" role="toolbar" aria-label="View">
+            <div class="vs-seg" role="group" aria-label="Globe or map"><button type="button" data-mode="globe">Globe</button><button type="button" data-mode="map">Map</button></div>
+            <select id="viewMode" hidden aria-hidden="true" tabindex="-1">
+                <option value="globe">Globe</option>
+                <option value="map">Map</option>
+            </select>
+            <span class="vs-item" id="mapProjectionGroup" data-view="map" title="The map's shape: equirectangular (the plain 2 : 1 map), Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, the globe as two hemispheres, an azimuthal (polar) map, or Van der Grinten's world in a circle. Each has its own options; the export offers the same"><label for="mapProjection">Projection</label> <select id="mapProjection"></select><span id="mapProjOpts" class="xp-proj-opts" hidden></span></span>
+            <label class="vs-item" id="mapCenterLonGroup" data-view="map">Centre <input type="range" id="sMapCenterLon" min="-180" max="180" value="0" step="5" aria-label="Centre longitude"><span class="v" id="vMapCenterLon">0&deg;</span></label>
+            <label class="toggle-label" data-view="globe"><input type="checkbox" id="chkRotate"><span class="toggle-track"><span class="toggle-thumb"></span></span>Auto-Rotate</label>
+            <label class="toggle-label"><input type="checkbox" id="chkGrid" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Grid Lines</label>
+            <span class="vs-item" id="gridSpacingGroup"><select id="gridSpacing" aria-label="Grid spacing">
+                <option value="30">30&deg;</option>
+                <option value="15" selected>15&deg;</option>
+                <option value="10">10&deg;</option>
+                <option value="5">5&deg;</option>
+                <option value="2.5">2.5&deg;</option>
+            </select></span>
+            <span class="vs-item" id="paletteGroup" title="How heights are coloured on the Terrain view"><label for="palette">Colours</label> <select id="palette">
+            <optgroup label="Maps">
+            <option value="relief" selected>Relief</option>
+            <option value="topographic">Topographic</option>
+            <option value="natural">Natural</option>
+            <option value="swiss">Swiss</option>
+            <option value="school">School Atlas</option>
+            <option value="etopo">ETOPO</option>
+            <option value="dem">DEM</option>
+            <option value="scientific">Scientific</option>
+            <option value="satellite">Blue Marble (by height)</option>
+            <option value="grey">Grey</option>
+            <option value="antique">Antique</option>
+            </optgroup>
+            <optgroup label="Other worlds">
+            <option value="arid">Arid</option>
+            <option value="frozen">Frozen</option>
+            <option value="lush">Lush</option>
+            <option value="alien">Alien</option>
+            <option value="volcanic">Volcanic</option>
+            </optgroup>
+            </select></span>
+            <label class="toggle-label" title="Shade the planet by its relief, lit from the north-west. Off, every view is flat colour, the mountains shown by their colours alone (a texture to light in a 3D program; the export has its own Hillshade switch)"><input type="checkbox" id="chkShade" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Hillshade</label>
+            <span class="vs-item" id="waterGroup">
+                <label class="toggle-label"><input type="checkbox" id="chkWater" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Rivers &amp; Lakes</label>
+                <label class="toggle-label" id="regimeRow" title="Colour the rivers by their year — each month's rain and snowmelt, run down the rivers: blue, permanent; violet, permanent with a yearly flood season (the Nile's, from rains far upstream; a snowmelt flood); cyan, seasonal — dry some months; brown, dry most of the year. Hover a river for its flood months"><input type="checkbox" id="chkRegime"><span class="toggle-track"><span class="toggle-thumb"></span></span>By Regime</label>
+                <span class="vs-item" id="riverDensityGroup" title="Which rivers are drawn, by how much water they carry: Few — 150 m³/s and more; Normal — 40 m³/s; Many — 8 m³/s. The bigger a river, the stronger its line; seasonal rivers are dashed, and those dry most of the year dotted"><select id="riverDensity">
+                <option value="150">Few</option>
+                <option value="40" selected>Normal</option>
+                <option value="8">Many</option>
+                </select></span>
+            </span>
+        </div>
+        <div id="climateChip" class="evo-chip" hidden><span id="climateChipText"></span><button id="climateChipBtn">Calculate</button></div>
     </div>
     <button id="helpBtn" title="How it works">?</button>
-    <div id="legendCard" class="evo-legend-card" hidden>
+    <div id="legendCard" class="legend-card" hidden>
         <div id="climateLegend" class="viz-legend"></div>
         <div id="regimeLegend" class="evo-koppen evo-regime-legend" hidden></div>
     </div>
-    <div id="climateChip" class="evo-chip" hidden><span id="climateChipText"></span><button id="climateChipBtn">Calculate</button></div>
     <div id="timeline" class="evo-timeline" hidden>
         <button id="playBtn" class="evo-play" aria-label="Play / pause">&#x25B6;</button>
+        <select id="rate" class="evo-rate" aria-label="Playback speed" title="Playback speed">
+        <option value="5">5 Myr/s</option>
+        <option value="10">10 Myr/s</option>
+        <option value="25" selected>25 Myr/s</option>
+        <option value="50">50 Myr/s</option>
+        </select>
         <div class="evo-track">
             <div class="evo-rail"><i id="railBuilt" class="built"></i><i id="railShown" class="shown"></i></div>
             <input id="timeSlider" type="range" min="0" max="1200" step="10" value="0" aria-label="Time">
@@ -368,7 +339,7 @@
             </div>
             <div class="tutorial-step" data-step="3">
                 <h3>Look Around &amp; Export</h3>
-                <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, <strong>Heightmap</strong> and <strong>Plates</strong> with the tabs over the planet. Climate shows Köppen zones, temperature, rain, wind and currents, with more layers (pressure, upwelling, ice, aridity, growing season and others) under <strong>More…</strong> or in the layer list. Climate also works on a paused preview. In <strong>View</strong>, the map can be drawn in any of ten <strong>projections</strong>, and <strong>Hillshade</strong> turns the relief's shading off, for flat colour.</p>
+                <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, <strong>Heightmap</strong> and <strong>Plates</strong> with the tabs over the planet. Climate shows Köppen zones, temperature, rain, wind and currents, with more layers (pressure, upwelling, ice, aridity, growing season and others) under <strong>More…</strong> or in the layer list. Climate also works on a paused preview. The strip under the tabs holds the view: <strong>Globe</strong> or <strong>Map</strong>, the map in any of ten <strong>projections</strong>, the terrain's colours, and <strong>Hillshade</strong>, which turns the relief's shading off for flat colour.</p>
                 <p><strong>Export</strong> saves the detailed moment as map files: a colour map, the Satellite view (the year, January or July), its climate zones, heightmaps with and without the sea floor, a land mask, and its rivers and lakes on their own. Every climate layer can go too, and each map as <strong>Data</strong> &mdash; 16-bit greyscales on fixed scales &mdash; as well as colour; several save as one ZIP with a README, at any width up to 16384 px, in any of ten map projections, centred as you like, with or without the hillshade.</p>
             </div>
             <div class="tutorial-step" data-step="4">

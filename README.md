@@ -119,36 +119,42 @@ Global climate offsets that adjust temperature and precipitation without a full 
 
 The climate (temperature, pressure and wind, ocean currents, rain, Köppen classification) runs with every generation: it works on a fixed 1° grid, so it takes a few seconds at any detail. On phones, above 640K regions, it is computed on demand when a climate-dependent view is first chosen.
 
-### Visual Options
+### The view: layers over the planet
 
-- **Map Type** — segmented Terrain / Satellite / Climate / Heightmap tabs for quick switching between the four most common visualizations. Each tab shows a color legend:
+Generate, Import and Evolution share one layout (plans/VIEW_UI_PLAN.md): the sidebar holds what builds the world, and what
+you look at sits over the planet — the **layer bar**, the **view strip** under it, and the **legend** beside the planet.
+
+- **Layer bar** (`js/layer-bar.js`) — **Terrain** · **Satellite** · **Climate** · **Heightmap** · **Plates** (Generate):
   - **Terrain** — elevation color ramp from deep ocean through sea level to mountain peaks
   - **Satellite** — the same look as Evolution's Satellite view (`v2/js/evolution/sat-style.js`): each family of climates in its own colours by height — its lowland colour up to its tree line, then dark grey-red rock, grey rock and snow (rainforests deep green, deserts sand to rust to dark rock, taiga dark green, tundra grey-green, cold deserts like tundra) — blended across the climates' edges (noise-warped, on a fixed grid so it looks the same at every detail), with a gentle fractal mottling; for the year, January or July (the season picker): each place in its own season by latitude, the even mean toward the equator, the snow line lower in winter, the climate's own snow and ice sheets; the sea in the terrain palette with sharp, ragged sea ice in its season.
-  - **Climate** — Köppen-Geiger classification with color swatches for all 30 climate types
+  - **Climate** — its own row of maps: **Köppen** (the Köppen-Geiger classes, swatches for all 30), **Temperature**, **Rain**, **Wind** and **Currents**, and under **More…** the rest; the tab opens on the climate map shown last. With the row, the **Season** — Year, January or July (the same in both hemispheres — January is the southern summer) — for the layers that change through the year (Satellite too):
+    - **Atmosphere** — Pressure (sea-level pressure in hPa, blue = low, red = high, with the wind's arrows and the ITCZ as a green line), Wind (speed in m/s, with arrows)
+    - **Ocean** — Ocean Currents (the sea's temperature against its latitude's average — warm and cold currents — with current arrows; the currents are seasonal in the tropics), Upwelling (m/day: cold, nutrient-rich water rising where the wind pushes the surface away), Ice (sea ice, with a summer pack where winters are long; on land, the season's snow and the ice sheets — so in winter the white runs from an ice sheet across the snowy land to the sea ice)
+    - **Land** — Temperature (°C on Evolution's smooth ramp: purple and blue below freezing, white at 0 °C, yellow through red above; the sea's surface temperature at sea), Precipitation (mm/month, or mm/year for the Year; sand when dry, through greens to deep blue when wet), the same ramps as Evolution's for temperature, precipitation, pressure and ocean currents, Temperature Range (warmest month − coldest: continentality), Rain Shadow (how mountains move the rain: blue windward slopes, red-brown rain shadows — for the Year, January or July, so a range whose wet side turns with the monsoon shows it), Aridity (the UNEP aridity index, precipitation ÷ potential evaporation: hyper-arid to humid), Growing Season (months above 10 °C), Rain Seasonality (Walsh & Lawler's index, from even rain to almost all of it in a month or two)
   - **Heightmap** — black-to-white gradient on a fixed absolute scale (-5 km ocean floor to 6 km peaks), so the same physical height always maps to the same shade
-- **View** dropdown — switch between Globe and Map (equirectangular projection)
-- **Center Longitude** slider (map mode only) — shifts the map projection's central meridian to any longitude from 180°W to 180°E, scrolling the equirectangular projection so the chosen longitude is centered. Exports are centred the same way (the file name notes it, e.g. `-c120E`).
-- **Wireframe** — toggle switch to show Voronoi cell edges as a wireframe overlay
-- **Show Plates** — toggle switch to color regions by plate (green shades = land, blue shades = ocean); also draws black super plate boundary lines showing tectonic super-groups
-- **Auto-Rotate** — toggle switch to spin the globe continuously
-- **Grid Lines** — toggle switch for latitude/longitude grid overlay on both globe and map views
-- **Grid Spacing** — choose the interval between grid lines: 30°, 15°, 10°, 5°, or 2.5°
+  - **Plates** (Generate) — the regions colored by plate (green shades = land, blue shades = ocean), with black super plate boundary lines showing tectonic super-groups. Ctrl-click (⌘-click on a Mac) plates to reshape them works in every view.
+- **View strip** (`js/view-strip.js`), showing only what applies:
+  - **Globe | Map** (Map: the equirectangular projection)
+  - **Centre** (map only) — shifts the map's central meridian to any longitude from 180°W to 180°E, scrolling the projection so the chosen longitude is centered. Exports are centred the same way (the file name notes it, e.g. `-c120E`).
+  - **Auto-Rotate** (globe only) — spin the globe continuously
+  - **Grid Lines** and the **grid spacing** — a latitude/longitude grid on both globe and map views, every 30°, 15°, 10°, 5° or 2.5°
+- **Legend** — a card beside the planet (bottom right) for the layer shown.
+- **On phones** — the bar becomes one layer list at the top, the season beneath it and the legend under that; the view strip sits at the top of the bottom sheet, every control a 44 px touch target.
 
-### Inspect Dropdown
+### Inspect (advanced)
 
-The **Inspect** dropdown (in Visual Options, below the map tabs) selects a detailed visualization layer. Options are organized into groups:
+A folded section at the foot of the sidebar, for the terrain's inner workings (the maps you'll want most are the tabs):
 
-- **Main views** (ungrouped at top) — Terrain, Satellite, Köppen Climate, Land Heightmap
 - **Geology** — Base, Tectonic, Noise, Interior, Coastal, Ocean Floor, Hotspot, Tectonic Activity, Margins, Back-Arc, Fold Ridge, Orogenic Power, Erosion Delta (blue = eroded, red = deposited)
-- **Atmosphere** — Pressure (sea-level pressure in hPa, blue = low, red = high, with the wind's arrows and the ITCZ as a green line), Wind (speed in m/s, with arrows)
-- **Ocean** — Ocean Currents (the sea's temperature against its latitude's average — warm and cold currents — with current arrows; the currents are seasonal in the tropics), Upwelling (m/day: cold, nutrient-rich water rising where the wind pushes the surface away), Ice (sea ice, with a summer pack where winters are long; on land, the season's snow and the ice sheets — so in winter the white runs from an ice sheet across the snowy land to the sea ice)
-- **Climate** — Temperature (°C on Evolution's smooth ramp: purple and blue below freezing, white at 0 °C, yellow through red above; the sea's surface temperature at sea), Precipitation (mm/month, or mm/year for the Year; sand when dry, through greens to deep blue when wet), the same ramps as Evolution's for temperature, precipitation, pressure and ocean currents, Temperature Range (warmest month − coldest: continentality), Rain Shadow (how mountains move the rain: blue windward slopes, red-brown rain shadows — for the Year, January or July, so a range whose wet side turns with the monsoon shows it), Aridity (the UNEP aridity index, precipitation ÷ potential evaporation: hyper-arid to humid), Growing Season (months above 10 °C), Rain Seasonality (Walsh & Lawler's index, from even rain to almost all of it in a month or two)
-- **Season** — beside Inspect, for the layers that change through the year: Year, January or July (the same in both hemispheres — January is the southern summer)
+- **Plate Physics** — Continental Drag, Size-Velocity, Plate Speed, Velocity Change, Mantle Flow
 - **Elevation** — Full Heightmap (full-range B&W)
+- **Wireframe** — toggle switch to show Voronoi cell edges as a wireframe overlay
+
+**None** returns to the tab shown. On the Import page the list holds the Full Heightmap and Erosion Delta.
 
 ### Export
 
-Click **Export Map** (below Visual Options) to open the export panel (`v2/js/view/export-panel.js`, shared with the Import and Evolution pages; this page's maps in `js/export-generate.js`):
+Click **Export Map** (at the foot of the sidebar) to open the export panel (`v2/js/view/export-panel.js`, shared with the Import and Evolution pages; this page's maps in `js/export-generate.js`):
 
 - **Width** — 1024 to 65536 px (8192 on phones); the height follows the projection (width / 2 for equirectangular). Large maps are rendered in tiles.
 - **Projection** — equirectangular, Mercator, Robinson, Equal Earth, Mollweide, Hammer, Winkel Tripel, orthographic hemispheres, azimuthal equidistant (polar) and Van der Grinten; each with its own options where it has them (Mercator's max latitude, Winkel's standard parallel, the azimuthals' centre latitude and extent, one or two orthographic hemispheres). Equirectangular is the plain 2 : 1 map that re-imports; the others are drawn from it pixel by pixel through the projection's inverse (`v2/js/view/projections.js`), colours and classes by the nearest pixel, numbers bilinearly, the outside transparent.
@@ -266,6 +272,8 @@ js/
   terrain-post.js       Domain warping, bilateral smoothing, glacial/hydraulic/thermal erosion, ridge sharpening, soil creep
   climate-new.js        The climate for Generate and Import — runs the new climate (v2/js/climate/) on a V1 planet: Köppen, per-region months, the 1° grid
   climate-layers.js     The climate's Inspect layers — colours, legends, hover lines, arrows, the season picker
+  layer-bar.js          The layer bar over the planet (Generate, Import): tabs, the Climate row and season, the phone's list
+  view-strip.js         The view strip under the layer bar (every page): Globe | Map and what applies; in the sheet on phones
   climate-config.js     The OLD climate's parameters (no longer run by the app; kept for the old tuning diagnostics)
   climate-util.js       Shared climate utilities — smoothing, ITCZ lookup, percentile selection
   wind.js … temperature.js  The OLD climate (wind, ocean, precipitation, heuristic-precip, temperature) — no longer run by the app

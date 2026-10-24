@@ -221,11 +221,6 @@ export function showClimateArrows(layer, season, buildWind, buildCurrents) {
     buildWind(a === 'wind' ? season : null);
     buildCurrents(a === 'currents' ? season : null);
 }
-/** The season picker beside Inspect: shown for a layer with seasons. */
-export function syncSeasonPicker(layer) {
-    const group = document.getElementById('climateSeasonGroup');
-    if (group) group.hidden = !(BY_ID[layer]?.seasonal || layer === 'biome');        // (the Satellite view has seasons too)
-}
 /** The Satellite view's legend: its climates' lowland colours, and what it shows, in the season chosen. */
 export function satelliteLegendHTML(season) {
     const F = Object.fromEntries(RAMP_FAMILIES.map(f => [f.name, f]));

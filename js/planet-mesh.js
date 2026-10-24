@@ -216,7 +216,7 @@ export function buildMapMesh() {
     if (!state.curData || !state.mapMode) return;
 
     const { mesh, r_xyz, t_xyz, r_plate, r_elevation, t_elevation, mountain_r, coastline_r, ocean_r, r_stress, debugLayers } = state.curData;
-    const showPlates = document.getElementById('chkPlates').checked;
+    const showPlates = state.showPlates;
     const showStress = false;
     const waterLevel = 0;
     const debugLayer = state.debugLayer || '';
@@ -513,7 +513,7 @@ export function updateSuperPlateBorders() {
     if (state.mapSuperPlateBorderMesh) { scene.remove(state.mapSuperPlateBorderMesh); state.mapSuperPlateBorderMesh.geometry.dispose(); state.mapSuperPlateBorderMesh.material.dispose(); state.mapSuperPlateBorderMesh = null; }
 
     if (!state.curData) return;
-    const showPlates = document.getElementById('chkPlates').checked;
+    const showPlates = state.showPlates;
     if (!showPlates) return;
 
     const { mesh, t_xyz, t_elevation, debugLayers } = state.curData;
@@ -597,7 +597,7 @@ export function updateSuperPlateBorders() {
 export function buildMesh() {
     if (!state.curData) return;
     const { mesh, r_xyz, t_xyz, r_plate, r_elevation, t_elevation, mountain_r, coastline_r, ocean_r, r_stress, debugLayers } = state.curData;
-    const showPlates = document.getElementById('chkPlates').checked;
+    const showPlates = state.showPlates;
     const showStress = false;
     const waterLevel = 0;
     const debugLayer = state.debugLayer || '';
@@ -807,7 +807,7 @@ export function buildMesh() {
 export function updateMeshColors() {
     if (!state.curData || !state.planetMesh) return;
     const { mesh, r_plate, r_elevation, t_elevation, mountain_r, coastline_r, ocean_r, r_stress, debugLayers } = state.curData;
-    const showPlates = document.getElementById('chkPlates').checked;
+    const showPlates = state.showPlates;
     const showStress = false;
     const waterLevel = 0;
     const debugLayer = state.debugLayer || '';

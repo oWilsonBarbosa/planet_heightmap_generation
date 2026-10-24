@@ -11,7 +11,9 @@ import { importHeightmap, reapplyViaWorker, computeClimateViaWorker } from './ge
 import { buildMesh, updateMeshColors, buildMapMesh, rebuildGrids, buildWindArrows, buildOceanCurrentArrows, updateKoppenHoverHighlight, updateMapKoppenHoverHighlight } from './planet-mesh.js';
 import { detailFromSlider } from './detail-scale.js';
 import { KOPPEN_CLASSES } from './koppen.js';
-import { needsClimate, climateLayer, climateLegendHTML, satelliteLegendHTML, showClimateArrows, syncSeasonPicker, initSeasonPicker, climateReadoutLines } from './climate-layers.js';
+import { needsClimate, climateLayer, climateLegendHTML, satelliteLegendHTML, showClimateArrows, initSeasonPicker, climateReadoutLines } from './climate-layers.js';
+import { initLayerBar } from './layer-bar.js';
+import { initViewStrip } from './view-strip.js';
 import { elevationToColor, elevToHeightKm } from './color-map.js';
 import { showBuildError, clearBuildError, describeFailure } from './build-error.js';
 
@@ -266,12 +268,10 @@ hiddenGenBtn.addEventListener('generate-done', () => {
         updateMeshColors();
     }
     syncTabsToLayer(state.debugLayer);
-    if (debugLayerEl) debugLayerEl.value = state.debugLayer;
     updateLegend(state.debugLayer);
     // Rebuild arrows if needed
     const v = state.debugLayer;
     showClimateArrows(v, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
-    syncSeasonPicker(v);
 });
 
 // ─── Climate layers ───────────────────────────────────────────────
@@ -281,7 +281,6 @@ const CLIMATE_LAYERS = { has: needsClimate };
 
 // ─── Visualization (debug layers, tabs, legend) ───────────────────
 
-const mapTabs = document.getElementById('mapTabs');
 const vizLegend = document.getElementById('vizLegend');
 const debugLayerEl = document.getElementById('debugLayer');
 
@@ -302,49 +301,22 @@ function applyLayer(layer) {
     state.hoveredKoppen = -1;
     updateMeshColors();
     showClimateArrows(layer, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
-    syncSeasonPicker(layer);
+    syncTabsToLayer(layer);
     updateLegend(layer);
 }
 
+// The layers over the planet (js/layer-bar.js: the tabs, the Climate row and the season, the phone's list) and the
+// sidebar's Inspect list (the full heightmap, the sculpting's changes)
+const layerBar = initLayerBar(switchVisualization);
+initViewStrip();
+/** The bar, its season and the Inspect list, for the layer shown. */
 function syncTabsToLayer(layer) {
-    mapTabs.querySelectorAll('.map-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.layer === layer);
-    });
-    const mvs = document.getElementById('mobileViewSwitch');
-    if (mvs && [...mvs.options].some(o => o.value === layer)) {
-        mvs.value = layer;
-    }
+    layerBar.sync(layer);
+    if (debugLayerEl) debugLayerEl.value = [...debugLayerEl.options].some(o => o.value === layer) ? layer : '';
 }
 
-mapTabs.addEventListener('click', (e) => {
-    const tab = e.target.closest('.map-tab');
-    if (!tab) return;
-    const layer = tab.dataset.layer;
-    mapTabs.querySelectorAll('.map-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    if (debugLayerEl) debugLayerEl.value = layer;
-    const mvs = document.getElementById('mobileViewSwitch');
-    if (mvs) mvs.value = layer;
-    switchVisualization(layer);
-});
-
-const mobileViewSwitch = document.getElementById('mobileViewSwitch');
-if (mobileViewSwitch) {
-    mobileViewSwitch.addEventListener('change', (e) => {
-        const layer = e.target.value;
-        syncTabsToLayer(layer);
-        if (debugLayerEl) debugLayerEl.value = layer;
-        switchVisualization(layer);
-    });
-}
-
-if (debugLayerEl) {
-    debugLayerEl.addEventListener('change', (e) => {
-        const layer = e.target.value;
-        syncTabsToLayer(layer);
-        switchVisualization(layer);
-    });
-}
+// The Inspect list (None: the terrain)
+if (debugLayerEl) debugLayerEl.addEventListener('change', (e) => switchVisualization(e.target.value));
 
 // Season picker (Year · January · July) for the climate's Inspect layers
 initSeasonPicker(state, () => {
@@ -513,7 +485,6 @@ document.getElementById('gridSpacing').addEventListener('change', (e) => {
 });
 
 // Map center longitude
-const mapCenterLonGroup = document.getElementById('mapCenterLonGroup');
 const sMapCenterLon = document.getElementById('sMapCenterLon');
 const vMapCenterLon = document.getElementById('vMapCenterLon');
 
@@ -580,7 +551,6 @@ document.getElementById('viewMode').addEventListener('change', (e) => {
         updateMapCameraFrustum();
         mapCtrl.target.set(0, 0, 0);
         mapCtrl.update();
-        mapCenterLonGroup.style.display = '';
     } else {
         if (state.planetMesh) state.planetMesh.visible = true;
         atmosMesh.visible = true;
@@ -606,7 +576,6 @@ document.getElementById('viewMode').addEventListener('change', (e) => {
         scene.background = new THREE.Color(0x030308);
         mapCtrl.enabled = false;
         ctrl.enabled = true;
-        mapCenterLonGroup.style.display = 'none';
     }
 });
 
@@ -878,7 +847,7 @@ window.takePreview = function(width = 1200, height = 630) {
     const savedPixelRatio = renderer.getPixelRatio();
 
     const hiddenEls = [];
-    for (const sel of ['#ui', '#topInfo', '#info', '#hoverInfo', '#helpBtn',
+    for (const sel of ['#ui', '#layerBar', '#legendCard', '#info', '#hoverInfo', '#helpBtn',
                         '#editToggle', '#refreshFab', '#rebuildFab', '#mobileViewSwitch',
                         '#buildOverlay', '#tutorialOverlay', '#exportOverlay', '#whatsNewOverlay']) {
         const el = document.querySelector(sel);

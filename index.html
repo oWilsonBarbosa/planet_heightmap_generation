@@ -167,6 +167,7 @@
             <button id="sidebarToggle" title="Collapse panel">&#x00AB;</button>
         </div>
         <div id="sidebarContent">
+        <div id="viewStripSlot"></div>
         <details class="section" open>
             <summary>Shape Your World</summary>
             <div class="section-body">
@@ -267,33 +268,13 @@
                 </div>
             </div>
         </details>
-        <details class="section" open>
-            <summary>Visual Options</summary>
+        <details class="section" id="inspectSection">
+            <summary>Inspect (advanced) <span class="tip" data-tip="The terrain's inner workings, stage by stage &mdash; what each geology and plate-physics pass built &mdash; to see why a planet looks as it does. The maps you'll want most are the tabs over the planet">?</span></summary>
             <div class="section-body">
                 <div class="cg">
-                    <label>View</label>
-                    <select id="viewMode">
-                        <option value="globe">Globe</option>
-                        <option value="map">Map</option>
-                    </select>
-                </div>
-                <div class="cg" id="mapCenterLonGroup" style="display:none">
-                    <label>Center Longitude <span class="v" id="vMapCenterLon">0°</span></label>
-                    <input type="range" id="sMapCenterLon" min="-180" max="180" value="0" step="5">
-                </div>
-                <div class="map-tabs" id="mapTabs">
-                    <button class="map-tab active" data-layer="">Terrain</button>
-                    <button class="map-tab" data-layer="biome">Satellite</button>
-                    <button class="map-tab" data-layer="koppen">Climate</button>
-                    <button class="map-tab" data-layer="landheightmap">Heightmap</button>
-                </div>
-                <div class="cg">
-                    <label>Inspect</label>
+                    <label>Layer</label>
                     <select id="debugLayer">
-                        <option value="">Terrain</option>
-                        <option value="biome">Satellite</option>
-                        <option value="koppen">K&ouml;ppen Climate</option>
-                        <option value="landheightmap">Land Heightmap</option>
+                        <option value="">None &mdash; the tab shown</option>
                         <optgroup label="Geology">
                             <option value="base">Base</option>
                             <option value="skeleton">Skeleton (pre-noise)</option>
@@ -324,59 +305,19 @@
                             <option value="velChange">Velocity Change</option>
                             <option value="mantleFlow">Mantle Flow</option>
                         </optgroup>
-                        <optgroup label="Atmosphere">
-                            <option value="pressure">Pressure</option>
-                            <option value="wind">Wind</option>
-                        </optgroup>
-                        <optgroup label="Ocean">
-                            <option value="currents">Ocean Currents</option>
-                            <option value="upwelling">Upwelling</option>
-                            <option value="ice">Ice</option>
-                        </optgroup>
-                        <optgroup label="Climate">
-                            <option value="temperature">Temperature</option>
-                            <option value="precip">Precipitation</option>
-                            <option value="tempRange">Temperature Range</option>
-                            <option value="rainShadow">Rain Shadow</option>
-                            <option value="aridity">Aridity</option>
-                            <option value="growing">Growing Season</option>
-                            <option value="rainSeason">Rain Seasonality</option>
-                        </optgroup>
                         <optgroup label="Elevation">
                             <option value="heightmap">Full Heightmap</option>
                         </optgroup>
                     </select>
                 </div>
-                <div class="cg" id="climateSeasonGroup" hidden>
-                    <label>Season <span class="tip" data-tip="The climate layers that change through the year: the year's average, January or July">?</span></label>
-                    <select id="climateSeason" aria-label="Season">
-                        <option value="year">Year</option>
-                        <option value="jan">January</option>
-                        <option value="jul">July</option>
-                    </select>
-                </div>
-                <div id="vizLegend" class="viz-legend"></div>
                 <div class="tg">
                     <label class="toggle-label"><input type="checkbox" id="chkWire"><span class="toggle-track"><span class="toggle-thumb"></span></span>Wireframe</label>
-                    <label class="toggle-label"><input type="checkbox" id="chkPlates"><span class="toggle-track"><span class="toggle-thumb"></span></span>Show Plates</label>
-                    <label class="toggle-label"><input type="checkbox" id="chkRotate"><span class="toggle-track"><span class="toggle-thumb"></span></span>Auto-Rotate</label>
-                    <label class="toggle-label"><input type="checkbox" id="chkGrid" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Grid Lines</label>
                 </div>
-                <div class="cg" id="gridSpacingGroup">
-                    <label>Grid Spacing</label>
-                    <select id="gridSpacing">
-                        <option value="30">30°</option>
-                        <option value="15" selected>15°</option>
-                        <option value="10">10°</option>
-                        <option value="5">5°</option>
-                        <option value="2.5">2.5°</option>
-                    </select>
-                </div>
-                <details id="statsDetails" class="stats-toggle">
-                    <summary>Stats</summary>
-                    <div id="stats"></div>
-                </details>
             </div>
+        </details>
+        <details id="statsDetails" class="stats-toggle">
+            <summary>Stats</summary>
+            <div id="stats"></div>
         </details>
         <button id="exportBtn" class="export-btn">Export Map</button>
         <a id="repoLink" href="https://github.com/raguilar011095/planet_heightmap_generation" target="_blank" rel="noopener">
@@ -385,11 +326,85 @@
         </a>
         </div>
     </div>
-    <select id="mobileViewSwitch" class="mobile-view-switch">
+    <div id="layerBar" class="layer-bar">
+        <div class="map-tabs" id="mapTabs">
+            <button class="map-tab active" data-layer="">Terrain</button>
+            <button class="map-tab" data-layer="biome" title="The planet as from space, cloud-free: each climate's colours climbing with the land to rock and snow, for the year, January or July">Satellite</button>
+            <button class="map-tab" data-layer="climate" title="The climate: K&ouml;ppen zones, temperature, rain, winds and currents &mdash; and under More, pressure, upwelling, ice, aridity and more">Climate</button>
+            <button class="map-tab" data-layer="landheightmap" title="Land heights in grey, the sea black">Heightmap</button>
+            <button class="map-tab" data-layer="plates" title="The plates in their colours &mdash; Ctrl-click (&#8984;-click on a Mac) a plate to raise or sink it, in any view">Plates</button>
+        </div>
+        <div id="subBar" class="layer-subbar" hidden>
+            <div class="map-tabs" id="climateTabs">
+                <button class="map-tab" data-layer="koppen">K&ouml;ppen</button>
+                <button class="map-tab" data-layer="temperature">Temperature</button>
+                <button class="map-tab" data-layer="precip">Rain</button>
+                <button class="map-tab" data-layer="wind">Wind</button>
+                <button class="map-tab" data-layer="currents">Currents</button>
+            </div>
+            <select id="climateMore" aria-label="More climate layers" title="More climate layers: pressure, the sea, and what the land's twelve months say">
+                <option value="">More&hellip;</option>
+                <optgroup label="Atmosphere">
+                    <option value="pressure">Pressure</option>
+                </optgroup>
+                <optgroup label="Ocean">
+                    <option value="upwelling">Upwelling</option>
+                    <option value="ice">Ice</option>
+                </optgroup>
+                <optgroup label="Land">
+                    <option value="tempRange">Temperature Range</option>
+                    <option value="rainShadow">Rain Shadow</option>
+                    <option value="aridity">Aridity</option>
+                    <option value="growing">Growing Season</option>
+                    <option value="rainSeason">Rain Seasonality</option>
+                </optgroup>
+            </select>
+            <select id="climateSeason" aria-label="Season" title="The year's average, January or July">
+                <option value="year">Year</option>
+                <option value="jan">January</option>
+                <option value="jul">July</option>
+            </select>
+        </div>
+        <div id="viewStrip" class="view-strip" role="toolbar" aria-label="View">
+            <div class="vs-seg" role="group" aria-label="Globe or map"><button type="button" data-mode="globe">Globe</button><button type="button" data-mode="map">Map</button></div>
+            <select id="viewMode" hidden aria-hidden="true" tabindex="-1">
+                <option value="globe">Globe</option>
+                <option value="map">Map</option>
+            </select>
+            <label class="vs-item" id="mapCenterLonGroup" data-view="map">Centre <input type="range" id="sMapCenterLon" min="-180" max="180" value="0" step="5" aria-label="Centre longitude"><span class="v" id="vMapCenterLon">0&deg;</span></label>
+            <label class="toggle-label" data-view="globe"><input type="checkbox" id="chkRotate"><span class="toggle-track"><span class="toggle-thumb"></span></span>Auto-Rotate</label>
+            <label class="toggle-label"><input type="checkbox" id="chkGrid" checked><span class="toggle-track"><span class="toggle-thumb"></span></span>Grid Lines</label>
+            <span class="vs-item" id="gridSpacingGroup"><select id="gridSpacing" aria-label="Grid spacing">
+                <option value="30">30&deg;</option>
+                <option value="15" selected>15&deg;</option>
+                <option value="10">10&deg;</option>
+                <option value="5">5&deg;</option>
+                <option value="2.5">2.5&deg;</option>
+            </select></span>
+        </div>
+    </div>
+    <div id="legendCard" class="legend-card"><div id="vizLegend" class="viz-legend"></div></div>
+    <select id="mobileViewSwitch" class="mobile-view-switch" aria-label="Layer">
         <option value="">Terrain</option>
         <option value="biome">Satellite</option>
-        <option value="koppen">Climate</option>
+        <optgroup label="Climate">
+            <option value="koppen">K&ouml;ppen</option>
+            <option value="temperature">Temperature</option>
+            <option value="precip">Rain</option>
+            <option value="wind">Wind</option>
+            <option value="currents">Currents</option>
+            <option value="pressure">Pressure</option>
+            <option value="upwelling">Upwelling</option>
+            <option value="ice">Ice</option>
+            <option value="tempRange">Temperature Range</option>
+            <option value="rainShadow">Rain Shadow</option>
+            <option value="aridity">Aridity</option>
+            <option value="growing">Growing Season</option>
+            <option value="rainSeason">Rain Seasonality</option>
+        </optgroup>
         <option value="landheightmap">Heightmap</option>
+        <option value="plates">Plates</option>
+        <option value="inspect" disabled hidden>Inspect layer</option>
     </select>
     <button id="helpBtn" title="Tutorial">?</button>
 
@@ -411,7 +426,7 @@
             </div>
             <div class="tutorial-step" data-step="3">
                 <h3>Visualize Your World</h3>
-                <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, and <strong>Heightmap</strong> views using the tabs under Visual Options. Use the <strong>Inspect</strong> dropdown for detailed layers &mdash; pressure and wind, ocean currents and sea ice, temperature, rain, aridity, growing season &mdash; each for the year, January or July (the Satellite view too).</p>
+                <p>Switch between <strong>Terrain</strong>, <strong>Satellite</strong>, <strong>Climate</strong>, and <strong>Heightmap</strong> views, and <strong>Plates</strong>, with the tabs over the planet. <strong>Climate</strong> opens its own row of maps &mdash; K&ouml;ppen, temperature, rain, wind, currents, and under <strong>More&hellip;</strong> pressure, sea ice, aridity, growing season and more &mdash; each for the year, January or July (the Satellite view too). The strip under the tabs switches <strong>Globe</strong> and <strong>Map</strong>, centres the map and sets the grid; the terrain's inner layers are in <strong>Inspect (advanced)</strong> in the sidebar.</p>
                 <p>The climate takes a few seconds at any detail. On phones, at the very highest detail it is computed when you first switch to a climate view.</p>
             </div>
             <div class="tutorial-step" data-step="4">
@@ -520,8 +535,6 @@
             </div>
         </div>
     </div>
-
-    <div id="topInfo">Drag to rotate &middot; Scroll to zoom &middot; Ctrl-click (&#8984;-click on a Mac) to reshape continents</div>
     <button id="editToggle" class="edit-toggle" title="Toggle plate edit mode">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14.5 2.5l3 3L6 17H3v-3L14.5 2.5z"/>
