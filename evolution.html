@@ -22,6 +22,7 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@worldorogen">
     <meta name="twitter:title" content="World Orogen — Evolution">
     <meta name="twitter:description" content="Watch a planet evolve over a billion years of plate tectonics, then sculpt any moment in detail. Free, in your browser.">
     <meta name="twitter:image" content="https://orogen.studio/assets/studio/evolution.jpg">
@@ -47,6 +48,7 @@
             "Planet files: the whole history and its detailed moment saved as one file and opened again later, without building either again — the same planet in any browser"
         ],
         "screenshot": "https://orogen.studio/assets/studio/evolution.jpg",
+        "sameAs": ["https://bsky.app/profile/did:plc:quknpdz3qcoid5uh4qv27w2t", "https://x.com/worldorogen", "https://www.threads.com/@orogen.studio", "https://www.instagram.com/orogen.studio/", "https://github.com/raguilar011095/planet_heightmap_generation"],
         "isPartOf": { "@type": "WebSite", "name": "World Orogen", "url": "https://orogen.studio/" }
     }
     </script>
@@ -63,6 +65,15 @@
         <a href="/generate" class="nav-tab">Generate</a>
         <a href="/import" class="nav-tab">Import<span class="nav-long">&nbsp;Heightmap</span></a>
         <a href="/evolution" class="nav-tab active">Evolution</a>
+        <div class="nav-follow">
+            <a class="nav-icon" href="https://github.com/raguilar011095/planet_heightmap_generation" target="_blank" rel="noopener" title="Source code on GitHub" aria-label="Source code on GitHub"><svg width="16" height="16" aria-hidden="true"><use href="assets/social.svg#github"/></svg></a>
+            <span class="nav-follow-label">Follow</span>
+            <a class="nav-icon" href="https://bsky.app/profile/did:plc:quknpdz3qcoid5uh4qv27w2t" target="_blank" rel="noopener" title="Follow on Bluesky for new releases and sneak peeks" aria-label="World Orogen on Bluesky"><svg width="16" height="16" aria-hidden="true"><use href="assets/social.svg#bluesky"/></svg></a>
+            <a class="nav-icon" href="https://x.com/worldorogen" target="_blank" rel="noopener" title="Follow on X for new releases and sneak peeks" aria-label="World Orogen on X"><svg width="16" height="16" aria-hidden="true"><use href="assets/social.svg#x"/></svg></a>
+            <a class="nav-icon" href="https://www.threads.com/@orogen.studio" target="_blank" rel="noopener" title="Follow on Threads for new releases and sneak peeks" aria-label="World Orogen on Threads"><svg width="16" height="16" aria-hidden="true"><use href="assets/social.svg#threads"/></svg></a>
+            <span class="nav-follow-label">Support</span>
+            <a class="nav-icon" href="https://ko-fi.com/orogenstudio" target="_blank" rel="noopener" title="Support World Orogen on Ko-fi" aria-label="Support World Orogen on Ko-fi"><svg width="16" height="16" aria-hidden="true"><use href="assets/social.svg#kofi"/></svg></a>
+        </div>
     </nav>
     <canvas id="canvas"></canvas>
     <canvas id="mapCanvas" hidden></canvas>
@@ -170,7 +181,13 @@
             <summary>Stats</summary>
             <div id="stats"></div>
         </details>
-        <a id="repoLink" href="https://github.com/raguilar011095/planet_heightmap_generation" target="_blank" rel="noopener">GitHub</a>
+        <div id="repoLink">
+            <a class="rl-github" href="https://github.com/raguilar011095/planet_heightmap_generation" target="_blank" rel="noopener" title="Source code on GitHub"><svg width="16" height="16" aria-hidden="true"><use href="assets/social.svg#github"/></svg>GitHub</a>
+            <a class="rl-icon" href="https://bsky.app/profile/did:plc:quknpdz3qcoid5uh4qv27w2t" target="_blank" rel="noopener" title="Follow on Bluesky for new releases and sneak peeks" aria-label="World Orogen on Bluesky"><svg width="16" height="16" aria-hidden="true"><use href="assets/social.svg#bluesky"/></svg></a>
+            <a class="rl-icon" href="https://x.com/worldorogen" target="_blank" rel="noopener" title="Follow on X for new releases and sneak peeks" aria-label="World Orogen on X"><svg width="16" height="16" aria-hidden="true"><use href="assets/social.svg#x"/></svg></a>
+            <a class="rl-icon" href="https://www.threads.com/@orogen.studio" target="_blank" rel="noopener" title="Follow on Threads for new releases and sneak peeks" aria-label="World Orogen on Threads"><svg width="16" height="16" aria-hidden="true"><use href="assets/social.svg#threads"/></svg></a>
+            <a class="rl-kofi" href="https://ko-fi.com/orogenstudio" target="_blank" rel="noopener"><svg width="16" height="16" aria-hidden="true"><use href="assets/social.svg#kofi"/></svg>Support on Ko-fi</a>
+        </div>
         </div>
     </div>
     <select id="mobileViewSwitch" class="mobile-view-switch" aria-label="Layer">

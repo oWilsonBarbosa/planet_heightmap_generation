@@ -69,6 +69,8 @@ A top navigation bar connects the pages:
 
 On narrow phones the Import tab reads just "Import".
 
+After the tabs, past a short divider: GitHub, then **Follow** with Bluesky, X and Threads, then **Support** with Ko-fi (plain links that open in a new tab; nothing is loaded from those sites). On phones and tablets the bar keeps only the tabs, and the same links sit at the foot of the side panel (a row a desktop shows too): GitHub, the three follow icons and **Support on Ko-fi**. The Studio has GitHub and the follow links under its introduction, and Ko-fi in its footer.
+
 ### Sharing Planets
 
 Every generated planet produces a **planet code** (shown below the Build button) that encodes the random seed, all slider values, and any plate edits. The seed is one of 2,147,483,646 (0 to 2,147,483,645: each its own world — the seeded generator's every starting state; before 2026-10 new planets drew from the first 16.7 million, whose codes read as they always did). An unedited planet is 22 characters; plate edits (applied via Rebuild) extend the code to include the toggled plates. Older codes (13–21 characters) from previous versions are still supported — missing sliders default to their current default values. To share a planet:
@@ -246,6 +248,7 @@ evolution.html          Evolution page — a planet's tectonic history (v2/)
 studio.html             The Studio's old address (/studio): sends on to /
 studio.css              Studio page styles
 assets/studio/          Screenshots of each tool for the Studio cards
+assets/social.svg       The GitHub, Bluesky, X and Threads marks for the follow links (one <symbol> each)
 styles.css              Shared CSS (all pages)
 robots.txt              Search engine crawler directives
 sitemap.xml             Sitemap for search engine indexing
@@ -309,6 +312,12 @@ Loaded via CDN import maps (no installation needed):
 
 - [Three.js](https://threejs.org/) v0.160.0 — 3D rendering
 - [Delaunator](https://github.com/mapbox/delaunator) v5.0.1 — 2D Delaunay triangulation
+
+## Follow and support
+
+New releases, work in progress and sneak peeks of what's coming, plus the odd planet along the way: [Bluesky](https://bsky.app/profile/did:plc:quknpdz3qcoid5uh4qv27w2t) · [X](https://x.com/worldorogen) · [Threads](https://www.threads.com/@orogen.studio).
+
+If World Orogen has been useful to you, you can support it on [Ko-fi](https://ko-fi.com/orogenstudio). It stays free either way: no ads, no account, nothing locked.
 
 ## License
 

@@ -40,6 +40,14 @@ https://orogen.studio/generate — Generate (a planet's link: orogen.studio/gene
 https://orogen.studio/import — Import Heightmap
 https://orogen.studio/evolution — Evolution
 
+## Follow and support
+
+- Source code: https://github.com/raguilar011095/planet_heightmap_generation
+- Bluesky: https://bsky.app/profile/did:plc:quknpdz3qcoid5uh4qv27w2t
+- X: https://x.com/worldorogen
+- Threads: https://www.threads.com/@orogen.studio
+- Ko-fi (optional; the tools stay free): https://ko-fi.com/orogenstudio
+
 ## Technical details
 
 - Built with Three.js (WebGL), vanilla JavaScript ES modules

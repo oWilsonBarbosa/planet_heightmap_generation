@@ -22,6 +22,16 @@ body { background: #000; overflow: hidden; font-family: 'Segoe UI', system-ui, s
 .nav-tab.active {
     color: #8bf; background: rgba(68,136,255,0.15);
 }
+/* after the tabs, past a short divider: GitHub, then the follow links (on phones and tablets the panel's foot has them) */
+.nav-follow { display: flex; align-items: center; gap: 2px; flex: none; margin-left: 6px; }
+.nav-follow::before { content: ''; width: 1px; height: 16px; background: rgba(255,255,255,0.14); margin-right: 8px; }
+.nav-follow-label { font-size: 12px; color: #667; margin: 0 2px 0 10px; }
+.nav-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 6px;
+    color: #889; transition: background 0.2s, color 0.2s;
+}
+.nav-icon:hover { color: #bcd; background: rgba(255,255,255,0.06); }
 #topNav { overflow-x: auto; scrollbar-width: none; }
 #topNav::-webkit-scrollbar { display: none; }
 .nav-tab { flex: none; white-space: nowrap; }
@@ -423,16 +433,19 @@ button#generate.generating {
     line-height: 1.6;
     margin-top: 4px;
 }
+/* the panel's foot: GitHub, the follow links, and Ko-fi a little quieter (on phones, the only place they are) */
 #repoLink {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12px; color: #556;
-    text-decoration: none;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 2px 4px;
+    font-size: 12px;
     margin-top: 10px; padding-top: 10px;
     border-top: 1px solid rgba(255,255,255,0.06);
-    transition: color 0.2s;
 }
-#repoLink:hover { color: #9ab; }
+#repoLink a { display: inline-flex; align-items: center; gap: 6px; color: #889; text-decoration: none; transition: color 0.2s; }
+#repoLink a:hover { color: #bcd; }
 #repoLink svg { flex-shrink: 0; }
+#repoLink .rl-github { margin-right: 6px; }
+#repoLink .rl-icon { padding: 4px; }
+#repoLink .rl-kofi { margin-left: auto; color: #778; }
 .slider-hint {
     display: flex;
     justify-content: space-between;
@@ -838,6 +851,9 @@ button#generate.generating {
 }
 .whatsnew-step p.whatsnew-beta-note { margin-top: 8px; font-size: 13px; color: #a98; }
 .whatsnew-step p.whatsnew-beta-note strong { color: #fc8; }
+.whatsnew-step p.whatsnew-follow { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+.whatsnew-follow a { color: #8bf; text-decoration: none; }
+.whatsnew-follow a:hover { text-decoration: underline; }
 .whatsnew-list li {
     font-size: 14px; line-height: 1.6; color: #9ab;
     padding: 6px 0;
@@ -939,6 +955,9 @@ button#generate.generating {
 @media (max-width: 768px) {
     #topNav { height: 36px; padding: 0 8px; }
     .nav-tab { padding: 4px 12px; font-size: 12px; min-height: 32px; }
+    .nav-follow { display: none; }
+    #repoLink a { min-height: 44px; }
+    #repoLink .rl-icon { min-width: 44px; justify-content: center; }
     #topInfo { display: none; }
 
     /* Bottom sheet */
