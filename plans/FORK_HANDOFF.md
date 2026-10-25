@@ -10,7 +10,7 @@ como verificá-las e o que ficou em aberto. Os detalhes de cada mudança estão 
   - Nada foi mesclado na `main` do fork e nenhum pull request foi aberto.
 - **Repositório irmão:** `oWilsonBarbosa/0r063N`, mesmo branch.
   - Contém o conjunto de dados do planeta `06cy8w6z6a89kow6psje93` (semente 10673275, 2.560.001 regiões), gerado por
-    este fork no commit `4186f55`.
+    este fork no commit `4e7c1b0`.
   - O `HANDOFF.md` de lá descreve os dados, as ferramentas e o mapa de rios publicado.
 - **Para retomar numa nova sessão:**
   - `git fetch origin ccr-85cb1372-invlm5 && git checkout -B <branch da sessão> origin/ccr-85cb1372-invlm5`.
@@ -85,6 +85,8 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
       - 50–60° N: +3,2/+2,6/+2,7 → +1,6/+0,2/+0,4 °C;
       - rios com o clima simulado (2,56M): nota anual −0,179 → −0,163; o pico dos rios frios adiantado 0,27 → 0,10 mês;
       - nenhum planeta gerado ficou mais seco.
+    - **No 0r063N** (`orogen_regions_4e7c1b0`): as terras 0,2 °C mais frias no ano (0,06–0,45 °C em nove décimos
+      delas); Köppen igual em 96,7 % das terras; a floresta subártica (Dfc) de 4,6 para 5,3 %.
     - **Custo:**
       - uns 100 ms num clima de ~6,5 s (160K);
       - a Ásia perde 0,6 ponto de acerto exato: os subtrópicos, já frios demais, esfriam 0,3–0,8 °C pelo norte mais frio
