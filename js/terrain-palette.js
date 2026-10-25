@@ -20,18 +20,24 @@ function tableOf(id) {
     return linear.get(id);
 }
 
-/** The Terrain view's colour of a raw elevation (relative to sea level), in the palette chosen. */
-export function terrainColor(e) {
-    if (state.palette === 'classic') return elevationToColor(e);
-    const T = tableOf(state.palette), m = elevToHeightKm(e) * 1000;
-    // (the coast exact, as Evolution's: a cell just under sea level is sea, one just over it land)
-    const j = Math.round((m - T.minM) / T.stepM), i = 3 * (m < 0 ? Math.max(0, Math.min(T.zero - 1, j)) : Math.min(T.n - 1, Math.max(T.zero, j)));
-    return [T.rgb[i], T.rgb[i + 1], T.rgb[i + 2]];
+/**
+ * The Terrain view's colour of a raw elevation (relative to sea level), in the palette chosen: a function, taken once
+ * before a loop over the mesh (Classic's is elevationToColor itself).
+ */
+export function terrainColorFn() {
+    if (state.palette === 'classic') return elevationToColor;
+    const T = tableOf(state.palette), { rgb, minM, stepM, n, zero } = T;
+    return (e) => {
+        const m = elevToHeightKm(e) * 1000;
+        // (the coast exact, as Evolution's: a cell just under sea level is sea, one just over it land)
+        const j = Math.round((m - minM) / stepM), i = 3 * (m < 0 ? Math.max(0, Math.min(zero - 1, j)) : Math.min(n - 1, Math.max(zero, j)));
+        return [rgb[i], rgb[i + 1], rgb[i + 2]];
+    };
 }
 
 /** The same as a CSS colour, for the legend (Classic's as its legend has always drawn it). */
 export function terrainCss(e) {
-    const c = state.palette === 'classic' ? elevationToColor(e) : terrainColor(e).map(v => (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055));
+    const c = state.palette === 'classic' ? elevationToColor(e) : terrainColorFn()(e).map(v => (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055));
     return `rgb(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)})`;
 }
 

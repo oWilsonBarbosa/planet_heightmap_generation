@@ -623,6 +623,7 @@ sMapCenterLon.addEventListener('input', () => {
         const builtLon = state.mapMesh._builtCenterLon || 0;
         const dx = (builtLon - state.mapCenterLon) * (2 / Math.PI);
         state.mapMesh.position.x = dx;
+        for (const c of state.mapMesh.userData.wrap) c.visible = dx !== 0;
         if (state.mapGridMesh) state.mapGridMesh.position.x = dx;
     }
 });
@@ -1025,6 +1026,7 @@ const store = {
         dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
         backBtn.disabled = i === 0;
         nextBtn.textContent = i === TOTAL - 1 ? 'Get Started' : 'Next';
+        card.scrollTop = 0;     // (a card taller than the screen scrolls: each step from its top)
     }
 
     function openModal() {
@@ -1104,6 +1106,7 @@ const store = {
         dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
         backBtn.disabled = i === 0;
         nextBtn.textContent = i === TOTAL - 1 ? 'Got It' : 'Next';
+        card.scrollTop = 0;     // (a card taller than the screen scrolls: each step from its top)
     }
 
     function closeModal() {
@@ -1232,7 +1235,7 @@ window.takePreview = function(width = 1200, height = 630) {
     renderer.setSize(savedW / savedPixelRatio, savedH / savedPixelRatio);
     fitCamera(innerWidth, innerHeight);
     for (const { el, prev } of hiddenEls) el.style.display = prev;
-    renderView();
+    renderView(true);
     console.log('preview.png downloaded!');
 };
 

@@ -5,7 +5,7 @@
 import { state } from './state.js';
 import { beginExportRender, renderExportLayer, endExportRender, exportSatelliteColors, koppenColor, heightmapColor, landHeightmapColor, toLinear3, exportCentreTag } from './planet-mesh.js';
 import { climateColorFn, gridAt } from './climate-layers.js';
-import { terrainColor } from './terrain-palette.js';
+import { terrainColorFn } from './terrain-palette.js';
 import { KOPPEN_CLASSES } from './koppen.js';
 import { initExportPanel } from '../v2/js/view/export-panel.js';
 import { DATA_SCALES as SC, scaled, hillshade8, climateRows } from '../v2/js/view/export-raster.js';
@@ -69,7 +69,7 @@ export function initGenerateExport({ page, ensureClimate, code }) {
             const data = state.curData, { r_elevation: elev, r_plate, debugLayers } = data, koppenArr = debugLayers && debugLayers.koppen, s = job.season || 'year', id = job.row.id;
             const render = (spec) => renderExportLayer(rctx.render, spec, progress);
             if (job.variant === 'colour') {
-                if (id === 'color') return render({ mode: 'rgb', colorOf: (r) => terrainColor(elev[r]) });
+                if (id === 'color') { const terrainColor = terrainColorFn(); return render({ mode: 'rgb', colorOf: (r) => terrainColor(elev[r]) }); }
                 if (id === 'satellite') { const sat = rctx.sat[s] || (rctx.sat[s] = exportSatelliteColors(s)); return render({ mode: 'rgb', colorOf: (r) => [sat[3 * r], sat[3 * r + 1], sat[3 * r + 2]] }); }
                 if (id === 'koppen') return render({ mode: 'rgb', colorOf: (r) => toLinear3(koppenColor(koppenArr[r])) });
                 if (id === 'plates') return render({ mode: 'rgb', colorOf: (r) => { const c = state.plateColors[r_plate[r]]; return c ? [c.r, c.g, c.b] : [0.3, 0.3, 0.3]; } });

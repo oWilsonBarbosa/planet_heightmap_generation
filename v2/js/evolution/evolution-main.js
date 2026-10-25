@@ -1205,6 +1205,7 @@ $('sidebarToggle').addEventListener('click', () => { ui.panel.classList.toggle('
         dots.forEach((d, k) => d.classList.toggle('active', k === i));
         $('tutorialBack').disabled = i === 0;
         $('tutorialNext').textContent = i === steps.length - 1 ? 'Get Started' : 'Next';
+        $('tutorialCard').scrollTop = 0;     // (a card taller than the screen scrolls: each step from its top)
     };
     const open = () => { show(0); overlay.classList.remove('hidden'); };
     const close = () => { overlay.classList.add('hidden'); try { localStorage.setItem(KEY, '1'); } catch { /* (remembered only where the browser allows) */ } };

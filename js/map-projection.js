@@ -1,7 +1,7 @@
 // Generate's and Import's map view in any of the ten projections (Evolution's: v2/js/view/projections.js and
 // projection-glsl.js). Equirectangular is the flat map mesh itself (planet-mesh.js buildMapMesh), crisp at any zoom, as
-// before. Any other projection: each frame the part of the flat map that is on screen — the cells, the arrows, the
-// borders and the highlights — is drawn into an off-screen equirectangular picture at about one and a half times the
+// before. Any other projection: whenever the view changes, the part of the flat map that is on screen — the cells, the
+// arrows, the borders and the highlights — is drawn into an off-screen equirectangular picture at about one and a half times the
 // screen's resolution, and a plane in the projection's shape shows it through the projection's inverse: each pixel
 // asks which longitude and latitude it shows and samples the picture there. Drawing only what is on screen keeps the map
 // sharp at any zoom. The map's lines — the super-plate borders, the wind's and the currents' arrows, the ITCZ — are kept
@@ -211,9 +211,47 @@ function drawFlat(l0, l1, lat0, latSpan, c0, c1) {
     renderer.render(scene, flatCam);
 }
 
+// A projected frame is drawn only when something it shows has changed — the flat map's visible objects (their geometry,
+// colours, materials and places), the projection, the grid, the centre, the map camera, the picture's size — and the
+// canvas keeps the last one meanwhile, as Evolution's globe does. (A frame is two passes, one at 2.25 × the screen's
+// pixels: drawn every frame, a still map would spend a phone's battery.) A resize, the page hidden and shown again, or
+// the GPU's context restored may empty the canvas: the next frame is drawn whatever.
+let shownKey = null;
+const invalidate = () => { shownKey = null; };
+addEventListener('resize', invalidate);
+document.addEventListener('visibilitychange', invalidate);
+renderer.domElement.addEventListener('webglcontextrestored', invalidate);
+
+function frameKey() {
+    scene.updateMatrixWorld();
+    const k = [target.width, target.height, state.mapProjection, JSON.stringify(state.mapProjOpts), state.gridEnabled, state.gridSpacing,
+        state.mapCenterLon || 0, scene.background?.isColor ? scene.background.getHex() : '', mapCamera.position.x, mapCamera.position.y,
+        mapCamera.zoom, mapCamera.left, mapCamera.right, mapCamera.top, mapCamera.bottom];
+    scene.traverseVisible((o) => {
+        if (!o.isMesh && !o.isLine && !o.isPoints) return;
+        const e = o.matrixWorld.elements, g = o.geometry;
+        k.push(o.id, g.id, g.index?.version ?? '', g.drawRange.start, g.drawRange.count, e[0], e[5], e[12], e[13]);
+        for (const name in g.attributes) k.push(g.attributes[name].version);
+        for (const m of Array.isArray(o.material) ? o.material : [o.material]) k.push(m.id, m.version, m.opacity, m.visible);
+    });
+    return k.join();
+}
+
+/** The projected view's picture and line copies let go (their GPU memory back) once the view is the globe or the flat map. */
+function release() {
+    if (!target) return;
+    target.dispose(); target = null;
+    for (const entry of lineCopies.values()) { projScene.remove(entry.copy); entry.copy.geometry.dispose(); }
+    lineCopies.clear();
+    shownKey = null;
+}
+
 function renderProjected() {
     if (!plane) setUp();
     ensureTarget();
+    const key = frameKey();
+    if (key === shownKey) return;
+    shownKey = key;
     const win = viewWindow(), u = plane.material.uniforms, lines = mapLines();
     syncLineCopies(lines);
     if (win) {
@@ -242,8 +280,9 @@ function renderProjected() {
     renderer.render(projScene, mapCamera);
 }
 
-/** Draw the view: the globe, the flat map, or the map in its projection. */
-export function renderView() {
+/** Draw the view: the globe, the flat map, or the map in its projection (`force`: drawn even if it looks unchanged). */
+export function renderView(force = false) {
+    if (force) shownKey = null;
     if (projected()) renderProjected();
-    else renderer.render(scene, state.mapMode ? mapCamera : camera);
+    else { release(); renderer.render(scene, state.mapMode ? mapCamera : camera); }
 }

@@ -503,6 +503,7 @@ sMapCenterLon.addEventListener('input', () => {
         const builtLon = state.mapMesh._builtCenterLon || 0;
         const dx = (builtLon - state.mapCenterLon) * (2 / Math.PI);
         state.mapMesh.position.x = dx;
+        for (const c of state.mapMesh.userData.wrap) c.visible = dx !== 0;
         if (state.mapGridMesh) state.mapGridMesh.position.x = dx;
     }
 });
@@ -872,7 +873,7 @@ window.takePreview = function(width = 1200, height = 630) {
     renderer.setSize(savedW / savedPixelRatio, savedH / savedPixelRatio);
     fitCamera(innerWidth, innerHeight);
     for (const { el, prev } of hiddenEls) el.style.display = prev;
-    renderView();
+    renderView(true);
     console.log('preview.png downloaded!');
 };
 

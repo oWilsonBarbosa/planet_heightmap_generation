@@ -70,10 +70,26 @@ export function initViewStrip() {
             try { localStorage.setItem(OPEN_KEY, open ? '1' : '0'); } catch { /* (remembered only where the browser allows) */ }
         });
     }
+    const narrow = matchMedia('(max-width: 768px)');
+    // (beside an open sidebar — a narrow window, a tablet — the bar moves right just enough to clear it, as far as the
+    // room before the help button allows; centred over the planet otherwise)
+    const bar = document.getElementById('layerBar'), panel = document.getElementById('ui'), help = document.getElementById('helpBtn');
+    if (bar && panel && typeof ResizeObserver !== 'undefined') {
+        const clear = () => {
+            bar.style.removeProperty('--bar-shift');
+            if (narrow.matches) return;
+            const b = bar.getBoundingClientRect(), want = panel.getBoundingClientRect().right + 8 - b.left;
+            if (want <= 0) return;
+            const room = (help?.checkVisibility?.() ? help.getBoundingClientRect().left : innerWidth) - 8 - b.right;
+            bar.style.setProperty('--bar-shift', `${Math.max(0, Math.min(want, room))}px`);
+        };
+        const watch = new ResizeObserver(clear);
+        watch.observe(bar); watch.observe(panel);
+        addEventListener('resize', clear);
+    }
     // (a phone: at the top of the bottom sheet; wider: back where the page put it)
     const slot = document.getElementById('viewStripSlot'), home = strip.parentElement, after = strip.nextElementSibling;
     if (!slot) return;
-    const narrow = matchMedia('(max-width: 768px)');
     const place = () => {
         if (narrow.matches) { slot.appendChild(strip); strip.classList.add('in-sheet'); }
         else { home.insertBefore(strip, after && after.parentElement === home ? after : null); strip.classList.remove('in-sheet'); }

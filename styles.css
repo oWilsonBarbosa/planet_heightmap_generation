@@ -257,7 +257,7 @@ button#generate.generating {
    the layers (Terrain · Satellite · Climate, its own row of maps and the season · Heightmap · Plates) under it; and the
    legend beside the planet ── */
 .layer-bar {
-    position: fixed; top: 52px; left: 50%; transform: translateX(-50%); z-index: 20;
+    position: fixed; top: 52px; left: 50%; transform: translateX(calc(-50% + var(--bar-shift, 0px))); z-index: 20;   /* (shift: js/view-strip.js) */
     display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none;
     max-width: calc(100vw - 32px);
 }
@@ -802,6 +802,10 @@ button#generate.generating {
 #whatsNewOverlay.hidden #whatsNewCard {
     opacity: 0; transform: translateY(-16px);
 }
+/* (on a screen shorter than a card — a phone on its side — the card scrolls, its close and its buttons within reach) */
+#tutorialCard, #whatsNewCard, #surveyCard {
+    max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain;
+}
 #whatsNewClose {
     position: absolute; top: 10px; right: 14px;
     background: none; border: none;
@@ -1198,7 +1202,7 @@ button#generate.generating {
 .xp-spacer { flex: 1; }
 .btn-ghost.xp-small { padding: 6px 12px; font-size: 13px; }
 @media (max-width: 768px) {
-    #exportCard { max-width: none; width: 94%; padding: 20px 14px 14px; max-height: calc(100dvh - 24px); }
+    #exportCard { max-width: none; width: 94%; padding: 20px 14px 14px; max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; }
     .xp-settings { grid-template-columns: 1fr; }
     .xp-layers { max-height: 36vh; }
     .xp-row { min-height: 44px; font-size: 15px; }
@@ -1209,5 +1213,14 @@ button#generate.generating {
     .xp-planet { flex-wrap: wrap; }
     .xp-planet-text { font-size: 15px; min-width: 60%; }
     #exportCard .export-actions { flex-wrap: wrap; gap: 8px; }
-    #exportCard .btn-primary, #exportCard .btn-ghost { min-height: 44px; }
+    #exportCard .btn-primary, #exportCard .btn-ghost, #exportCard select { min-height: 44px; }
+    #exportCard input[type=range] { height: 44px; }
+    #exportClose { min-width: 44px; min-height: 44px; top: 4px; right: 6px; }
+}
+/* a short screen (a phone on its side): the whole card scrolls, the maps' list at its full length, so that Export is
+   always within reach (the card's own share of the height would leave the list and the buttons below the screen) */
+@media (max-height: 520px) {
+    #exportCard { overflow-y: auto; overscroll-behavior: contain; }
+    #exportCard > *, #exportCard .xp > * { flex-shrink: 0; }
+    .xp-layers { max-height: none; min-height: 0; overflow: visible; }
 }

@@ -226,6 +226,11 @@
         bottom: 68px; gap: 6px; row-gap: 0; padding: 4px 8px 6px; flex-wrap: wrap;
     }
     .evo-track { order: -1; flex: 1 1 100%; }
+    /* (the time slider a 44 px touch target, centred on the rail as its 20 px one is) */
+    .evo-track input[type=range] { top: -8px; height: 44px; }
+    .evo-track input[type=range]::-webkit-slider-runnable-track { height: 44px; }
+    .evo-track input[type=range]::-moz-range-track { height: 44px; }
+    .evo-track input[type=range]::-webkit-slider-thumb { margin-top: 14px; }
     .evo-play { width: 44px; height: 44px; }
     .evo-time { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: left; font-size: 12px; }
     .evo-timeline select { min-height: 44px; }
