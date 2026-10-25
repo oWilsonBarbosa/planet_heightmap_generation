@@ -24,11 +24,13 @@ como verificá-las e o que ficou em aberto. Os detalhes de cada mudança estão 
 | Teto do suprimento de chuva do ar (`e97dc88`) | não (desligado) | não | não | sim (`EARTH_RELIEF_CLIMATE`) |
 | Alturas como as da Terra (`59f4740`) | não | não | não | sim |
 | Rios e lagos do Generate (`js/water-new.js`) | não (sem tela) | não | não | sim |
-| Regras novas da hidrologia (`FINISH`) | — | — | **desligadas** | ligadas (`WATER`) |
+| Gargantas e ano dos rios calibrado (`FINISH`, item 14) | — | — | **sim** (desde 2026-10-25) | sim |
+| Mares interiores de qualquer tamanho, bacias fechadas (`WATER`) | — | — | **não** | sim |
 
-O Evolution deste fork difere do original só pelo clima. As regras de hidrologia novas ficam desligadas em `FINISH`
-(`v2/js/finish/finish-config.js`) e são ligadas em `WATER` (`js/water-new.js`). O teste `tuning/evolution/` confirma
-que elas não mexem no Evolution.
+O Evolution deste fork difere do original pelo clima e, desde 2026-10-25, pelos rios: a correção das gargantas e o
+ano dos rios calibrado estão em `FINISH` (`v2/js/finish/finish-config.js`), que o Evolution e o Generate usam. Os
+mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `FINISH` e são ligados só em `WATER`
+(`js/water-new.js`). O teste `tuning/evolution/` mostra o que cada mudança faz no Evolution.
 
 ## Inovações e correções
 
@@ -113,6 +115,22 @@ que elas não mexem no Evolution.
       - a nota anual dos rios fica igual (0,252) e melhora com o clima simulado (−0,231 → −0,179).
     - **Calibração do fator:** 1 fecha 23,9 %, inclusive o Níger e o Narmada, que de fato chegam ao mar.
 
+### Evolution
+
+14. **2026-10-25: o Evolution adota a correção das gargantas e o ano dos rios calibrado** (escolha do dono).
+    - `FINISH` passa a ter `drainBelowFloor` (item 10) e o ano dos rios dos itens 7 e 9: `baseflowShare` 0,7,
+      `baseflowMonths` 3, `lakeRegulationDry` 0, `riverSpeedKmDay` 40.
+    - `WATER` fica só com `seaRemnantAnySize` e `closedBasins`, e sai idêntico: o Generate e o 0r063N não mudam.
+    - **No mundo da semente 10673275:**
+      - lagos doces 121 → 100 a 250K, 1.319 → 1.302 a 2,5M e 1.125 → 1.114 a 10M (os lagos falsos são sobretudo das
+        malhas grossas);
+      - rios com estação de cheia 47 → 30 % a 2,5M e 46 → 31 % a 10M; permanentes 45 → 68 % e 45 → 66 %.
+    - **Custo** (sem navegador, 4 núcleos): a 2,5M (padrão da página), 92 contra 91 s e a mesma memória; a 10M, 316
+      contra 341 s e 3,95 contra 3,93 GB no pico.
+    - Com as cinco constantes nos valores antigos (`--set`), o Evolution volta a ser idêntico ao original (116 de 116).
+    - **Ficaram de fora** as bacias fechadas (contrariam a regra do autor de que todo rio termina no mar) e os mares
+      interiores de qualquer tamanho (sem efeito no Evolution).
+
 ### Ferramentas de verificação
 
 - `tuning/water/earth-rivers.mjs`:
@@ -124,7 +142,8 @@ que elas não mexem no Evolution.
 - `tuning/climate/diag-rain-bias.mjs`: vieses de chuva na Terra contra Beck e GPCP.
 - `tuning/relief/`: hipsometria da Terra (ETOPO 2022).
 - `tuning/evolution/regress.mjs`: prova que uma mudança no código compartilhado deixa o Evolution idêntico (116 saídas
-  com hash).
+  com hash), ou mostra o que muda; `--set chave=valor` liga uma constante de `FINISH` e cada rodada imprime lagos e
+  regimes.
 
 ## Números de referência atuais (Terra real, 2,56M regiões)
 
@@ -144,8 +163,9 @@ que elas não mexem no Evolution.
 
 ## Em aberto e próximos passos
 
-1. **Ligar regras novas no Evolution?** Decisão pendente do dono.
-   - Cada regra é uma linha em `FINISH`. Medido no mundo da semente 10673275 a 640K (2026-10-25), uma de cada vez:
+1. **Regras novas no Evolution: decidido em 2026-10-25** (item 14).
+   - Ligadas: gargantas e ano dos rios. Só no Generate: bacias fechadas e mares interiores de qualquer tamanho.
+   - O que cada regra fazia, medido no mundo da semente 10673275 a 640K, uma de cada vez, antes da escolha:
      - `drainBelowFloor`: 386 → 355 lagos doces, área de lagos 1,02 → 0,86 % das terras; somem os "lagos" enfileirados
        ao longo de gargantas; 284 regiões rebaixadas (média 42 m); Köppen igual.
      - `seaRemnantAnySize`: nenhum efeito (o Evolution já trata restos de mar abaixo de 5.000 km² como terra).
@@ -154,11 +174,11 @@ que elas não mexem no Evolution.
      - Ano dos rios do Generate (`baseflowShare` 0,7, `baseflowMonths` 3, `riverSpeedKmDay` 40, `lakeRegulationDry` 0):
        regime muda em 32 % dos pontos de rio (permanentes 38 → 64 %, com cheia 54 → 34 %). Na Terra com o clima
        simulado (640K), nota −0,549 → −0,144, mas faltam cheias nos rios frios (ver item 8).
-   - Para medir: `node tuning/evolution/regress.mjs <saída.json> --set drainBelowFloor=true` (qualquer constante de
-     `FINISH`), `--compare` contra uma rodada sem a regra; cada rodada imprime lagos e regimes
-     (`tuning/evolution/README.md`).
-2. **Publicar o fork no navegador.**
-   - É um site estático e já roda igual ao original: testado localmente, Evolution e Generate sem erros.
+   - Para medir outra regra: `node tuning/evolution/regress.mjs <saída.json> --set closedBasins=true` (qualquer
+     constante de `FINISH`), `--compare` contra uma rodada sem ela (`tuning/evolution/README.md`).
+2. **Publicar o fork no navegador.** O dono decidiu não publicar por enquanto (2026-10-25).
+   - É um site estático e já roda igual ao original: testado localmente, Evolution e Generate sem erros. Para usar no
+     computador: `npx serve` dentro da pasta do fork.
    - Para o GitHub Pages:
      - remover o `CNAME` (aponta para orogen.studio);
      - trocar os links do topo, que partem da raiz (`href="/evolution"` em `index.html`, `import.html`,

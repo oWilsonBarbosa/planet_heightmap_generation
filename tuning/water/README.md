@@ -82,10 +82,11 @@ observed climate (130 → 122) are of rivers that end, on the coarse map, in a d
 lakes that seldom flow — and the Indus, the Juba, the Colorado of Argentina, the Burdekin, the Itapicuru and the Tapi,
 whose courses cross basins the map's 20 km pixels close (a gorge narrower than a region, a terrace of its 8-bit steps).
 
-The Evolution's constants even out the months more the finer the mesh (the range ×0.86 at 640K, ×0.64 at 2.56M): the
-basins the rivers cut through, more of them at finer detail, pass on their water as lakes would. Without that the
-rivers were too seasonal at any detail (the range ×1.24 at both, the low flow ×0.55 and ×0.51), hence more water
-through the ground. Without the travel time, `--tune` ranks
+The Evolution's constants before it took up `WATER`'s year (2026-10-25; `v2/js/finish/finish-config.js`) evened out
+the months more the finer the mesh (the range ×0.86 at 640K, ×0.64 at 2.56M): the basins the rivers cut through, more
+of them at finer detail, passed on their water as lakes would. Without that the rivers were too seasonal at any detail
+(the range ×1.24 at both, the low flow ×0.55 and ×0.51), hence more water through the ground. Without the travel time,
+`--tune` ranks
 0.7 × 2.5 months a little above `WATER`'s 0.7 × 3 with the observed climate (year score 0.208 against 0.189 at 2.56M,
 0.245 against 0.178 at 640K) and below it with the simulated one (−0.312 against −0.243): 3 months keeps the dry
 season's flow nearer the measured with either (×0.85 against ×0.66 observed, ×0.75 against ×0.56 simulated). With it,

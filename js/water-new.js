@@ -45,11 +45,13 @@ import { elevToHeightKm } from './color-map.js';
 export const Water = Object.freeze({ ...HydroWater, BRACKISH: 4 });
 
 /**
- * The hydrology's constants for Generate: the Evolution's (finish-config.js FINISH), with the rivers' year checked
- * against measured flows (tuning/water/earth-rivers.mjs: real Earth's rivers against 130 of Dai & Trenberth's gauges,
- * with the observed climate, at 2.56M):
- *   - a basin its river cuts through (no water kept) does not even out the river's months — the Evolution's own do,
- *     as lakes: at 2.56M that flattened the Tocantins', the Mackenzie's and the Brahmaputra's years to within ±15 % of
+ * The hydrology's constants for Generate: the Evolution's (finish-config.js FINISH), and two rules of Generate's own.
+ * The rivers' year in FINISH was set here first, against measured flows (tuning/water/earth-rivers.mjs: real Earth's
+ * rivers against 130 of Dai & Trenberth's gauges, with the observed climate, at 2.56M), and the Evolution took it up
+ * (2026-10-25) — before, its constants were baseflowShare 0.5, baseflowMonths 2.5, no travel time, and dry basins
+ * evening out the months as lakes:
+ *   - a basin its river cuts through (no water kept) does not even out the river's months (lakeRegulationDry 0): as a
+ *     lake, at 2.56M that flattened the Tocantins', the Mackenzie's and the Brahmaputra's years to within ±15 % of
  *     their mean, the more the finer the mesh (the range ×0.86 of the measured at 640K, ×0.64 at 2.56M);
  *   - more of the water through the ground, drained back more slowly (baseflowShare 0.5 → 0.7, baseflowMonths 2.5 → 3):
  *     the months' correlation with the measured 0.80 → 0.86, the peak within a month 76 → 83 %, the range (coefficient
@@ -57,27 +59,28 @@ export const Water = Object.freeze({ ...HydroWater, BRACKISH: 4 });
  *     scores a little higher with the observed climate, 3 with the simulated one, and keeps the dry season's flow
  *     nearer the measured with either (×0.85 against ×0.66 observed, ×0.75 against ×0.56 simulated);
  *   - each month's water reaching a river point as late as its way down takes, at 40 km a day, and spread over the
- *     months as its water comes from near and far (riverSpeedKmDay: the Evolution's water reaches the mouth within the
- *     month): the great basins' year, from 500,000 km², 0.79 months early → 0.07, the months' correlation 0.86 → 0.89,
- *     the peak within a month 83 → 87 %. Of 25–80 km a day, 40 scores best: 0.46 m/s, one effective speed for every
- *     river, as simple global river-routing schemes have it (TRIP's first version, CLM4, LPJ) — the water runs faster
- *     in its channel, but floodplains and wetlands hold it back. A basin far larger than Earth's has its year spread
- *     out more than shifted: water from 7,600 km on average, give or take 3,400, keeps 40 % of its seasons.
- * The year's flows do not depend on them. And a basin that a gorge from upstream drains below its own floor holds no
- * water along that gorge (drainBelowFloor): the Evolution's hydrology takes the gorge's cells under the floor for a lake
- * — on planet 06cy8w6z6a89kow6psje93 with the ice age, a 54,600 km² "lake" over a canyon cut 100 m below its surface.
- * And an inland sea is a lake whatever its size (seaRemnantAnySize): the Evolution's hydrology keeps no lake smaller than
- * lakeMinKm2, two cells and lakeMinDepthM, so such a remnant was never full and its rivers ended in it — on that planet
- * 83 of its 189 closed lakes, one to ten regions a few metres deep, that their rivers would fill many times over (one
- * took in 37,000 m³/s): 14 % of its land drained to them. And a basin on land its rivers cannot fill is where they end
- * (closedBasins: the Evolution cuts it through, "every river needs to end at ocean"): a salt lake at its balance, or a
- * salt pan — unless twice what they bring would fill it (closedBasinPluvial: wetter times breached it). On real Earth's
- * map, with the observed climate, 19 % of the land then drains to closed basins (Earth: ≈ 18–20 %; 3 % without, to seas
- * the coarse map encloses) — the Tarim's, Balkhash's, Lake Eyre's (a pan), the Great Basin's, Sistan's, the Dead Sea's,
+ *     months as its water comes from near and far (riverSpeedKmDay; before, every month's water reached the mouth
+ *     within the month): the great basins' year, from 500,000 km², 0.79 months early → 0.07, the months' correlation
+ *     0.86 → 0.89, the peak within a month 83 → 87 %. Of 25–80 km a day, 40 scores best: 0.46 m/s, one effective speed
+ *     for every river, as simple global river-routing schemes have it (TRIP's first version, CLM4, LPJ) — the water
+ *     runs faster in its channel, but floodplains and wetlands hold it back. A basin far larger than Earth's has its
+ *     year spread out more than shifted: water from 7,600 km on average, give or take 3,400, keeps 40 % of its seasons.
+ * The year's flows do not depend on them. The cold rivers' spring floods come out too flat (tuning/water/README.md).
+ * And with them a basin that a gorge from upstream drains below its own floor holds no water along that gorge
+ * (drainBelowFloor; on planet 06cy8w6z6a89kow6psje93 with the ice age, before, a 54,600 km² "lake" over a canyon).
+ * Generate's own: an inland sea is a lake whatever its size (seaRemnantAnySize): the hydrology keeps no lake smaller
+ * than lakeMinKm2, two cells and lakeMinDepthM, so such a remnant was never full and its rivers ended in it — on that
+ * planet 83 of its 189 closed lakes, one to ten regions a few metres deep, that their rivers would fill many times over
+ * (one took in 37,000 m³/s): 14 % of its land drained to them (in the Evolution it changes nothing: a remnant smaller
+ * than seaBasinKm2 is the land's there). And a basin on land its rivers cannot fill is where they end (closedBasins:
+ * the Evolution cuts it through, "every river needs to end at ocean"): a salt lake at its balance, or a salt pan —
+ * unless twice what they bring would fill it (closedBasinPluvial: wetter times breached it). On real Earth's map, with
+ * the observed climate, 19 % of the land then drains to closed basins (Earth: ≈ 18–20 %; 3 % without, to seas the
+ * coarse map encloses) — the Tarim's, Balkhash's, Lake Eyre's (a pan), the Great Basin's, Sistan's, the Dead Sea's,
  * Urmia's; on planet 06cy8w6z6a89kow6psje93 4 %, half of it to basins on land (6 salt lakes, 109 pans): its erosion
  * drained most hollows.
  */
-export const WATER = Object.freeze({ ...FINISH, lakeRegulationDry: 0, baseflowShare: 0.7, baseflowMonths: 3, riverSpeedKmDay: 40, drainBelowFloor: true, seaRemnantAnySize: true, closedBasins: true });
+export const WATER = Object.freeze({ ...FINISH, seaRemnantAnySize: true, closedBasins: true });
 
 /**
  * Rivers and lakes on a V1 planet.
