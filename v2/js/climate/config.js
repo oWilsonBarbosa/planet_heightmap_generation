@@ -75,7 +75,8 @@ export const PARAMS_DEFAULTS = Object.freeze({
     // Tuned 2026-09-28 (tuning/climate/circulation-check.mjs --tune: open loop, continents and ocean basins weighted
     // equally, none worse than with the literature values). Ferrel width, sea friction angle and Hadley scale ended
     // at or near the edge of their ranges — a hint of the simple structure's limits.
-    CIRC_HADLEY_SCALE: 1.5,   // –          Hadley-cell width relative to Held & Hou's estimate
+    CIRC_HADLEY_SCALE: 1.44,  // –          Hadley-cell width relative to Held & Hou's estimate (1.5, the range's
+                                //            edge, until 2026-10-25: polar air too warm then narrowed the contrast)
     CIRC_HADLEY_SEASONAL: 0.5, // –          share of each month's own equator-to-pole contrast in the Hadley cells' width
     CIRC_FERREL_DEG: 35,        // °          from the subtropical high to the subpolar low (the Ferrel cell)
     CIRC_TROPICAL_HPA: 10.13,    // hPa        how much lower the tropical rain belt is than the subtropical highs
