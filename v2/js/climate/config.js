@@ -46,6 +46,13 @@ export const PARAMS_DEFAULTS = Object.freeze({
     TEMP_SEA_ICE_H0: 0.5,       // m          the sea is covered once its ice is this thick (and holds at most 6× this)
     TEMP_SEA_ICE_SPREAD_KM: 700,// km         the ice follows the sea's temperature averaged within this (a warm current's
                                 //            water spreads well out from its coast; the pack drifts)
+    TEMP_SNOW_MELT_MM: 90,      // mm/°C      snow on the ground melts this much water a month per °C above freezing, its
+                                //            latent heat taken from the air (spring late where the snow is deep; with the
+                                //            rain stage's rain; 0 = off) …
+    TEMP_SNOW_COVER_MM: 60,     // mm         … and covers the ground for the albedo as 1 − e^{−water/this} (0 = the month's
+                                //            cold alone, TEMP_ICE_WARM_C … TEMP_ICE_COLD_C) …
+    TEMP_SNOW_ALBEDO: 0.45,     // –          … reflecting this much (the snow itself; TEMP_ALBEDO_SNOW where the cold alone
+                                //            stands for it, counting dry frozen ground as snowy)
     TEMP_BLOCK_KM: 1.5,           // km         mountains block the low air's heat exchange: e^{−(ridge above the lower side)/this}; 0 = off
     TEMP_LOCAL_K: 11,            // W/m²/K     land's own seasons below the grid: a column's exchange with its surroundings (0 = off)
     TEMP_LOCAL_KM: 1925,        // km         … its departure from the region within this (Gaussian σ) is added over land
@@ -223,6 +230,9 @@ export const PARAM_PRIORS = Object.freeze({
     TEMP_SEA_ICE_MELT:  { value: 0.003, min: 0.002, max: 0.006, source: 'summer surface melt ≈ 0.5–1.5 m over a season of a few hundred positive degree-days (Perovich et al. 2003)' },
     TEMP_SEA_ICE_H0:    { value: 0.5, min: 0.3, max: 1, source: 'ice ≈ 0.3–1 m thick closes the sea (consolidated pack vs new ice and leads)' },
     TEMP_SEA_ICE_SPREAD_KM: { value: 700, min: 300, max: 1200, source: 'sea-ice drift ≈ 5–10 km/day — a few hundred to a thousand km over a season (IABP buoys)' },
+    TEMP_SNOW_MELT_MM:  { value: 90, min: 45, max: 150, source: 'degree-day factors for snow ≈ 1.5–5 mm/°C/day (Hock 2003; Braithwaite 2008): ≈ 45–150 mm/°C a month; the latent heat of fusion 334 kJ/kg' },
+    TEMP_SNOW_COVER_MM: { value: 30, min: 10, max: 80, source: 'snow depletion curves: open ground fully covered from ≈ 10–40 mm of snow water, patchy below; forests and rough ground need more (Liston 2004; Niu & Yang 2007)' },
+    TEMP_SNOW_ALBEDO:   { value: 0.45, min: 0.35, max: 0.6, source: 'planetary (top-of-atmosphere) albedo over snow-covered land ≈ 0.35–0.45 over boreal forest, 0.5–0.65 over open land, against ≈ 0.25–0.35 snow-free (CERES, MODIS; Qu & Hall 2007)' },
     TEMP_ICE_START_C:   { value: -30, min: -40, max: -20, source: 'ice-sheet hysteresis: once grown, polar ice sheets persist under climates that would not grow them (e.g. DeConto & Pollard 2003; Abe-Ouchi et al. 2013)' },
 
     CIRC_HADLEY_SCALE:  { value: 1.2, min: 0.9, max: 1.5, source: 'Held & Hou 1980 underestimates the observed Hadley edge by ~20 % (e.g. Frierson et al. 2007)' },

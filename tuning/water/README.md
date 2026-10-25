@@ -60,6 +60,7 @@ node tuning/water/earth-rivers.mjs --tune --climate sim --grid baseflowShare=0.6
 | observed climate, `WATER`: inland seas of any size | 82 % (×0.92) | 0.89 | 87 % | ×0.91 | ×0.90 | 0.13 (0.07) |
 | observed climate, `WATER`: closed basins (122 gauges) | 84 % (×0.91) | 0.90 | 88 % | ×0.94 | ×0.88 | 0.07 (0.00) |
 | simulated climate, `WATER`: closed basins (126 gauges) | 53 % (×0.79) | 0.68 | 61 % | ×0.94 | ×0.75 | −0.02 (0.38) |
+| simulated climate with snow on the ground (125 gauges) | 53 % (×0.81) | 0.70 | 63 % | ×0.93 | ×0.72 | −0.10 (0.23) |
 
 The simulated rows from "`WATER` before closed basins" on are with the simulated climate as it is now, the snowmelt on
 frozen ground mostly running off (`RAIN_MELT_SOAK`, `v2/js/climate/config.js`); those above it with the climate before,
@@ -120,6 +121,13 @@ climate (within one month at 98 % of the cold gauges) — but too flat. Tried, r
 
 `WATER` stays as it was: for a planet's cold rivers, which run on the simulated climate, the place to start is that
 climate's spring. With the observed climate, snowmelt seeping in at 0.85 of rain's sets their floods right.
+
+The climate's snow on the ground (2026-10-25: `TEMP_SNOW_*` in `v2/js/climate/config.js` — snow piled up by the
+winter keeps the land white and, melting, its air near freezing) moved the simulated spring later: the year's score
+−0.179 → −0.163, the cold gauges' year 0.27 months early → 0.10 (their peak within a month 80 → 83 %), but their
+floods as flat (20 % with a flood season). Snowmelt seeping in less than rain still scores lower with the simulated
+climate (0.9: −0.161, 0.85: −0.187, 0.7: −0.204; the cold floods 22, 27, 44 %): at 60–80° N its March and April are
+still 4–6 °C warm (`tuning/climate/diag-spring.mjs`).
 
 With the observed climate the rivers are right within ×2 for 84–90 % of the gauges in tropical, temperate and cold
 climates, and 50 % in arid ones (dams, irrigation, losses). Most of what remains is the simulated climate's: how much

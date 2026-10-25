@@ -21,6 +21,7 @@ como verificá-las e o que ficou em aberto. Os detalhes de cada mudança estão 
 | Mudança | Generate (site) | Import (site) | Evolution (site) | Exportação (0r063N) |
 |---|---|---|---|---|
 | Correções de chuva (`64b4e16`, `fb173ae`) | sim | sim | sim (o clima é compartilhado) | sim |
+| Neve no chão na primavera (item 15) | sim | sim | sim (o clima é compartilhado) | sim |
 | Teto do suprimento de chuva do ar (`e97dc88`) | não (desligado) | não | não | sim (`EARTH_RELIEF_CLIMATE`) |
 | Alturas como as da Terra (`59f4740`) | não | não | não | sim |
 | Rios e lagos do Generate (`js/water-new.js`) | não (sem tela) | não | não | sim |
@@ -64,6 +65,36 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
 3. **`e97dc88`: teto do suprimento de água do ar** (`RAIN_SUPPLY_START_MM`, `RAIN_SUPPLY_MAX_MM`).
    - Desligado por padrão: o terreno do Evolution responde a qualquer mudança de chuva.
    - `js/earth-relief.js` `EARTH_RELIEF_CLIMATE` liga o teto para planetas com alturas da Terra.
+15. **2026-10-25: neve no chão na primavera** (`temperature.js`; `TEMP_SNOW_MELT_MM` 90, `TEMP_SNOW_COVER_MM` 60,
+    `TEMP_SNOW_ALBEDO` 0,45).
+    - **Problema** (diagnóstico novo `tuning/climate/diag-spring.mjs`):
+      - as terras frias (Köppen D e E de Beck) ficavam 4–7 °C quentes demais de fevereiro a maio;
+      - a cobertura de neve saía só da temperatura do mês (0 a −10 °C);
+      - o albedo da neve sazonal (0,325) era menor que o de fundo nas latitudes altas (0,41 a 65° N);
+      - a neve sumia um mês ou mais antes em 42 % das terras entre 60 e 70° N, e a cheia dos rios frios vinha cedo.
+    - **Correção:** na passada final da temperatura (já com a chuva), um balanço de neve no chão.
+      - O que cai abaixo de 0 °C se acumula e derrete a 90 mm por °C e por mês.
+      - O derretimento tira do ar o calor latente de fusão, que a neve devolve ao se formar.
+      - O chão fica branco conforme a neve acumulada (1 − e^(−água/60 mm)), com albedo 0,45. A cobertura pela
+        temperatura (0,325) segue nas passadas sem chuva.
+    - **Resultado na Terra:**
+      - Köppen contra Beck 46,8/86,1 → 47,1/86,1 %; continentes iguais 43,7 → 44,3 %;
+      - Kottek 0,7188 → 0,7196;
+      - erro da temperatura das terras 3,75 → 3,72 °C;
+      - 60–70° N, março a maio: +6,7/+5,7/+3,3 → +5,6/+4,2/+1,7 °C; neve que some cedo 42 → 32 %;
+      - 50–60° N: +3,2/+2,6/+2,7 → +1,6/+0,2/+0,4 °C;
+      - rios com o clima simulado (2,56M): nota anual −0,179 → −0,163; o pico dos rios frios adiantado 0,27 → 0,10 mês;
+      - nenhum planeta gerado ficou mais seco.
+    - **Custo:**
+      - uns 100 ms num clima de ~6,5 s (160K);
+      - a Ásia perde 0,6 ponto de acerto exato: os subtrópicos, já frios demais, esfriam 0,3–0,8 °C pelo norte mais frio
+        e pela neve de primavera nas montanhas;
+      - a cheia dos rios frios continua achatada (20 % com estação de cheia, contra 51 %).
+    - **Testado e rejeitado:**
+      - só a neve mais clara, pela cobertura da temperatura (0,45–0,55): piora a Ásia (Cw → Dw no norte da China, de
+        inverno seco);
+      - albedo 0,48–0,55 com a neve acumulada: verões frios demais a 60–70° N;
+      - só o calor latente: quase nenhum efeito na primavera.
 
 ### Relevo
 
@@ -148,18 +179,19 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
 ## Números de referência atuais (Terra real, 2,56M regiões)
 
 - **Clima:**
-  - Köppen contra Beck: 46,8 % exato, 86,1 % próximo;
-  - Kottek: 0,7188;
-  - erro da chuva nas terras (log): 0,558.
+  - Köppen contra Beck: 47,1 % exato, 86,1 % próximo (continentes iguais 44,3 / 85,7 %);
+  - Kottek: 0,7196;
+  - erro da temperatura das terras 3,72 °C; da chuva (log) 0,72 por continente (`coupled-check`), 0,558 nas terras
+    (`diag-rain-bias`).
 - **Rios, clima observado** (122 estações):
   - nota anual 0,252;
   - escoamento dentro de ×2 em 84 % (×0,91);
   - correlação 0,90; pico ±1 mês 88 %.
-- **Rios, clima simulado** (126 estações): nota anual −0,179; dentro de ×2 em 53 %.
+- **Rios, clima simulado** (125 estações): nota anual −0,163; dentro de ×2 em 53 %; correlação 0,70.
 - **Estação de cheia** (pico ≥ 2,5× a média), simulada contra medida:
   - clima observado: 36 contra 39 % das estações; nos climas frios (zona D), 24 contra 51 %;
-  - clima simulado: 34 contra 38 %; frios 22 contra 51 %, temperados 42 contra 8 %, secos 50 contra 20 %.
-- **Drenagem fechada:** 18,8 % das terras com o clima observado, 19,5 % com o simulado.
+  - clima simulado: 34 contra 37 %; frios 20 contra 51 %, temperados 42 contra 8 %, secos 50 contra 20 %.
+- **Drenagem fechada:** 18,8 % das terras com o clima observado, 18,9 % com o simulado.
 
 ## Em aberto e próximos passos
 
@@ -203,13 +235,16 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
 6. **Teste das bacias fechadas na Terra.** O mapa grosseiro (pixels de 20 km, 8 bits) fecha bacias que os rios
    atravessam por gargantas menores que uma célula: o Colorado (EUA) e partes do Indo.
 7. **Pull request para o original:** não feito. Os commits estão separados por tema e podem ser escolhidos um a um.
-8. **Cheias dos rios frios.** Estação de cheia em 22–24 % dos rios frios da Terra, contra 51 % medidos.
+8. **Cheias dos rios frios.** Estação de cheia em 20–24 % dos rios frios da Terra, contra 51 % medidos.
    - A cheia de degelo vem no mês certo com o clima observado (98 % a ±1 mês), mas achatada.
-   - Com o clima simulado ela vem cedo (80 %): a primavera simulada derrete a neve antes.
+   - Com o clima simulado ela vinha cedo (80 %, adiantada 0,27 mês). Com a neve no chão (item 15) adianta só 0,10
+     mês (83 %), mas segue achatada.
    - **Testado sem sucesso** (`tuning/water/README.md`): fluxo de base 0,6–0,65; degelo infiltrando menos que a chuva
      (0,7–0,9); velocidade do degelo 60–400 mm/°C por mês. O degelo a 0,85 acerta as cheias com o clima observado
-     (49 %, nota 0,252 → 0,270), mas piora com o simulado (−0,179 → −0,214).
-   - **Caminho:** corrigir a primavera do clima simulado; depois o degelo a 0,85 valeria.
+     (49 %, nota 0,252 → 0,270), mas piora com o simulado, também depois do item 15 (−0,163 → −0,187).
+   - **O que falta na primavera simulada:** a 60–80° N, março e abril seguem 4–6 °C quentes, e o inverno dos interiores
+     também (Iacútia +11–13 °C, Quebec +9–11 °C): o inverno "sem núcleo" dos continentes frios não fica frio o
+     bastante. A chuva de abril a junho nas terras frias também sai ×2–5 (`diag-spring.mjs`).
 
 ## Regras de trabalho
 
