@@ -69,7 +69,7 @@ A top navigation bar connects the pages:
 
 On narrow phones the Import tab reads just "Import".
 
-After the tabs, past a short divider: GitHub, then **Follow** with Bluesky, X and Threads, then **Support** with Ko-fi (plain links that open in a new tab; nothing is loaded from those sites). On phones and tablets the bar keeps only the tabs, and the same links sit at the foot of the side panel (a row a desktop shows too): GitHub, the three follow icons and **Support on Ko-fi**. The Studio has GitHub and the follow links under its introduction, and Ko-fi in its footer.
+After the tabs, past a short divider: GitHub, then **Follow** with Bluesky, X and Threads, then **Support** with Ko-fi (plain links that open in a new tab; nothing is loaded from those sites). On phones and tablets the bar keeps only the tabs, and the same links sit at the foot of the side panel (a row a desktop shows too): GitHub, the three follow icons and **Support** with the Ko-fi cup. The Studio has GitHub and the follow links under its introduction, and Ko-fi in its footer.
 
 ### Sharing Planets
 
