@@ -10,8 +10,10 @@
  * climate zone at the gauge (Beck's Köppen group):
  *   runoff   the year's flow ÷ the drainage area, simulated ÷ measured: median, share within ×2, rms
  *   year     the twelve monthly mean flows: correlation with the measured, the peak month within one of it, the range
- *            (coefficient of variation of the months, simulated ÷ measured) and the low flow (the lowest month ÷ the
- *            mean, simulated ÷ measured); how early the simulated year comes (the shift, in months, that best
+ *            (coefficient of variation of the months, simulated ÷ measured), the peak (the highest month ÷ the mean,
+ *            simulated ÷ measured) and the low flow (the lowest month ÷ the mean, simulated ÷ measured); the share of
+ *            gauges with a flood season (the peak month floodRatio × the mean or more: the regime the Evolution colours
+ *            violet), simulated and measured; how early the simulated year comes (the shift, in months, that best
  *            correlates it with the measured: the mean over all gauges, and over the great basins, from 500,000 km²)
  * And the closed basins: the share of the land (without Antarctica) whose water ends in a lake with no outflow (Earth:
  * ≈ 18–20 %, Wang et al. 2018), and which of Earth's own closed basins close (CLOSED).
@@ -20,8 +22,9 @@
  *                                      [--tune [--grid key=v/v/v,…]] [--list]
  *
  * --set overrides the hydrology's constants (js/water-new.js WATER); --tune searches the constants of the rivers' year
- * (TUNE below) with the observed climate, ranked by the year's score: correlation − |ln(range ratio)| − ½ |ln(low-flow
- * ratio)|, the median over the gauges. The annual flows do not depend on them. --list prints each gauge.
+ * (TUNE below) with the observed climate (--climate sim: the simulated), ranked by the year's score: correlation −
+ * |ln(range ratio)| − ½ |ln(low-flow ratio)|, the median over the gauges; each with the cold climates' (zone D) and
+ * each zone's flood seasons. The annual flows do not depend on them. --list prints each gauge.
  *
  * Needs:  npm install --no-save netcdfjs pngjs delaunator
  *         node tuning/water/fetch-rivers.mjs
@@ -146,8 +149,9 @@ function score(W) {
         if (i !== undefined && W.rivers.months) {
             const m = Array.from(W.rivers.months.subarray(12 * i, 12 * i + 12));
             if (m.every(v => v >= 0) && m.some(v => v > 0)) {
-                const d = Math.abs(argmax(m) - argmax(s.months));
+                const d = Math.abs(argmax(m) - argmax(s.months)), top = (a) => Math.max(...a) / (a.reduce((t, x) => t + x, 0) / 12);
                 Object.assign(row, { r: corr(m, s.months), peak: Math.min(d, 12 - d) <= 1, range: cv(m) / cv(s.months), low: low(m) / low(s.months), early: early(m, s.months), great: s.areaKm2 >= GREAT_KM2,
+                    top: top(m) / top(s.months), flood: top(m) >= WATER.floodRatio, floodMeasured: top(s.months) >= WATER.floodRatio,
                     year: m.map(v => v / (m.reduce((t, x) => t + x, 0) / 12)), measured: s.months.map(v => v / (s.months.reduce((t, x) => t + x, 0) / 12)) });
             }
         }
@@ -163,7 +167,8 @@ function summary(rows) {
     const yr = rows.filter(x => x.r !== undefined), w2 = rows.filter(x => x.runoff >= 0.5 && x.runoff <= 2).length;
     const rms = 10 ** Math.sqrt(rows.reduce((t, x) => t + Math.log10(x.runoff) ** 2, 0) / Math.max(1, rows.length));
     return `${String(rows.length).padStart(3)} gauges · runoff ×${med(rows.map(x => x.runoff)).toFixed(2)}, within ×2 ${Math.round(100 * w2 / Math.max(1, rows.length))} %, rms ×${rms.toFixed(2)}`
-        + ` · year r ${med(yr.map(x => x.r)).toFixed(2)}, peak ±1 month ${Math.round(100 * yr.filter(x => x.peak).length / Math.max(1, yr.length))} %, range ×${med(yr.map(x => x.range)).toFixed(2)}, low flow ×${med(yr.map(x => x.low)).toFixed(2)}`
+        + ` · year r ${med(yr.map(x => x.r)).toFixed(2)}, peak ±1 month ${Math.round(100 * yr.filter(x => x.peak).length / Math.max(1, yr.length))} %, range ×${med(yr.map(x => x.range)).toFixed(2)}, peak ×${med(yr.map(x => x.top)).toFixed(2)}, low flow ×${med(yr.map(x => x.low)).toFixed(2)}`
+        + `, flood season ${Math.round(100 * yr.filter(x => x.flood).length / Math.max(1, yr.length))} % (measured ${Math.round(100 * yr.filter(x => x.floodMeasured).length / Math.max(1, yr.length))} %)`
         + `, early ${mean(yr.map(x => x.early)).toFixed(2)} months (great basins ${mean(yr.filter(x => x.great).map(x => x.early)).toFixed(2)}, ${yr.filter(x => x.great).length})`;
 }
 const run = (climate, F) => runNewWater({ r_xyz: xyz, r_elevation: E.r_elevation, ...adj, climate }, { F, riverMonths: true });
@@ -199,17 +204,18 @@ function closedBasins(W) {
 }
 
 if (TUNING) {
-    // ── every combination of TUNE's values, with the observed climate ──
+    // ── every combination of TUNE's values, with the observed climate (or the simulated) ──
     const keys = Object.keys(TUNE), combos = keys.reduce((list, k) => list.flatMap(c => TUNE[k].map(v => ({ ...c, [k]: v }))), [{}]);
     const results = [];
     for (const c of combos) {
-        const rows = score(run(obs, { ...WATER, ...SET, ...c }));
+        const rows = score(run(CLIMATE === 'sim' ? sim : obs, { ...WATER, ...SET, ...c }));
         results.push({ c, rows, s: yearScore(rows) });
         log(`${keys.map(k => `${k} ${c[k]}`).join(', ')}: year score ${results.at(-1).s.toFixed(3)}`);
     }
     results.sort((a, b) => b.s - a.s);
-    console.log(`${gauges.length} gauges draining ≥ ${MIN_AREA.toLocaleString()} km²; Earth at ${n.toLocaleString()} regions; observed climate; ranked by the year's score`);
-    for (const x of results) console.log(`${x.s.toFixed(3)}  ${keys.map(k => `${k} ${x.c[k]}`).join(', ').padEnd(64)} ${summary(x.rows)}`);
+    console.log(`${gauges.length} gauges draining ≥ ${MIN_AREA.toLocaleString()} km²; Earth at ${n.toLocaleString()} regions; ${CLIMATE === 'sim' ? 'simulated' : 'observed'} climate; ranked by the year's score`);
+    const floods = (rows) => ZONES.map(z => { const yr = rows.filter(y => y.zone === z && y.r !== undefined); return yr.length >= 3 ? `${z} ${Math.round(100 * yr.filter(y => y.flood).length / yr.length)}/${Math.round(100 * yr.filter(y => y.floodMeasured).length / yr.length)}` : ''; }).filter(Boolean).join(', ');
+    for (const x of results) console.log(`${x.s.toFixed(3)}  ${keys.map(k => `${k} ${x.c[k]}`).join(', ').padEnd(64)} ${summary(x.rows)}\n${' '.repeat(71)}zone D ${summary(x.rows.filter(y => y.zone === 'D'))}\n${' '.repeat(71)}flood season by zone, simulated/measured %: ${floods(x.rows)}`);
 } else {
     console.log(`${gauges.length} gauges draining ≥ ${MIN_AREA.toLocaleString()} km²; Earth at ${n.toLocaleString()} regions${Object.keys(SET).length ? `; ${JSON.stringify(SET)}` : ''}`);
     for (const [label, climate] of [['observed climate', obs], ['simulated climate', CLIMATE === 'obs' ? null : sim]]) {

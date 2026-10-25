@@ -22,4 +22,18 @@ runs of the same code give identical hashes (116 outputs).
 
 Generate's options in the finish (`FINISH` in `v2/js/finish/finish-config.js`: `drainBelowFloor`,
 `seaRemnantAnySize`, `closedBasins`, `riverSpeedKmDay`, …) are off for the Evolution; `js/water-new.js` `WATER` turns
-them on for Generate. This check shows they stay off.
+them on for Generate. This check shows they stay off. `--set key=value,…` turns them on (any `FINISH` constant), to see
+what one would change in the Evolution: `--compare` against a run without it, and the lakes and the rivers' regimes
+each run prints.
+
+```bash
+node tuning/evolution/regress.mjs /tmp/base.json
+node tuning/evolution/regress.mjs /tmp/gorge.json --set drainBelowFloor=true
+node tuning/evolution/regress.mjs --compare /tmp/base.json /tmp/gorge.json
+```
+
+At 250K (2026-10-25): `drainBelowFloor` 121 → 100 fresh lakes, 0.65 → 0.47 % of the land; at 640K
+`seaRemnantAnySize` changes nothing (a remnant of the sea under `seaBasinKm2` is the land's there), `closedBasins`
+makes 17 salt lakes and 159 salt pans and keeps 1,102 regions up to 1.4 km higher (rims no longer cut through), and
+Generate's river year (`baseflowShare=0.7,baseflowMonths=3,riverSpeedKmDay=40,lakeRegulationDry=0`) turns 54 → 34 %
+of the river points' regime to a flood season, 38 → 64 % to steady.

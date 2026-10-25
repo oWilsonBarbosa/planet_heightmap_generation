@@ -19,7 +19,10 @@ By the climate zone at the gauge (Beck's Köppen group A–E):
 - `year r` — correlation of the twelve monthly mean flows with the measured
 - `peak ±1 month` — share of gauges whose highest month is within one month of the measured
 - `range` — the coefficient of variation of the twelve months, simulated ÷ measured (1 = as seasonal as measured)
+- `peak` — the highest month ÷ the mean, simulated ÷ measured
 - `low flow` — the lowest month ÷ the mean, simulated ÷ measured
+- `flood season` — the share of gauges whose highest month carries 2.5 × the mean or more (`floodRatio`: the regime
+  the Evolution colours violet, `regime` 1 in an export), simulated and measured
 - `early` — how many months later the simulated year best matches the measured (the shift that correlates them best;
   positive: the simulated comes early): the mean over the gauges, and over the great basins, from 500,000 km²
 
@@ -41,6 +44,7 @@ node tuning/water/earth-rivers.mjs                       # both climates, at 640
 node tuning/water/earth-rivers.mjs --n 2560000 --list    # at 2.56M (~1 min), every gauge with its twelve months
 node tuning/water/earth-rivers.mjs --set baseflowShare=0.6,baseflowMonths=2.5    # other constants (WATER keys)
 node tuning/water/earth-rivers.mjs --tune [--grid baseflowShare=0.5/0.7,baseflowMonths=2/3]   # search, observed climate
+node tuning/water/earth-rivers.mjs --tune --climate sim --grid baseflowShare=0.6/0.7          # search, simulated climate
 ```
 
 ## Results (2.56M regions, 130 gauges)
@@ -97,6 +101,24 @@ riverSpeedKmDay=0/25/30/40/50/60/80` with the observed climate at 2.56M: year sc
 its channel, but floodplains and wetlands hold it back. The Amazon now peaks in April–May, the measured in May–June
 (before: March–April); the model has no floodplains. The spread changes little here (the Mackenzie's year: r 0.97 →
 0.99 against a shift alone); it matters for basins larger than Earth's, whose water comes from thousands of km apart.
+
+**Flood seasons.** As many gauges have one as measured (36 % against 39 % with the observed climate, 34 % against 38 %
+with the simulated, at 2.56M), but in the wrong climates: too few in cold ones (zone D, 41 gauges: 24 % and 22 % against
+51 %; the peak ×0.87 and ×0.81), too many in temperate (C: 29 % and 42 % against 14 % and 8 %) and dry ones (B: 56 %
+and 50 % against 33 % and 20 %). The spring flood of rivers on frozen ground comes in its month — with the observed
+climate (within one month at 98 % of the cold gauges) — but too flat. Tried, ranked by the year's score at 2.56M:
+- **less water through the ground**: `baseflowShare` 0.65 brings the cold floods to 32 % and scores 0.259 against 0.252
+  with the observed climate, but −0.212 against −0.179 with the simulated (27 %); 0.6: 59 % and 0.249 observed, 39 %
+  and −0.263 simulated;
+- **snowmelt seeping in less than rain**, the ground still frozen beneath (the climate's `RAIN_MELT_SOAK`; tried as a
+  share of what rain seeps in): 0.85 brings them to 49 % and scores 0.270 with the observed climate, but with the
+  simulated only to 24 %, at −0.214 — its snow melts early (the cold floods within a month of the measured at 80 %,
+  68 % with the sharper flood), and a sharper flood in the wrong month scores lower; 0.7: 76 % and 0.223 observed,
+  49 % and −0.229 simulated;
+- **a faster or slower melt** (`snowMeltMmPerC` 60–400, at 640K): 11–14 % observed, 22–27 % simulated.
+
+`WATER` stays as it was: for a planet's cold rivers, which run on the simulated climate, the place to start is that
+climate's spring. With the observed climate, snowmelt seeping in at 0.85 of rain's sets their floods right.
 
 With the observed climate the rivers are right within ×2 for 84–90 % of the gauges in tropical, temperate and cold
 climates, and 50 % in arid ones (dams, irrigation, losses). Most of what remains is the simulated climate's: how much

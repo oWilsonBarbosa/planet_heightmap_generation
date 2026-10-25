@@ -118,8 +118,9 @@ que elas não mexem no Evolution.
 - `tuning/water/earth-rivers.mjs`:
   - rios da Terra real contra 130 estações;
   - fração de terras com drenagem fechada contra a da Terra;
-  - quais das 15 bacias fechadas conhecidas fecham.
-  - Opções: `--n 2560000 --list`, `--set chave=valor`, `--tune`.
+  - quais das 15 bacias fechadas conhecidas fecham;
+  - o tamanho do pico e a parcela de rios com estação de cheia, simulada e medida, por zona climática.
+  - Opções: `--n 2560000 --list`, `--set chave=valor`, `--tune` (com `--climate sim`, contra o clima simulado).
 - `tuning/climate/diag-rain-bias.mjs`: vieses de chuva na Terra contra Beck e GPCP.
 - `tuning/relief/`: hipsometria da Terra (ETOPO 2022).
 - `tuning/evolution/regress.mjs`: prova que uma mudança no código compartilhado deixa o Evolution idêntico (116 saídas
@@ -136,15 +137,26 @@ que elas não mexem no Evolution.
   - escoamento dentro de ×2 em 84 % (×0,91);
   - correlação 0,90; pico ±1 mês 88 %.
 - **Rios, clima simulado** (126 estações): nota anual −0,179; dentro de ×2 em 53 %.
+- **Estação de cheia** (pico ≥ 2,5× a média), simulada contra medida:
+  - clima observado: 36 contra 39 % das estações; nos climas frios (zona D), 24 contra 51 %;
+  - clima simulado: 34 contra 38 %; frios 22 contra 51 %, temperados 42 contra 8 %, secos 50 contra 20 %.
 - **Drenagem fechada:** 18,8 % das terras com o clima observado, 19,5 % com o simulado.
 
 ## Em aberto e próximos passos
 
 1. **Ligar regras novas no Evolution?** Decisão pendente do dono.
-   - Regras candidatas: `drainBelowFloor` (afeta 29 dos 99 lagos doces da semente 10673275 a 250K),
-     `seaRemnantAnySize`, `closedBasins` e `riverSpeedKmDay`.
-   - Cada uma é uma linha em `FINISH`.
-   - Medir com `tuning/evolution/regress.mjs` e olhar o mundo do Evolution.
+   - Cada regra é uma linha em `FINISH`. Medido no mundo da semente 10673275 a 640K (2026-10-25), uma de cada vez:
+     - `drainBelowFloor`: 386 → 355 lagos doces, área de lagos 1,02 → 0,86 % das terras; somem os "lagos" enfileirados
+       ao longo de gargantas; 284 regiões rebaixadas (média 42 m); Köppen igual.
+     - `seaRemnantAnySize`: nenhum efeito (o Evolution já trata restos de mar abaixo de 5.000 km² como terra).
+     - `closedBasins`: 17 lagos salgados (77 mil km²) e 159 salinas (128 mil km²); 1.102 regiões ficam até 1,4 km mais
+       altas (bordas de bacia que deixam de ser cortadas); contraria a regra do autor original.
+     - Ano dos rios do Generate (`baseflowShare` 0,7, `baseflowMonths` 3, `riverSpeedKmDay` 40, `lakeRegulationDry` 0):
+       regime muda em 32 % dos pontos de rio (permanentes 38 → 64 %, com cheia 54 → 34 %). Na Terra com o clima
+       simulado (640K), nota −0,549 → −0,144, mas faltam cheias nos rios frios (ver item 8).
+   - Para medir: `node tuning/evolution/regress.mjs <saída.json> --set drainBelowFloor=true` (qualquer constante de
+     `FINISH`), `--compare` contra uma rodada sem a regra; cada rodada imprime lagos e regimes
+     (`tuning/evolution/README.md`).
 2. **Publicar o fork no navegador.**
    - É um site estático e já roda igual ao original: testado localmente, Evolution e Generate sem erros.
    - Para o GitHub Pages:
@@ -171,6 +183,13 @@ que elas não mexem no Evolution.
 6. **Teste das bacias fechadas na Terra.** O mapa grosseiro (pixels de 20 km, 8 bits) fecha bacias que os rios
    atravessam por gargantas menores que uma célula: o Colorado (EUA) e partes do Indo.
 7. **Pull request para o original:** não feito. Os commits estão separados por tema e podem ser escolhidos um a um.
+8. **Cheias dos rios frios.** Estação de cheia em 22–24 % dos rios frios da Terra, contra 51 % medidos.
+   - A cheia de degelo vem no mês certo com o clima observado (98 % a ±1 mês), mas achatada.
+   - Com o clima simulado ela vem cedo (80 %): a primavera simulada derrete a neve antes.
+   - **Testado sem sucesso** (`tuning/water/README.md`): fluxo de base 0,6–0,65; degelo infiltrando menos que a chuva
+     (0,7–0,9); velocidade do degelo 60–400 mm/°C por mês. O degelo a 0,85 acerta as cheias com o clima observado
+     (49 %, nota 0,252 → 0,270), mas piora com o simulado (−0,179 → −0,214).
+   - **Caminho:** corrigir a primavera do clima simulado; depois o degelo a 0,85 valeria.
 
 ## Regras de trabalho
 

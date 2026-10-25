@@ -115,8 +115,8 @@ export const FINISH = {
     lakeKeepKm2: 5000,
     glacialKeepShare: 0.5,
     // a basin that a gorge from upstream drains below its own floor holds no water along that gorge (off: the gorge's
-    // cells under the floor read as a lake strung along it — on for Generate, js/water-new.js; here they make 29 of the
-    // 99 fresh lakes of seed 10673275 at 250K cells)
+    // cells under the floor read as a lake strung along it — on for Generate, js/water-new.js; here they make 21 of the
+    // 121 fresh lakes of seed 10673275 at 250K cells: tuning/evolution/regress.mjs --set drainBelowFloor=true)
     drainBelowFloor: false,
     // a remnant of the sea is a lake whatever its size, one cell or a few metres deep too (off: only from lakeMinKm2, two
     // cells and lakeMinDepthM, as any hollow — a smaller one holds no water. On for Generate, js/water-new.js, which keeps

@@ -5,7 +5,11 @@
  * as it was, or to change only what it should.
  *
  *   node tuning/evolution/regress.mjs <out.json> [--seed 10673275] [--sim 40000] [--time 300] [--cells 250000]
+ *                                     [--set key=value,…]
  *   node tuning/evolution/regress.mjs --compare <before.json> <after.json>
+ *
+ * --set overrides the finish's constants (FINISH) — what a rule Generate turns on (js/water-new.js WATER) would change
+ * in the Evolution: --compare against a run without it, and the lakes and the rivers' regimes it prints.
  *
  * The baseline comes from the code before the change: a worktree of that commit (git worktree add <dir> <commit>, its
  * node_modules linked to this checkout's), its copy of this script run with the same options; then this checkout's, and
@@ -42,6 +46,8 @@ const OUT = process.argv[2];
 if (!OUT || OUT.startsWith('--')) throw new Error('usage: node tuning/evolution/regress.mjs <out.json> [--seed …] | --compare <a.json> <b.json>');
 const SEED = Number(arg('--seed', 10673275)), CONT = Number(arg('--cont', 30)), SIM = Number(arg('--sim', 40000));
 const TIME = Number(arg('--time', 300)), CELLS = Number(arg('--cells', 250000));
+const SET = Object.fromEntries((arg('--set', '') || '').split(',').filter(Boolean).map(kv => { const [k, v] = kv.split('='); return [k, v === 'true' ? true : v === 'false' ? false : Number(v)]; }));
+for (const k of Object.keys(SET)) if (!(k in FINISH)) throw new Error(`--set: no constant ${k} in FINISH`);
 const MESH_SEED = 12345;                                  // the page's: every planet's sim mesh is the same
 const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), 'data');
 const t0 = performance.now(), log = (m) => console.error(`[${((performance.now() - t0) / 1000).toFixed(0)} s] ${m}`);
@@ -67,8 +73,12 @@ log(`history: seed ${SEED}, ${SIM.toLocaleString()} plate cells, ${TIME} Myr`);
 
 // ── the finish (Add detail), as the page's worker runs it, with the page's default climate options ──
 const simMesh = buildSimMesh(SIM, MESH_SEED), pool = await TerrainPool.create(simMesh);
-const fin = await finishPlanet({ frame, simMesh, seed: SEED, cells: CELLS, pool, closePool: true, F: { ...FINISH }, climateOptions: { greenhouseWm2: 0, precipScale: 1 } });
-log(`finished at ${CELLS.toLocaleString()} cells`);
+const fin = await finishPlanet({ frame, simMesh, seed: SEED, cells: CELLS, pool, closePool: true, F: { ...FINISH, ...SET }, climateOptions: { greenhouseWm2: 0, precipScale: 1 } });
+log(`finished at ${CELLS.toLocaleString()} cells${Object.keys(SET).length ? `, ${JSON.stringify(SET)}` : ''}`);
+const w = fin.stats.water, reg = [0, 0, 0, 0];
+for (const r of fin.rivers.regime) reg[r]++;
+log(`lakes: ${w.freshLakes} fresh, ${w.saltLakes} salt, ${w.pans} pans, ${(100 * w.lakeShare).toFixed(2)} % of the land; ${(100 * w.toBasinsShare).toFixed(2)} % of the runoff to closed basins; `
+    + `${w.points.toLocaleString()} river points: ${['steady', 'flood season', 'seasonal', 'dry most of the year'].map((k, i) => `${(100 * reg[i] / Math.max(1, w.points)).toFixed(1)} % ${k}`).join(', ')}`);
 
 // ── every output: arrays by their hash, numbers and strings as they are ──
 const hashes = {};
