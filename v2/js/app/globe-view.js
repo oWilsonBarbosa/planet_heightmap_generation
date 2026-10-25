@@ -2,8 +2,8 @@
 // The texture is the single source of truth for both views, so globe and map always agree.
 // `space: true` (the Evolution page) sets it in V1's space (js/scene.js): its stars, its atmosphere, its bluish ambient
 // light and sun — the sun over the viewer's shoulder, where V1's stands for its opening view, so whatever is turned to
-// face you is lit as V1's planet is — and the sun glinting off the sea (V1's water sphere: shininess 120, specular
-// 0x4488bb at its opacity 0.55), the sea given by a mask (setSeaMask).
+// face you is lit as V1's planet is — and the sun glinting off the sea (V1's water sphere: shininess 50, specular
+// 0x4488bb at half, at its opacity 0.55 — a soft sheen), the sea given by a mask (setSeaMask).
 // The texture is a canvas's, or one painted on the GPU (view/gpu-paint.js: setSource takes either). Zoom is V1's
 // (js/scene.js): the wheel or a pinch sets the distance aimed at and the camera eases there. The map view (setMap) is
 // the same texture drawn flat by the same renderer, letterboxed in a frame element's box — zoomed and panned on the
@@ -14,6 +14,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { P as PROJ } from '../view/projections.js';
 import { PROJECTION_GLSL, projectionUniforms } from '../view/projection-glsl.js';
+
+const GLINT = new THREE.Color(0x4488bb).multiplyScalar(0.5 * 0.55);    // (the sea's specular: V1's water sphere's)
 
 // a wheel's notch (100 px): 14 % nearer or farther — OrbitControls' own was 5 % and felt slow (developer, 2026-10-18:
 // "zooming in is also very slow"); V1's is 8 %. The camera covers this share of the way left each 60th of a second.
@@ -38,7 +40,7 @@ export class GlobeView {
         this.ownTexture = true;                            // (a canvas's: made here; a GPU-painted one belongs to its painter)
         this.globe = new THREE.Mesh(
             new THREE.SphereGeometry(1, 128, 64),
-            space ? new THREE.MeshPhongMaterial({ map: this.texture, specular: new THREE.Color(0x4488bb).multiplyScalar(0.55), shininess: 120 })
+            space ? new THREE.MeshPhongMaterial({ map: this.texture, specular: GLINT.clone(), shininess: 50 })
                 : new THREE.MeshBasicMaterial({ map: this.texture }),
         );
         this.scene.add(this.globe);
@@ -159,7 +161,7 @@ export class GlobeView {
         const map = src ? this.seaMask : null;
         if (m.specularMap !== map) { m.specularMap = map; m.needsUpdate = true; }
         m.specular.setScalar(0);
-        if (src) m.specular.set(0x4488bb).multiplyScalar(0.55);
+        if (src) m.specular.copy(GLINT);
         this._dirty = true;
     }
     /** The sea mask's canvas was painted again. */

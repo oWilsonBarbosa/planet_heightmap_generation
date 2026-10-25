@@ -541,11 +541,11 @@ function blank() {
     show(t);
 }
 
-/** The glint on (the sea mask painted with each frame: the canvas's, or the GPU's) or off. */
+/** The glint on (the sea mask painted with each frame: the canvas's, or the GPU's) or off — off, too, with the hillshade. */
 function glint(on, from = seaMask.canvas) {
-    const want = on ? from : null;
+    const want = on && view.shaded ? from : null;
     if (want === glintFrom) return;
-    glintFrom = want; glinting = on;
+    glintFrom = want; glinting = !!want;
     globe.setSeaMask(want);
 }
 

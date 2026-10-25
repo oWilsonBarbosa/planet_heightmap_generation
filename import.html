@@ -199,9 +199,32 @@
                 <option value="5">5&deg;</option>
                 <option value="2.5">2.5&deg;</option>
             </select></span>
+            <span class="vs-item" id="paletteGroup" title="How heights are coloured on the Terrain view: Classic, this page's own, or one of Evolution's map styles and other-world looks"><label for="palette">Colours</label> <select id="palette">
+            <option value="classic" selected>Classic</option>
+            <optgroup label="Maps">
+            <option value="relief">Relief</option>
+            <option value="topographic">Topographic</option>
+            <option value="natural">Natural</option>
+            <option value="swiss">Swiss</option>
+            <option value="school">School Atlas</option>
+            <option value="etopo">ETOPO</option>
+            <option value="dem">DEM</option>
+            <option value="scientific">Scientific</option>
+            <option value="satellite">Blue Marble (by height)</option>
+            <option value="grey">Grey</option>
+            <option value="antique">Antique</option>
+            </optgroup>
+            <optgroup label="Other worlds">
+            <option value="arid">Arid</option>
+            <option value="frozen">Frozen</option>
+            <option value="lush">Lush</option>
+            <option value="alien">Alien</option>
+            <option value="volcanic">Volcanic</option>
+            </optgroup>
+            </select></span>
         </div>
         <div class="layer-row">
-            <button type="button" id="viewFold" class="vs-fold" aria-controls="viewStrip" aria-expanded="false" aria-label="View options" title="View options: globe or map, projection, auto-rotate, grid lines"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M3.5 1.5 7 5 3.5 8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button type="button" id="viewFold" class="vs-fold" aria-controls="viewStrip" aria-expanded="false" aria-label="View options" title="View options: globe or map, projection, auto-rotate, grid lines, colours"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M3.5 1.5 7 5 3.5 8.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             <div class="map-tabs" id="mapTabs">
                 <button class="map-tab active" data-layer="">Terrain</button>
                 <button class="map-tab" data-layer="biome" title="The planet as from space, cloud-free: each climate's colours climbing with the land to rock and snow, for the year, January or July">Satellite</button>

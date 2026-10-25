@@ -5,7 +5,7 @@
 import { state } from './state.js';
 import { beginExportRender, renderExportLayer, endExportRender, exportSatelliteColors, koppenColor, heightmapColor, landHeightmapColor, toLinear3, exportCentreTag } from './planet-mesh.js';
 import { climateColorFn, gridAt } from './climate-layers.js';
-import { elevationToColor } from './color-map.js';
+import { terrainColor } from './terrain-palette.js';
 import { KOPPEN_CLASSES } from './koppen.js';
 import { initExportPanel } from '../v2/js/view/export-panel.js';
 import { DATA_SCALES as SC, scaled, hillshade8, climateRows } from '../v2/js/view/export-raster.js';
@@ -17,7 +17,7 @@ export const HEIGHT_SCALE = { unit: 'km (sea level at 5/11 of the range)', lo: -
 /** The catalogue: groups of rows, each row a map as Colour and / or Data (one file per `data` entry). */
 export const CATALOGUE = [
     { id: 'maps', label: 'Maps', rows: [
-        { id: 'color', label: 'Colour Map', colour: true, tip: 'The Terrain view: the terrain palette by height, the sea by depth' },
+        { id: 'color', label: 'Colour Map', colour: true, tip: 'The Terrain view in the Colours chosen: the land by height, the sea by depth' },
         { id: 'satellite', label: 'Satellite', colour: true, seasonal: true, needs: 'climate', tip: 'The Satellite view: each climate\'s colours climbing with the land to rock and snow, sea ice in its season' },
         { id: 'koppen', label: 'Climate zones (Köppen)', colour: true, needs: 'climate', data: [{ key: 'koppenIndex', suffix: 'index', label: 'Köppen class index', scale: SC.koppenIndex, bits: 8 }], tip: 'The Köppen classes in the legend\'s colours; as data, each class\'s index (the README lists them)' },
     ] },
@@ -69,7 +69,7 @@ export function initGenerateExport({ page, ensureClimate, code }) {
             const data = state.curData, { r_elevation: elev, r_plate, debugLayers } = data, koppenArr = debugLayers && debugLayers.koppen, s = job.season || 'year', id = job.row.id;
             const render = (spec) => renderExportLayer(rctx.render, spec, progress);
             if (job.variant === 'colour') {
-                if (id === 'color') return render({ mode: 'rgb', colorOf: (r) => elevationToColor(elev[r]) });
+                if (id === 'color') return render({ mode: 'rgb', colorOf: (r) => terrainColor(elev[r]) });
                 if (id === 'satellite') { const sat = rctx.sat[s] || (rctx.sat[s] = exportSatelliteColors(s)); return render({ mode: 'rgb', colorOf: (r) => [sat[3 * r], sat[3 * r + 1], sat[3 * r + 2]] }); }
                 if (id === 'koppen') return render({ mode: 'rgb', colorOf: (r) => toLinear3(koppenColor(koppenArr[r])) });
                 if (id === 'plates') return render({ mode: 'rgb', colorOf: (r) => { const c = state.plateColors[r_plate[r]]; return c ? [c.r, c.g, c.b] : [0.3, 0.3, 0.3]; } });

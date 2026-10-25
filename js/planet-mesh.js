@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { renderer, scene, waterMesh, atmosMesh, starsMesh } from './scene.js';
 import { state } from './state.js';
 import { elevationToColor, elevToHeightKm, biomeColor } from './color-map.js';
+import { terrainColor } from './terrain-palette.js';
 import { makeRng } from './rng.js';
 import { KOPPEN_CLASSES } from './koppen.js';
 import { climateColorFn, climateLayer, vectorAt, regionLatLon, sampleGrid as gridSampleAt } from './climate-layers.js';
@@ -297,7 +298,7 @@ export function buildMapMesh() {
                 else if (ocean_r.has(br))         { cr=0.1; cg=0.2; cb=0.7; }
                 else                              { cr=0.15; cg=0.15; cb=0.18; }
             } else {
-                [cr, cg, cb] = elevationToColor(re);
+                [cr, cg, cb] = terrainColor(re);
             }
             c0r = c1r = c2r = cr;
             c0g = c1g = c2g = cg;
@@ -713,7 +714,7 @@ export function buildMesh() {
                 else if (ocean_r.has(br))         { cr=0.1; cg=0.2; cb=0.7; }
                 else                              { cr=0.15; cg=0.15; cb=0.18; }
             } else {
-                [cr, cg, cb] = elevationToColor(re);
+                [cr, cg, cb] = terrainColor(re);
             }
             for (let j = 0; j < 3; j++) {
                 col[off+j*3]   = cr;
@@ -852,7 +853,7 @@ export function updateMeshColors() {
             if (ocean_r.has(br))              return [0.1, 0.2, 0.7];
             return [0.15, 0.15, 0.18];
         }
-        return elevationToColor(r_elevation[br] - waterLevel);
+        return terrainColor(r_elevation[br] - waterLevel);
     };
 
     // The globe's material follows the layer: unlit for an exact layer, lit otherwise

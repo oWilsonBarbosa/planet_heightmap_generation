@@ -127,7 +127,7 @@ Generate, Import and Evolution share one layout (plans/VIEW_UI_PLAN.md): the sid
 you look at sits over the planet — the **view strip**, the **layer bar** under it, and the **legend** beside the planet.
 
 - **Layer bar** (`js/layer-bar.js`) — **Terrain** · **Satellite** · **Climate** · **Heightmap** · **Plates** (Generate):
-  - **Terrain** — elevation color ramp from deep ocean through sea level to mountain peaks
+  - **Terrain** — the land coloured by height and the sea by depth, in the **Colours** chosen in the view strip (Classic, the page's own ramp from deep ocean through sea level to mountain peaks, by default); on the globe the sun glints softly off the sea
   - **Satellite** — the same look as Evolution's Satellite view (`v2/js/evolution/sat-style.js`): each family of climates in its own colours by height — its lowland colour up to its tree line, then dark grey-red rock, grey rock and snow (rainforests deep green, deserts sand to rust to dark rock, taiga dark green, tundra grey-green, cold deserts like tundra) — blended across the climates' edges (noise-warped, on a fixed grid so it looks the same at every detail), with a gentle fractal mottling; for the year, January or July (the season picker): each place in its own season by latitude, the even mean toward the equator, the snow line lower in winter, the climate's own snow and ice sheets; the sea in the terrain palette with sharp, ragged sea ice in its season.
   - **Climate** — its own row of maps: **Köppen** (the Köppen-Geiger classes, swatches for all 30), **Temperature**, **Rain**, **Wind** and **Currents**, and under **More…** the rest; the tab opens on the climate map shown last. With the row, the **Season** — Year, January or July (the same in both hemispheres — January is the southern summer) — for the layers that change through the year (Satellite too):
     - **Atmosphere** — Pressure (sea-level pressure in hPa, blue = low, red = high, with the wind's arrows and the ITCZ as a green line), Wind (speed in m/s, with arrows)
@@ -141,6 +141,7 @@ you look at sits over the planet — the **view strip**, the **layer bar** under
   - **Centre** (map only) — shifts the map's central meridian to any longitude from 180°W to 180°E, scrolling the projection so the chosen longitude is centered. Exports are centred the same way (the file name notes it, e.g. `-c120E`).
   - **Auto-Rotate** (globe only) — spin the globe continuously
   - **Grid Lines** and the **grid spacing** — a latitude/longitude grid on both globe and map views, every 30°, 15°, 10°, 5° or 2.5°
+  - **Colours** (Generate, Import; Evolution has its own) — how the Terrain view and its Colour Map export colour heights: **Classic** (the page's own ramp, the default) or one of Evolution's sixteen palettes, read by height in km — the maps Relief, Topographic, Natural, Swiss, School Atlas, ETOPO, DEM, Scientific, Blue Marble (by height), Grey and Antique, and the other worlds Arid, Frozen, Lush, Alien and Volcanic (`js/terrain-palette.js`, from `v2/js/evolution/looks.js`). The browser remembers it, the same on Generate and Import.
 - **Legend** — a card beside the planet (bottom right) for the layer shown.
 - **On phones** — the bar becomes one layer list at the top, the season beneath it and the legend under that; the view strip sits at the top of the bottom sheet, never folded, every control a 44 px touch target.
 
@@ -277,6 +278,7 @@ js/
   terrain-post.js       Domain warping, bilateral smoothing, glacial/hydraulic/thermal erosion, ridge sharpening, soil creep
   climate-new.js        The climate for Generate and Import — runs the new climate (v2/js/climate/) on a V1 planet: Köppen, per-region months, the 1° grid
   climate-layers.js     The climate's Inspect layers — colours, legends, hover lines, arrows, the season picker
+  terrain-palette.js    The Terrain view's Colours (Generate, Import): Classic or one of Evolution's palettes, by height in km
   layer-bar.js          The layer bar over the planet (Generate, Import): tabs, the Climate row and season, the phone's list
   view-strip.js         The view strip above the layer tabs (every page), folded behind an arrow: Globe | Map and what applies, the projection picker; in the sheet on phones
   map-projection.js     Generate's and Import's map view in any of the ten projections: the flat map drawn off-screen, shown through the projection's inverse; hover and Ctrl-click through it

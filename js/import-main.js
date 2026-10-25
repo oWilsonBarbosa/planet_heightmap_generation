@@ -15,7 +15,8 @@ import { needsClimate, climateLayer, climateLegendHTML, satelliteLegendHTML, sho
 import { initLayerBar } from './layer-bar.js';
 import { initViewStrip, initProjectionPicker } from './view-strip.js';
 import { renderView, setProjection, mapLonLatAt } from './map-projection.js';
-import { elevationToColor, elevToHeightKm } from './color-map.js';
+import { elevToHeightKm } from './color-map.js';
+import { terrainCss, initPaletteMenu } from './terrain-palette.js';
 import { showBuildError, clearBuildError, describeFailure, holdControls } from './build-error.js';
 
 // ─── File Upload ──────────────────────────────────────────────────
@@ -370,10 +371,7 @@ function updateLegend(layer) {
             { e: -0.50 }, { e: -0.25 }, { e: -0.05 }, { e: 0.00 },
             { e: 0.03 }, { e: 0.15 }, { e: 0.35 }, { e: 0.55 }, { e: 0.80 }
         ];
-        const colors = stops.map(s => {
-            const [r, g, b] = elevationToColor(s.e);
-            return `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
-        });
+        const colors = stops.map(s => terrainCss(s.e));
         const pcts = stops.map((_, i) => Math.round(i / (stops.length - 1) * 100));
         const gradStr = colors.map((c, i) => `${c} ${pcts[i]}%`).join(', ');
         vizLegend.innerHTML = `<div class="legend-gradient" style="background:linear-gradient(to right,${gradStr})"></div>` +
@@ -488,6 +486,9 @@ document.getElementById('gridSpacing').addEventListener('change', (e) => {
     state.gridSpacing = parseFloat(e.target.value);
     rebuildGrids();
 });
+
+// The Terrain view's colours (the view strip's Colours; js/terrain-palette.js)
+initPaletteMenu(() => { updateMeshColors(); updateLegend(state.debugLayer); });
 
 // Map center longitude
 const sMapCenterLon = document.getElementById('sMapCenterLon');

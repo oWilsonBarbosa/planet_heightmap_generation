@@ -28,6 +28,7 @@ export const state = {
     debugLayer: '',
     showPlates: false,          // the Plates tab (Generate): the plate colours, with no other layer
     climateSeason: 'year',       // the climate's Inspect layers: 'year', 'jan' or 'jul' (js/climate-layers.js)
+    palette: 'classic',         // the Terrain view's colours (js/terrain-palette.js)
     isTouchDevice: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0),
     editMode: false,
     oceanCurrentArrowGroup: null,

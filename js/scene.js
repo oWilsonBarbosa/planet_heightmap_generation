@@ -101,10 +101,10 @@ const atmosMat = new THREE.ShaderMaterial({
 export const atmosMesh = new THREE.Mesh(new THREE.SphereGeometry(1.12,64,64), atmosMat);
 scene.add(atmosMesh);
 
-// Water sphere
+// Water sphere — the sun's glint on it broad and soft, a sheen the sea still shows through (a tight, bright one hid it)
 const waterMat = new THREE.MeshPhongMaterial({
     color:0x0c3a6e, transparent:true, opacity:0.55,
-    shininess:120, specular:0x4488bb, depthWrite:false
+    shininess:50, specular:new THREE.Color(0x4488bb).multiplyScalar(0.5), depthWrite:false
 });
 export const waterMesh = new THREE.Mesh(new THREE.SphereGeometry(1.0,80,80), waterMat);
 scene.add(waterMesh);
