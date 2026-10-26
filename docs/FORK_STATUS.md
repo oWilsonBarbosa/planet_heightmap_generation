@@ -2,21 +2,21 @@
 
 Referências conferidas em 26/10/2026. Este documento registra o que foi feito e o que falta. `plans/FORK_HANDOFF.md` preserva o histórico anterior de clima e água.
 
-## Papéis das linhas de trabalho
+## Branches ativos
 
 | Linha | Referência | Papel e estado |
 |---|---|---|
 | `main` | `7026cc6` | Acompanha o projeto original; permanece inalterado. |
 | `integration/climate-hydrology` | main + `a66a5b4`, PR #2 | Candidata separada; testes concluídos nesta rodada, revisão dos resultados aberta. |
-| `ccr-85cb1372-invlm5` | `a66a5b4` | Origem de clima, neve e água; histórico incorporado pelo PR #2. |
-| `feat/world-atlas-poc` | `729f25f`, PR #1 | Atualizado para o Generate atual; preserva o Studio e o motor físico. Ainda não conectado ao Evolution. |
-| `chatgpt/regenerate-cc2662b4` | `4936796` | Reprodução e diagnósticos de uma base Generate antiga; manter a versão identificada. |
-| `audit/geography-baseline-20261023` | `2555d52` | Registro histórico da auditoria inicial. |
-| `claude/affectionate-brahmagupta-f8xp05` | `6de9489` | Experimentos do clima antigo; revisão seletiva pendente. Não transportar seu cache Python. |
-| `claude/orogen-map-generation-fmg-udqzoj` | `3b13df2` | Experimentos antigos de clima e interface; revisão seletiva pendente. |
-| `claude/simulate-time-in-cells-zgwcbn` | `70077db` | Protótipo de Almanac; avaliar separadamente do Evolution atual. |
+| `feat/world-atlas-poc` | `729f25f`, PR #1 | Atlas atualizado para Generate; preserva Studio e motor físico. Ainda não conectado ao Evolution. |
 
-As pontas originais dos sete branches secundários estão preservadas nas tags `snapshot/2026-10-26/<nome-do-branch>`. A referência do código de pesquisa `47edc28` tem a tag `baseline/evolution-241024-1200myr-47edc28`. Nenhum branch foi apagado. Preservar um experimento não implica incorporar suas mudanças ao main.
+Em 26/10/2026, os outros seis branches foram retirados após a verificação das tags
+e de uma cópia completa de recuperação. O inventário, os motivos e os comandos
+para recriá-los estão em [BRANCH_ARCHIVE.md](BRANCH_ARCHIVE.md).
+
+A referência de pesquisa `47edc28` continua na tag
+`baseline/evolution-241024-1200myr-47edc28`. Arquivar experimentos não equivale a
+incorporar suas funcionalidades ao main.
 
 ## Feito nesta integração
 
@@ -60,7 +60,8 @@ Nos rios, 84% dos 122 postos comparáveis ficaram dentro de um fator dois com cl
 
 ## Organização e pesquisa que continuam abertas
 
-- [ ] Revisar os experimentos antigos e selecionar os resultados úteis antes de decidir a retirada de branches. As tags de recuperação já existem.
+- [x] Reduzidos nove branches remotos para três; seis históricos preservados por tags e bundle de recuperação testado. Relatório inicial de auditoria reunido no catálogo.
+- [ ] Consultar e portar seletivamente ideias dos experimentos arquivados quando houver uma necessidade concreta; não exigem branches ativos permanentes.
 - [ ] Avaliar convergência e desempenho do Atlas antes de ampliar seu uso; sua conexão ao Evolution é uma etapa futura.
 - [ ] Retomar a investigação física sobre a referência histórica preservada. Os testes desta integração não resolvem retroativamente problemas de drenagem de arquivos já salvos.
 
