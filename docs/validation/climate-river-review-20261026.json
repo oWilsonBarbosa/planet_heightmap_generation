@@ -1,0 +1,204 @@
+{
+  "date": "2026-10-26",
+  "reviewedHead": "7bab00e1f2ac654adc1c738c42e377cc8a409ad9",
+  "physicsIdenticalTo": "1e56993586abfb1fe3b4dc02f61b69b21bdd57c8",
+  "mainCommit": "7026cc6526fa637611d05804a4cec8eed04de017",
+  "findings": [
+    {
+      "id": "R1",
+      "priority": "P1",
+      "file": "v2/js/finish/finish-hydro.js",
+      "line": 649,
+      "issue": "Travel-time moments traverse the old flood order after dry-basin receivers were redirected."
+    },
+    {
+      "id": "R2",
+      "priority": "P2",
+      "file": "v2/js/finish/finish-hydro.js",
+      "line": 656,
+      "issue": "Travel-time moments use stepKm computed before receiver redirection."
+    },
+    {
+      "id": "R3",
+      "priority": "P2",
+      "file": "tuning/water/earth-rivers.mjs",
+      "line": 166,
+      "issue": "Seasonal metrics do not state their smaller valid denominator; zero-flow stations have no seasonal series."
+    },
+    {
+      "id": "R4",
+      "priority": "P2",
+      "file": "tuning/water/earth-rivers.mjs",
+      "line": 161,
+      "issue": "The median drops non-finite penalties produced by flat seasonal series, so tuning can ignore poor cases."
+    }
+  ],
+  "riverCoverage2560001": {
+    "observed": {
+      "climate": "observed climate",
+      "sourceGauges": 219,
+      "matched": 122,
+      "seasonal": 120,
+      "zeroRunoff": 2,
+      "withoutSeasonal": 2,
+      "nonFiniteSeasonalTerms": 0,
+      "zeroFlowStations": [
+        {
+          "river": "Euphrates (Fira",
+          "station": "Hindiya, Iraq",
+          "observedMeanM3s": 606.8055341490763
+        },
+        {
+          "river": "Ashburton",
+          "station": "Capricorn R",
+          "observedMeanM3s": 14.248476583404583
+        }
+      ]
+    },
+    "simulated": {
+      "climate": "simulated climate",
+      "sourceGauges": 219,
+      "matched": 125,
+      "seasonal": 117,
+      "zeroRunoff": 7,
+      "withoutSeasonal": 8,
+      "nonFiniteSeasonalTerms": 0,
+      "zeroFlowStations": [
+        {
+          "river": "Narmada",
+          "station": "Garudeshwar, India",
+          "observedMeanM3s": 1216.2115696758046
+        },
+        {
+          "river": "Karun",
+          "station": "Ahvaz, Iran",
+          "observedMeanM3s": 742.6736623605588
+        },
+        {
+          "river": "Senegal",
+          "station": "Dagana, Senegal",
+          "observedMeanM3s": 692.3316643017884
+        },
+        {
+          "river": "Euphrates (Fira",
+          "station": "Hindiya, Iraq",
+          "observedMeanM3s": 606.8055341490763
+        },
+        {
+          "river": "Mangoky",
+          "station": "Bevoay, Madagascar",
+          "observedMeanM3s": 527.4686649682346
+        },
+        {
+          "river": "Victoria",
+          "station": "Coolibah Ho, Australia",
+          "observedMeanM3s": 142.14777754876636
+        },
+        {
+          "river": "Ashburton",
+          "station": "Capricorn R",
+          "observedMeanM3s": 14.248476583404583
+        }
+      ]
+    }
+  },
+  "routeProbes640001": {
+    "generatePolicy": {
+      "runs": [
+        {
+          "total": 188219,
+          "backward": 5364,
+          "differentLength": 12318,
+          "maxLengthErrorKm": 53.46432762490678
+        },
+        {
+          "total": 187769,
+          "backward": 5286,
+          "differentLength": 12160,
+          "maxLengthErrorKm": 53.46432762490678
+        }
+      ],
+      "lateTransfers": []
+    },
+    "evolutionFlagsViaGenerateAdapter": {
+      "runs": [
+        {
+          "total": 188219,
+          "backward": 4404,
+          "differentLength": 11400,
+          "maxLengthErrorKm": 53.79957633157574
+        },
+        {
+          "total": 187548,
+          "backward": 4378,
+          "differentLength": 11338,
+          "maxLengthErrorKm": 53.79957633157574
+        }
+      ],
+      "lateTransfers": [
+        {
+          "lateEdges": 4404,
+          "lateFlow": 487542.9324950916
+        },
+        {
+          "lateEdges": 4378,
+          "lateFlow": 484552.3195485555
+        }
+      ]
+    }
+  },
+  "metricReproduction": {
+    "perfectOnly": 1,
+    "twoFlatAndOnePerfect": 1,
+    "flatOnly": "NaN",
+    "currentEarthRunsNonFiniteScoreTerms": 0
+  },
+  "fullResolutionChecks": {
+    "main": {
+      "gate": {
+        "beatsV1": true,
+        "guardrails": true,
+        "noDrift": true
+      },
+      "drift": {
+        "640000": {
+          "exact": 0.48132899925956657,
+          "classShareTV": 0.012179412178407482,
+          "ms": 4828.545514999998
+        },
+        "2500000": {
+          "exact": 0.4801709909863861,
+          "classShareTV": 0.012124272216203104,
+          "ms": 8469.465408999997
+        }
+      }
+    },
+    "candidate": {
+      "gate": {
+        "beatsV1": true,
+        "guardrails": true,
+        "noDrift": true
+      },
+      "drift": {
+        "640000": {
+          "exact": 0.485671825194692,
+          "classShareTV": 0.01198787120541995,
+          "ms": 6010.839326000001
+        },
+        "2500000": {
+          "exact": 0.48437985502353276,
+          "classShareTV": 0.011661926336133988,
+          "ms": 6202.341139999997
+        }
+      }
+    }
+  },
+  "scope": [
+    "Route probes instrumented temporary module copies without changing the generator.",
+    "The Evolution-flags probe uses Generate geometry with Evolution hydrology flags; it is not an end-to-end Evolution validation.",
+    "Route counts are from 640001 cells, station coverage from 2560001 cells.",
+    "Late-flow sums are not a global lost-water estimate.",
+    "Reviewed implementation remains unchanged; findings are not fixed by the review."
+  ],
+  "readyToMerge": false
+}

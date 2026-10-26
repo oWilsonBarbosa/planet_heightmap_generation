@@ -46,13 +46,21 @@ Valores agregados e referências exatas: [climate-hydrology-20261026.json](valid
 | Acerto de grupos principais Beck | 79,13% | 78,76% |
 | Acerto exato na Ásia, Beck | 30,78% | 30,55% |
 
-As portas internas de `coupled-check` passaram nas duas versões, mas não verificam todas as regressões entre elas; `noDrift` ficou sem avaliação. O acerto próximo da América do Norte também caiu, de 87,46% para 87,25%. Portanto, houve ganhos globais e perdas regionais/de grupos, e não se declara ausência geral de regressão.
+As portas internas de `coupled-check` passaram nas duas versões, mas não verificam todas as regressões entre elas; `noDrift` ficou sem avaliação na execução rápida. A revisão posterior executou a versão completa no main e na candidata, e ambos passaram no limite de 2% de diferença das proporções de classes entre resoluções. O acerto próximo da América do Norte também caiu, de 87,46% para 87,25%. Portanto, houve ganhos globais e perdas regionais/de grupos, e não se declara ausência geral de regressão.
 
 Nos 14 mundos de teste, nenhum ficou mais árido na precisão impressa pelo programa. As porcentagens são arredondadas ao inteiro, o que não demonstra igualdade ou melhora abaixo de um ponto percentual.
 
 Nos rios, 84% dos 122 postos comparáveis ficaram dentro de um fator dois com clima observado; com clima simulado, foram 55% de 125 postos. A estatística RMS resultou em `Infinity` em alguns casos de vazão zero; os exutórios de várias bacias terrestres também divergem. O main não contém esse módulo de rios, portanto esse ensaio não é uma comparação direta entre os dois branches.
 
+## Revisão antes das correções
+
+A [revisão de 26/10/2026](REVIEW_CLIMATE_RIVERS_20261026.md) confirmou a preservação dos históricos e identificou quatro pontos no transporte e na medição dos rios. Os números e limites estão em [validation/climate-river-review-20261026.json](validation/climate-river-review-20261026.json). As sondas não alteraram o motor.
+
 ## Falta antes de aprovar o PR #2
+
+- [ ] Corrigir a ordem de propagação dos momentos de viagem após redirecionamentos de bacias.
+- [ ] Atualizar os comprimentos associados aos receptores redirecionados.
+- [ ] Exibir amostras sazonais, zeros e exclusões por métrica; tratar explicitamente penalidades de séries constantes no ajuste.
 
 - [ ] Analisar as perdas em grupos climáticos e nas regiões identificadas; corrigir ou justificar os compromissos antes de declarar a candidata pronta.
 - [ ] Investigar os casos de vazão zero, o RMS infinito e as divergências de saída das bacias.
