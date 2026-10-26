@@ -19,7 +19,7 @@
  * ≈ 18–20 %, Wang et al. 2018), and which of Earth's own closed basins close (CLOSED).
  *
  *   node tuning/water/earth-rivers.mjs [--n 640000] [--climate obs|sim|both] [--min-area 25000] [--set key=value,…]
- *                                      [--tune [--grid key=v/v/v,…]] [--list]
+ *                                      [--tune [--grid key=v/v/v,…]] [--list] [--json report.json]
  *
  * --set overrides the hydrology's constants (js/water-new.js WATER); --tune searches the constants of the rivers' year
  * (TUNE below) with the observed climate (--climate sim: the simulated), ranked by the year's score: correlation −
@@ -32,6 +32,8 @@
  */
 
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
+import { seasonalMetrics, yearScore, compareScores, summarizeRows, metricJson } from './lib/metrics.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Delaunator from 'delaunator';
@@ -48,6 +50,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIONS = path.join(__dirname, 'data', 'stations.json');
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const N = Number(arg('--n', 640000)), CLIMATE = arg('--climate', 'both'), MIN_AREA = Number(arg('--min-area', 25000)), TUNING = process.argv.includes('--tune'), LIST = process.argv.includes('--list');
+const JSON_OUT = arg('--json', null);
+if (!['obs', 'sim', 'both'].includes(CLIMATE)) throw new Error('--climate must be obs, sim or both');
 const SET = Object.fromEntries((arg('--set', '') || '').split(',').filter(Boolean).map(kv => { const [k, v] = kv.split('='); return [k, v === 'true' ? true : v === 'false' ? false : Number(v)]; }));
 for (const k of Object.keys(SET)) if (!(k in WATER)) throw new Error(`--set: no constant ${k} in WATER`);
 const RADIUS_KM = 100, AREA_TOL = 1.5, R = 6371, SEC = 3.15576e7;
@@ -58,8 +62,9 @@ for (const k of Object.keys(TUNE)) if (!(k in WATER)) throw new Error(`--grid: n
 const t0 = performance.now(), log = (m) => console.error(`[${((performance.now() - t0) / 1000).toFixed(0)} s] ${m}`);
 
 if (!fs.existsSync(STATIONS)) throw new Error('Gauges missing: run  node tuning/water/fetch-rivers.mjs');
-const gauges = JSON.parse(fs.readFileSync(STATIONS, 'utf8'))
-    .filter(s => s.areaKm2 >= MIN_AREA && s.q > 0 && s.yearsPerMonth >= 5 && s.months.every(v => v > 0));
+const stationText = fs.readFileSync(STATIONS, 'utf8'), sourceGauges = JSON.parse(stationText);
+const gauges = sourceGauges.filter(s => s.areaKm2 >= MIN_AREA && s.q > 0 && Number.isFinite(s.q)
+    && s.yearsPerMonth >= 5 && s.months.length === 12 && s.months.every(v => Number.isFinite(v) && v > 0));
 
 // ── the Earth planet, as the Import page builds it, and its simulated climate ──
 setDelaunator(Delaunator);
@@ -120,19 +125,12 @@ const candidates = gauges.map(s => {
 });
 
 const ZONES = ['A', 'B', 'C', 'D', 'E'], zoneOf = (k) => (k <= 0 ? '?' : k <= 3 ? 'A' : k <= 7 ? 'B' : k <= 16 ? 'C' : k <= 28 ? 'D' : 'E');
-const corr = (a, b) => { const ma = a.reduce((t, x) => t + x, 0) / 12, mb = b.reduce((t, x) => t + x, 0) / 12; let sab = 0, saa = 0, sbb = 0;
-    for (let i = 0; i < 12; i++) { sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) ** 2; sbb += (b[i] - mb) ** 2; } return saa > 0 && sbb > 0 ? sab / Math.sqrt(saa * sbb) : 0; };
-const cv = (a) => { const m = a.reduce((t, x) => t + x, 0) / 12; return Math.sqrt(a.reduce((t, x) => t + (x - m) ** 2, 0) / 12) / m; };
-const low = (a) => Math.max(0.01, Math.min(...a) / (a.reduce((t, x) => t + x, 0) / 12));
-const argmax = (a) => a.reduce((m, v, i) => (v > a[m] ? i : m), 0);
-/** How many months later the simulated year best matches the measured (−5 … 6; positive: the simulated comes early). */
-const early = (a, b) => { let best = 0, bestR = -Infinity; for (let k = -5; k <= 6; k++) { const r = corr(a.map((_, i) => a[(i - k + 12) % 12]), b); if (r > bestR) { bestR = r; best = k; } } return best; };
 const GREAT_KM2 = 500000;
 
 /** Each gauge against one run of the rivers: matched or not; its runoff ratio; its year's correlation, peak, range, low
  *  flow; and whether a lake lies upstream (a lake evens out what it passes on: on the coarse Earth map most are
  *  artefacts of its 8-bit steps). */
-function score(W) {
+function score(W, F) {
     // (each region's own river point: at a confluence the first point of the reach that starts there — the last point
     // there, as every reach ending there, with its own tributary's year, is traced before it)
     const pointAt = new Map();
@@ -140,36 +138,38 @@ function score(W) {
     const first = new Int32Array(n).fill(-1), next = new Int32Array(n).fill(-1);
     for (let c = 0; c < n; c++) { const r = W.recv[c]; if (r >= 0) { next[c] = first[r]; first[r] = c; } }
     const lakeUpstream = (c0) => { const st = [c0]; while (st.length) { const c = st.pop(); if (W.lake[c]) return true; for (let u = first[c]; u >= 0; u = next[u]) st.push(u); } return false; };
-    return gauges.map((s, gi) => {
+    const unmatched = [];
+    const rows = gauges.map((s, gi) => {
         let best = -1, err = Infinity;
         for (const r of candidates[gi]) { if (W.ocean[r] || W.lake[r] || !(W.area[r] > 0)) continue; const e = Math.abs(Math.log(W.area[r] / s.areaKm2)); if (e < err) { err = e; best = r; } }
-        if (!(best >= 0 && err <= Math.log(AREA_TOL))) return null;
-        const row = { river: s.river, station: s.station, q: s.q, zone: zoneOf(zoneClimate.cell.koppen[best]), runoff: (W.q[best] / W.area[best]) / (s.q / s.areaKm2), lake: lakeUpstream(best) };
+        if (!(best >= 0 && err <= Math.log(AREA_TOL))) {
+            unmatched.push({ gaugeIndex: gi, river: s.river, station: s.station, lat: s.lat, lon: s.lon,
+                observedAreaKm2: s.areaKm2, nearestAreaKm2: best >= 0 ? W.area[best] : null,
+                reason: best >= 0 ? 'drainage-area-mismatch' : 'no-dry-cell-with-drainage' });
+            return null;
+        }
+        const row = { gaugeIndex: gi, river: s.river, station: s.station, q: s.q, simulatedQ: W.q[best],
+            cell: best, observedAreaKm2: s.areaKm2, simulatedAreaKm2: W.area[best],
+            zone: zoneOf(zoneClimate.cell.koppen[best]), runoff: (W.q[best] / W.area[best]) / (s.q / s.areaKm2),
+            lake: lakeUpstream(best), great: s.areaKm2 >= GREAT_KM2,
+            seasonalStatus: W.q[best] === 0 ? 'zero-annual-flow' : 'no-river-series' };
         const i = pointAt.get(best);
         if (i !== undefined && W.rivers.months) {
             const m = Array.from(W.rivers.months.subarray(12 * i, 12 * i + 12));
-            if (m.every(v => v >= 0) && m.some(v => v > 0)) {
-                const d = Math.abs(argmax(m) - argmax(s.months)), top = (a) => Math.max(...a) / (a.reduce((t, x) => t + x, 0) / 12);
-                Object.assign(row, { r: corr(m, s.months), peak: Math.min(d, 12 - d) <= 1, range: cv(m) / cv(s.months), low: low(m) / low(s.months), early: early(m, s.months), great: s.areaKm2 >= GREAT_KM2,
-                    top: top(m) / top(s.months), flood: top(m) >= WATER.floodRatio, floodMeasured: top(s.months) >= WATER.floodRatio,
-                    year: m.map(v => v / (m.reduce((t, x) => t + x, 0) / 12)), measured: s.months.map(v => v / (s.months.reduce((t, x) => t + x, 0) / 12)) });
-            }
+            Object.assign(row, seasonalMetrics(m, s.months, F.floodRatio), { monthlySimulatedM3s: m, monthlyObservedM3s: s.months });
         }
         return row;
     }).filter(Boolean);
+    return { rows, unmatched };
 }
-const med = (v) => { const a = v.filter(Number.isFinite).sort((x, y) => x - y); return a.length ? a[a.length >> 1] : NaN; };
-const mean = (v) => { const a = v.filter(Number.isFinite); return a.length ? a.reduce((t, x) => t + x, 0) / a.length : NaN; };
-/** The year's score: per gauge its correlation, less how far its range and (half) its low flow are from the measured
- *  (|ln| of the ratios); the median over the gauges. */
-const yearScore = (rows) => med(rows.filter(x => x.r !== undefined).map(x => x.r - Math.abs(Math.log(x.range)) - 0.5 * Math.abs(Math.log(x.low))));
+const f = (x, digits = 2) => Number.isNaN(x) ? 'n/a' : x.toFixed(digits);
+const pc = x => Number.isNaN(x) ? 'n/a' : Math.round(100 * x) + ' %';
 function summary(rows) {
-    const yr = rows.filter(x => x.r !== undefined), w2 = rows.filter(x => x.runoff >= 0.5 && x.runoff <= 2).length;
-    const rms = 10 ** Math.sqrt(rows.reduce((t, x) => t + Math.log10(x.runoff) ** 2, 0) / Math.max(1, rows.length));
-    return `${String(rows.length).padStart(3)} gauges · runoff ×${med(rows.map(x => x.runoff)).toFixed(2)}, within ×2 ${Math.round(100 * w2 / Math.max(1, rows.length))} %, rms ×${rms.toFixed(2)}`
-        + ` · year r ${med(yr.map(x => x.r)).toFixed(2)}, peak ±1 month ${Math.round(100 * yr.filter(x => x.peak).length / Math.max(1, yr.length))} %, range ×${med(yr.map(x => x.range)).toFixed(2)}, peak ×${med(yr.map(x => x.top)).toFixed(2)}, low flow ×${med(yr.map(x => x.low)).toFixed(2)}`
-        + `, flood season ${Math.round(100 * yr.filter(x => x.flood).length / Math.max(1, yr.length))} % (measured ${Math.round(100 * yr.filter(x => x.floodMeasured).length / Math.max(1, yr.length))} %)`
-        + `, early ${mean(yr.map(x => x.early)).toFixed(2)} months (great basins ${mean(yr.filter(x => x.great).map(x => x.early)).toFixed(2)}, ${yr.filter(x => x.great).length})`;
+    const { matched, annual: a, seasonal: y } = summarizeRows(rows);
+    return `${matched} matched · annual n=${a.n}, zero=${a.zero}, invalid=${a.invalid}: runoff ×${f(a.medianRatio)}, within ×2 ${pc(a.withinFactorTwo)}, rms ×${f(a.rmsFactor)}`
+        + ` · seasonal n=${y.n}/${matched} (score n=${y.scoreN}, infinite penalties=${y.infinitePenaltyN}, invalid=${y.invalidScoreN}): r ${f(y.correlation)}, peak ±1 month ${pc(y.peakWithinMonth)} (n=${y.peakN}), range ×${f(y.range)}, peak ×${f(y.peakRatio)}, low flow ×${f(y.low)}`
+        + `, flood season ${pc(y.flood)} (measured ${pc(y.floodMeasured)})`
+        + `, early ${f(y.early)} months (n=${y.phaseN}; great basins ${f(y.greatEarly)}, n=${y.greatN})`;
 }
 const run = (climate, F) => runNewWater({ r_xyz: xyz, r_elevation: E.r_elevation, ...adj, climate }, { F, riverMonths: true });
 /** Earth's closed basins, a place on each one's floor or terminal lake (the Caspian and the Aral are water on the map: an
@@ -203,31 +203,47 @@ function closedBasins(W) {
     return `closed basins: ${(100 * closed / Math.max(1, all)).toFixed(1)} % of the land drains to them (Earth ≈ 18–20 %); of Earth's own closed ${named.filter(x => x[1]).map(x => x[0]).join(', ') || 'none'}; open ${named.filter(x => !x[1]).map(x => x[0]).join(', ') || 'none'}`;
 }
 
+const report = { format: 'orogen-river-check-v2', regions: n, eligibleGauges: gauges.length, sourceGauges: sourceGauges.length,
+    stationDataSha256: createHash('sha256').update(stationText).digest('hex'),
+    matching: { radiusKm: RADIUS_KM, areaFactor: AREA_TOL, minAreaKm2: MIN_AREA, minimumYearsPerMonth: 5 },
+    scoreDefinition: 'upper median; zero annual/monthly flows and constant simulated years retain -Infinity penalties; invalid model output yields NaN; unavailable positive-flow series reported separately',
+    nonFiniteJsonEncoding: 'Infinity, -Infinity and NaN are strings, not null', runs: [] };
+
 if (TUNING) {
     // ── every combination of TUNE's values, with the observed climate (or the simulated) ──
     const keys = Object.keys(TUNE), combos = keys.reduce((list, k) => list.flatMap(c => TUNE[k].map(v => ({ ...c, [k]: v }))), [{}]);
     const results = [];
     for (const c of combos) {
-        const rows = score(run(CLIMATE === 'sim' ? sim : obs, { ...WATER, ...SET, ...c }));
-        results.push({ c, rows, s: yearScore(rows) });
+        const F = { ...WATER, ...SET, ...c }, batch = score(run(CLIMATE === 'sim' ? sim : obs, F), F);
+        results.push({ c, ...batch, s: yearScore(batch.rows) });
         log(`${keys.map(k => `${k} ${c[k]}`).join(', ')}: year score ${results.at(-1).s.toFixed(3)}`);
     }
-    results.sort((a, b) => b.s - a.s);
+    results.sort((a, b) => compareScores(a.s, b.s));
     console.log(`${gauges.length} gauges draining ≥ ${MIN_AREA.toLocaleString()} km²; Earth at ${n.toLocaleString()} regions; ${CLIMATE === 'sim' ? 'simulated' : 'observed'} climate; ranked by the year's score`);
     const floods = (rows) => ZONES.map(z => { const yr = rows.filter(y => y.zone === z && y.r !== undefined); return yr.length >= 3 ? `${z} ${Math.round(100 * yr.filter(y => y.flood).length / yr.length)}/${Math.round(100 * yr.filter(y => y.floodMeasured).length / yr.length)}` : ''; }).filter(Boolean).join(', ');
+    report.runs = results.map(x => ({ climate: CLIMATE === 'sim' ? 'simulated' : 'observed', constants: { ...WATER, ...SET, ...x.c }, summary: summarizeRows(x.rows), rows: x.rows, unmatched: x.unmatched }));
     for (const x of results) console.log(`${x.s.toFixed(3)}  ${keys.map(k => `${k} ${x.c[k]}`).join(', ').padEnd(64)} ${summary(x.rows)}\n${' '.repeat(71)}zone D ${summary(x.rows.filter(y => y.zone === 'D'))}\n${' '.repeat(71)}flood season by zone, simulated/measured %: ${floods(x.rows)}`);
 } else {
     console.log(`${gauges.length} gauges draining ≥ ${MIN_AREA.toLocaleString()} km²; Earth at ${n.toLocaleString()} regions${Object.keys(SET).length ? `; ${JSON.stringify(SET)}` : ''}`);
     for (const [label, climate] of [['observed climate', obs], ['simulated climate', CLIMATE === 'obs' ? null : sim]]) {
         if (!climate) continue;
-        const W = run(climate, { ...WATER, ...SET }), rows = score(W);
+        const F = { ...WATER, ...SET }, W = run(climate, F), { rows, unmatched } = score(W, F);
+        report.runs.push({ climate: label, constants: F, summary: summarizeRows(rows), rows, unmatched });
+        console.log(`  matched ${rows.length}/${gauges.length} eligible (${sourceGauges.length} source); unmatched ${unmatched.length}`);
         console.log(`── ${label}: year score ${yearScore(rows).toFixed(3)}`);
         console.log(`  ${closedBasins(W)}`);
         console.log(`  all      ${summary(rows)}`);
         console.log(`  no lake  ${summary(rows.filter(x => !x.lake))}`);
         for (const z of ZONES) { const zr = rows.filter(x => x.zone === z); if (zr.length >= 3) console.log(`  zone ${z}   ${summary(zr)}`); }
         if (LIST) for (const x of rows.slice().sort((a, b) => b.q - a.q)) console.log(`    ${x.river.slice(0, 16).padEnd(17)}${x.zone} runoff ×${x.runoff.toFixed(2)}`
-            + (x.r === undefined ? '' : ` r ${x.r.toFixed(2)} range ×${x.range.toFixed(2)} low ×${x.low.toFixed(2)} early ${x.early} | ${x.year.map(v => v.toFixed(1)).join(' ')} | measured ${x.measured.map(v => v.toFixed(1)).join(' ')}`));
+            + (x.r === undefined ? ` [${x.seasonalStatus}]` : ` r ${x.r.toFixed(2)} range ×${x.range.toFixed(2)} low ×${x.low.toFixed(2)} early ${x.early ?? 'n/a'} | ${x.year.map(v => v.toFixed(1)).join(' ')} | measured ${x.measured.map(v => v.toFixed(1)).join(' ')}`));
+        if (LIST) for (const x of unmatched) console.log(`    ${x.river} / ${x.station}: unmatched [${x.reason}]`);
     }
 }
+if (JSON_OUT) {
+    fs.mkdirSync(path.dirname(path.resolve(JSON_OUT)), { recursive: true });
+    fs.writeFileSync(JSON_OUT, JSON.stringify(report, metricJson, 2) + '\n');
+    log(`report: ${JSON_OUT}`);
+}
+if (report.runs.some(x => x.summary.annual.invalid || x.summary.seasonal.invalidScoreN)) process.exitCode = 1;
 log('done');

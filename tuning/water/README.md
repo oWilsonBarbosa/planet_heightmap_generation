@@ -33,6 +33,25 @@ The **year's score** — per gauge `r − |ln range| − ½ |ln low flow|`, the 
 The rivers' year (`baseflowShare`, `baseflowMonths`, `monthEvapShare`, `snowMeltMmPerC`, `lakeRegulation…`,
 `riverSpeedKmDay`) does not change the year's flows.
 
+## Coverage and scoring (2026-10-26)
+
+The summary prints matched/eligible/source counts, the annual sample, zero annual flows, invalid model outputs,
+and the smaller sample used by seasonal metrics. Peak and phase have their own sample counts: a constant simulated
+year has no meaningful peak or phase. `--list` identifies unavailable monthly series and unmatched gauges.
+
+`--json report.json` writes every matched and unmatched gauge, its stable index within the eligible station set,
+the source station-data SHA-256, matching rules, model constants, monthly flows and metric denominators. Compare
+common gauge indices when comparing runs whose basin matching differs. JSON represents Infinity, -Infinity and
+NaN as strings; the infinite logarithmic RMS caused by a zero-flow simulation is retained, not replaced by a finite value.
+
+The score uses the historical **upper median**, preserving -Infinity penalties for constant simulated years and
+zero simulated annual/monthly flow against these positive-flow observations. An invalid model output invalidates
+a tuning result (NaN, ranked last); the CLI exits nonzero if an annual model value or score input is invalid.
+Positive-flow gauges without a drawn monthly series remain explicitly unavailable, not fabricated as a flat year.
+Constant observed years are reported separately because a correlation/range ratio cannot be evaluated against them.
+The low-flow statistic retains its existing floor of 0.01 of the mean. `--set floodRatio=...` also changes the
+benchmark's flood classification, consistently with the model.
+
 ## Usage
 
 ```bash
@@ -41,13 +60,19 @@ node tuning/water/fetch-rivers.mjs                       # the gauges → tuning
 node tuning/climate/fetch-references.mjs && node tuning/climate/regrid-references.mjs   # the observed climate
 
 node tuning/water/earth-rivers.mjs                       # both climates, at 640K regions (~20 s)
-node tuning/water/earth-rivers.mjs --n 2560000 --list    # at 2.56M (~1 min), every gauge with its twelve months
+node tuning/water/earth-rivers.mjs --n 2560000 --list --json report.json    # at 2.56M (~1 min), every gauge with its twelve months
 node tuning/water/earth-rivers.mjs --set baseflowShare=0.6,baseflowMonths=2.5    # other constants (WATER keys)
 node tuning/water/earth-rivers.mjs --tune [--grid baseflowShare=0.5/0.7,baseflowMonths=2/3]   # search, observed climate
 node tuning/water/earth-rivers.mjs --tune --climate sim --grid baseflowShare=0.6/0.7          # search, simulated climate
 ```
 
-## Results (2.56M regions, 130 gauges)
+## Historical results (before the routing/scoring corrections)
+
+These rows document development before 26 October's corrections. Their year's scores exclude some failures and
+are not directly comparable to the new score. Current before/after results, including remaining seasonal
+regressions, are recorded in [the correction report](../../docs/FIXES_CLIMATE_RIVERS_20261026.md).
+
+### 2.56M regions, approximately 130 gauges
 
 | | runoff within ×2 | year r | peak ±1 month | range | low flow | early (great basins) |
 |---|---:|---:|---:|---:|---:|---:|
@@ -137,6 +162,21 @@ Files:
 
 ```
 fetch-rivers.mjs    download Dai & Trenberth's coastal stations; data/stations.json
-earth-rivers.mjs    the check, --list, --set, --tune
+earth-rivers.mjs    the check, --list, --set, --tune, --json
+lib/metrics.mjs     pure metrics, explicit coverage and non-finite score handling
 data/               the gauges (gitignored)
 ```
+
+
+Regression checks (no observed-data download needed):
+
+```sh
+node tests/river-metrics.test.mjs
+node tests/river-transport.test.mjs
+```
+
+Travel now follows the final graph after basin redirection, with physical edge lengths and a topological traversal.
+Wet lake cells feed their outlet (or stop at a closed lake); outlet losses apply once, while the existing reservoir
+smoothing remains separate. There are no cell-hop travel constants. Runtime is O(N); extra traversal workspace is
+four bytes per mesh cell plus four bytes per active land cell. Speeds and other WATER constants were not retuned
+in this correction, and the Earth results still require calibration and review before merge.
