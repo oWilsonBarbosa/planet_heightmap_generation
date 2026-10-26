@@ -1,0 +1,135 @@
+{
+  "date": "2026-10-26",
+  "mainCommit": "7026cc6526fa637611d05804a4cec8eed04de017",
+  "testedCandidateCommit": "1e56993586abfb1fe3b4dc02f61b69b21bdd57c8",
+  "scope": "Same observed inputs on main and candidate. Results are mixed; no physical-validation or universal non-regression claim.",
+  "kottek40k": {
+    "objective": {
+      "main": 0.7234659843236365,
+      "candidate": 0.7248384344811157,
+      "delta": 0.0013724501574792214
+    },
+    "exactAcc": {
+      "main": 0.4634669305624278,
+      "candidate": 0.4674253669800429,
+      "delta": 0.003958436417615063
+    },
+    "gradedAcc": {
+      "main": 0.8675805492346279,
+      "candidate": 0.8692102090010283,
+      "delta": 0.0016296597664003931
+    },
+    "majorAcc": {
+      "main": 0.7916048160976414,
+      "candidate": 0.7878937819561274,
+      "delta": -0.00371103414151408
+    },
+    "macroF1": {
+      "main": 0.3033797774836938,
+      "candidate": 0.3062590418427905,
+      "delta": 0.0028792643590966893
+    }
+  },
+  "coupled160k": {
+    "main": {
+      "exact": 0.4751103636745848,
+      "near": 0.8625701808050551,
+      "major": 0.7912549926424217,
+      "macroF1": 0.2985104008740564,
+      "perCont": {
+        "North America": 0.4328147100424328,
+        "South America": 0.399088199193407,
+        "Europe": 0.35304297663686185,
+        "Africa": 0.5937667920472864,
+        "Asia": 0.3078404401650619,
+        "Australia": 0.5657643919176516
+      },
+      "meanCont": 0.4420529183337836,
+      "perContNear": {
+        "North America": 0.8745506851392492,
+        "South America": 0.7957836619672854,
+        "Europe": 0.8878852660215173,
+        "Africa": 0.8864123295508185,
+        "Asia": 0.8165759507164441,
+        "Australia": 0.8828016269868265
+      },
+      "meanContNear": 0.85733492006369
+    },
+    "candidate": {
+      "exact": 0.4790834559596384,
+      "near": 0.8637941303262195,
+      "major": 0.7875972251418961,
+      "macroF1": 0.2990746795510565,
+      "perCont": {
+        "North America": 0.4339462517680339,
+        "South America": 0.4006663159740487,
+        "Europe": 0.3821747908854918,
+        "Africa": 0.5961311123052122,
+        "Asia": 0.30550206327372764,
+        "Australia": 0.5661456347693481
+      },
+      "meanCont": 0.44742769482931033,
+      "perContNear": {
+        "North America": 0.8725471044301755,
+        "South America": 0.797320928927573,
+        "Europe": 0.8907631456095512,
+        "Africa": 0.886756653367296,
+        "Asia": 0.8184906189469556,
+        "Australia": 0.8830196956017069
+      },
+      "meanContNear": 0.8581496911472097
+    }
+  },
+  "coupledInternalGates": {
+    "main": {
+      "beatsV1": true,
+      "guardrails": true,
+      "noDrift": null
+    },
+    "candidate": {
+      "beatsV1": true,
+      "guardrails": true,
+      "noDrift": null
+    }
+  },
+  "dryness": {
+    "terrainCacheShared": true,
+    "worldCases": 14,
+    "earthRows": 2,
+    "drierAtPrintedPrecision": [],
+    "precision": "Printed percentages rounded to integer percent; not proof of strict non-regression below 1 percentage point."
+  },
+  "rivers2560001": {
+    "comparison": "Fork river module against observations; main lacks this module, so this is not a direct comparison with main.",
+    "observedClimate": {
+      "gauges": 122,
+      "runoffMedianRatio": 0.91,
+      "withinFactorTwo": 0.84,
+      "yearCorrelation": 0.9,
+      "peakWithinOneMonth": 0.88,
+      "closedLandFraction": 0.188,
+      "rmsFactor": "Infinity; review zero-flow cases"
+    },
+    "simulatedClimate": {
+      "gauges": 125,
+      "runoffMedianRatio": 0.84,
+      "withinFactorTwo": 0.55,
+      "yearCorrelation": 0.7,
+      "peakWithinOneMonth": 0.66,
+      "closedLandFraction": 0.19,
+      "rmsFactor": "Infinity; review zero-flow cases"
+    }
+  },
+  "save": {
+    "passed": true,
+    "legacyMapsDrawn": 84,
+    "command": "node v2/tools/check-save.mjs --sim 5000 --len 60 --cells 40000 --width 256"
+  },
+  "reviewRequired": [
+    "Major-class accuracy declined on both Earth references.",
+    "Asia exact accuracy and North America near accuracy declined.",
+    "Review zero-flow river cases and divergent basin outlets.",
+    "No merge decision has been made."
+  ],
+  "readyToMerge": false
+}

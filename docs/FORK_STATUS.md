@@ -1,57 +1,67 @@
 # Estado do fork e da integração
 
-Referências conferidas em 26/10/2026. Este documento é o ponto de entrada para o trabalho do fork; `plans/FORK_HANDOFF.md` preserva o histórico anterior de clima e água.
+Referências conferidas em 26/10/2026. Este documento registra o que foi feito e o que falta. `plans/FORK_HANDOFF.md` preserva o histórico anterior de clima e água.
 
 ## Papéis das linhas de trabalho
 
 | Linha | Referência | Papel e estado |
 |---|---|---|
-| `main` | `7026cc6` | Acompanha o projeto original. Não é alterado por esta proposta. |
-| `integration/climate-hydrology` | main + `a66a5b4` | Candidata à integração de clima, neve e hidrologia; revisão e validação ainda abertas. |
-| `ccr-85cb1372-invlm5` | `a66a5b4` | Trabalho de origem preservado; seus commits são incorporados pela proposta de integração. |
-| `feat/world-atlas-poc` | `502a4c9`, PR #1 | Protótipo de atlas. Portar a seleção e os controles para a interface atual em trabalho separado. |
-| `chatgpt/regenerate-cc2662b4` | `4936796` | Reprodução e diagnósticos de uma base Generate antiga. Manter a versão identificada. |
+| `main` | `7026cc6` | Acompanha o projeto original; permanece inalterado. |
+| `integration/climate-hydrology` | main + `a66a5b4`, PR #2 | Candidata separada; testes concluídos nesta rodada, revisão dos resultados aberta. |
+| `ccr-85cb1372-invlm5` | `a66a5b4` | Origem de clima, neve e água; histórico incorporado pelo PR #2. |
+| `feat/world-atlas-poc` | `729f25f`, PR #1 | Atualizado para o Generate atual; preserva o Studio e o motor físico. Ainda não conectado ao Evolution. |
+| `chatgpt/regenerate-cc2662b4` | `4936796` | Reprodução e diagnósticos de uma base Generate antiga; manter a versão identificada. |
 | `audit/geography-baseline-20261023` | `2555d52` | Registro histórico da auditoria inicial. |
 | `claude/affectionate-brahmagupta-f8xp05` | `6de9489` | Experimentos do clima antigo; revisão seletiva pendente. Não transportar seu cache Python. |
 | `claude/orogen-map-generation-fmg-udqzoj` | `3b13df2` | Experimentos antigos de clima e interface; revisão seletiva pendente. |
 | `claude/simulate-time-in-cells-zgwcbn` | `70077db` | Protótipo de Almanac; avaliar separadamente do Evolution atual. |
 
-As referências acima são versões identificáveis, não indicações de que todos os experimentos devam ser mesclados. Nenhum branch histórico é apagado nesta proposta.
+As pontas originais dos sete branches secundários estão preservadas nas tags `snapshot/2026-10-26/<nome-do-branch>`. A referência do código de pesquisa `47edc28` tem a tag `baseline/evolution-241024-1200myr-47edc28`. Nenhum branch foi apagado. Preservar um experimento não implica incorporar suas mudanças ao main.
 
 ## Feito nesta integração
 
-- [x] Comparados o main atual e a linha de origem do fork, com base comum `47edc28`.
-- [x] Preservadas as atualizações de interface, projeções, exportação, seeds e salvamento presentes no main.
-- [x] Incorporados os módulos e ferramentas de clima e água de `ccr` em uma candidata separada.
-- [x] Resolvidos conflitos em README, parâmetros climáticos e chuva. Mantidos a atenuação polar e a largura de Hadley do upstream, os novos parâmetros de neve do fork, o fator orográfico sazonal (`orographicK`) e o teto opcional de chuva.
-- [x] Mantido o teto opcional de chuva desligado nos padrões do site, conforme a linha de origem.
-- [x] Teste existente de seeds passou.
-- [x] Módulos JavaScript modificados passaram na checagem de sintaxe.
-- [x] Verificações de execução passaram em 40.001 e 160.001 células de acabamento, usando uma cópia de um frame histórico. As saídas históricas originais não foram regravadas.
-- [x] Repetição em 40.001 células produziu arrays idênticos por SHA-256.
-- [x] Codec, salvamento/leitura de um planeta novo e migrações sintéticas passaram na parte executável de `check-save.mjs`.
-- [x] Avaliados README, tutorial e metadados: README atualizado; nenhum controle ou fluxo de UI novo nesta integração; tutorial e SEO mantidos.
+- [x] Comparados o main e a origem do fork, com base comum `47edc28`.
+- [x] Preservadas as atualizações de interface, projeções, exportação, seeds e salvamento do main.
+- [x] Incorporados os módulos e ferramentas de clima e água de ccr em uma candidata separada.
+- [x] Resolvidos os três conflitos em README, configuração climática e chuva: atenuação polar e largura de Hadley do upstream, parâmetros de neve do fork, fator orográfico sazonal e teto opcional de chuva. O teto continua desligado nos padrões.
+- [x] Teste de seeds e sintaxe dos 15 módulos JavaScript modificados passaram.
+- [x] Execução de acabamento passou em 40.001 e 160.001 células sobre cópia de um frame histórico. Repetição em 40.001 células produziu 26 arrays idênticos por SHA-256.
+- [x] Suíte completa `check-save.mjs` passou, incluindo codec, salvamento/leitura, migrações e fixture histórico com 31 frames e 84 mapas renderizados.
+- [x] Earth-match Kottek, comparação acoplada Beck e teste de aridez foram executados no main e na candidata com os mesmos dados observados. O teste de rios foi executado contra observações em 2.560.001 células.
+- [x] README atualizado; nenhum controle novo nesta integração; tutorial, metadados e formatos de salvamento preservados.
+- [x] PR #1 atualizado separadamente: Studio preservado, Atlas em Generate, cinco testes Node e verificação HTTP desktop/móvel passaram. Seleção em quatro projeções e mudança de meridiano verificadas. Detalhes em seu relatório de arquitetura.
 
-As verificações de execução incluem terreno finito, coordenadas e vazões de rios finitas, comprimentos dos arrays, códigos de regime, clima terrestre e níveis de lago finitos e fechamento das frações anuais de runoff. Não demonstram ausência de todos os problemas físicos de drenagem.
+Os testes de acabamento verificam finitude, formas dos arrays, regimes, níveis de água e fechamento das frações anuais de runoff. Não demonstram correção física completa da drenagem. As saídas históricas originais não foram regravadas.
 
-## Falta antes de aprovar o merge
+## O que os resultados mostram
 
-- [ ] Executar `node tuning/climate/evaluate.mjs` no main e na candidata, com o arquivo de referência Köppen disponível, e comparar os resultados.
-- [ ] Executar `node tuning/climate/coupled-check.mjs --quick` com as referências observadas da Terra e verificar não regressão.
-- [ ] Executar `node tuning/climate/planets-dry.mjs` com as mesmas referências e verificar não regressão.
-- [ ] Disponibilizar o fixture binário `v2/tools/fixtures/saves/format1-frame1-finish1-codec1.orogen` e concluir `node v2/tools/check-save.mjs`. A execução local terminou com duas falhas pela ausência desse fixture; a suíte completa não foi declarada aprovada.
-- [ ] Repetir a avaliação de vazões terrestres (`tuning/water/earth-rivers.mjs`) com os dados observados pertinentes.
-- [ ] Decidir a integração após essas comparações. Esta candidata é um rascunho, sem merge automático.
+Valores agregados e referências exatas: [climate-hydrology-20261026.json](validation/climate-hydrology-20261026.json). Código físico avaliado: `1e56993`; alterações posteriores neste branch são de documentação.
 
-Os dados observados não estavam disponíveis no ambiente desta rodada. O transporte Git falhou; os arquivos de texto foram obtidos pelo conector GitHub e verificados contra seus hashes Git. O conector não forneceu o fixture binário. Esse arquivo existente foi preservado na árvore proposta, sem substituição ou remoção.
+| Medida | Main | Candidata |
+|---|---:|---:|
+| Objetivo Kottek, 40 mil células | 0,723466 | 0,724838 |
+| Acerto exato Kottek | 46,35% | 46,74% |
+| Acerto de grupos principais Kottek | 79,16% | 78,79% |
+| Acerto exato Beck, 160 mil células | 47,51% | 47,91% |
+| Acerto de grupos principais Beck | 79,13% | 78,76% |
+| Acerto exato na Ásia, Beck | 30,78% | 30,55% |
 
-## Depois da integração física
+As portas internas de `coupled-check` passaram nas duas versões, mas não verificam todas as regressões entre elas; `noDrift` ficou sem avaliação. O acerto próximo da América do Norte também caiu, de 87,46% para 87,25%. Portanto, houve ganhos globais e perdas regionais/de grupos, e não se declara ausência geral de regressão.
 
-- [ ] Portar o atlas do PR #1 de `index.html` para o Generate atual (`generate.html`), preservar o Studio na página inicial e repetir seleção, sincronização 2D/3D e testes de toque.
-- [ ] Revisar os experimentos antigos, preservar os resultados úteis e decidir seu arquivamento após haver uma referência de recuperação.
+Nos 14 mundos de teste, nenhum ficou mais árido na precisão impressa pelo programa. As porcentagens são arredondadas ao inteiro, o que não demonstra igualdade ou melhora abaixo de um ponto percentual.
 
-## Proveniência e pesquisa
+Nos rios, 84% dos 122 postos comparáveis ficaram dentro de um fator dois com clima observado; com clima simulado, foram 55% de 125 postos. A estatística RMS resultou em `Infinity` em alguns casos de vazão zero; os exutórios de várias bacias terrestres também divergem. O main não contém esse módulo de rios, portanto esse ensaio não é uma comparação direta entre os dois branches.
 
-Uma seed não identifica sozinha um resultado: registrar modo de geração, parâmetros, época, resolução e commit. O estudo Evolution baseado em `47edc28` e os conjuntos Generate antigos são referências distintas; mudanças nesta candidata não alteram retroativamente arquivos já salvos.
+## Falta antes de aprovar o PR #2
 
-Relatórios particulares, mapas e matrizes permanecem fora do código distribuído, conforme `.gitignore`. Seu catálogo e o registro de execução são mantidos separadamente. Esta proposta publica o código e o estado técnico de integração, sem incorporar os dados particulares da pesquisa.
+- [ ] Analisar as perdas em grupos climáticos e nas regiões identificadas; corrigir ou justificar os compromissos antes de declarar a candidata pronta.
+- [ ] Investigar os casos de vazão zero, o RMS infinito e as divergências de saída das bacias.
+- [ ] Decidir a integração após essa revisão. O PR #2 permanece em rascunho; nenhum merge automático foi feito.
+
+## Organização e pesquisa que continuam abertas
+
+- [ ] Revisar os experimentos antigos e selecionar os resultados úteis antes de decidir a retirada de branches. As tags de recuperação já existem.
+- [ ] Avaliar convergência e desempenho do Atlas antes de ampliar seu uso; sua conexão ao Evolution é uma etapa futura.
+- [ ] Retomar a investigação física sobre a referência histórica preservada. Os testes desta integração não resolvem retroativamente problemas de drenagem de arquivos já salvos.
+
+Uma seed não identifica sozinha um resultado: registrar modo, parâmetros, época, resolução e commit. O estudo Evolution baseado em `47edc28` e os conjuntos Generate antigos são referências distintas. Relatórios, mapas e matrizes da pesquisa permanecem fora do código distribuído; o catálogo é mantido separadamente.
