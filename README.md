@@ -335,3 +335,27 @@ Additional inspiration and reference from:
 - [Artifexian](https://www.youtube.com/@Artifexian) — worldbuilding tutorials and planetary science inspiration
 - [Madeline James](https://www.youtube.com/@MadelineJamesWorldbuilds) ([website](https://www.madelinejameswrites.com/)) — worldbuilding methodology and climate design reference
 - [Fractal Philosophy](https://www.youtube.com/watch?v=7xL0udlhnqI) — procedural terrain generation inspiration
+
+## Atlas do mundo (experimental)
+
+Em **Generate** (`generate.html`), na seção **Atlas do mundo**, ative **Ativar grade cartográfica**. Clique ou toque
+no globo/mapa para selecionar uma posição. O painel mostra ID H3, centro, área,
+vizinhos, fração de terra, altitude e clima disponível. **Escala cartográfica**
+alterna entre global (~966 km) e regional (~138 km), com apenas a vizinhança da
+seleção carregada no nível regional. A seleção permanece ao alternar Globe/Map.
+Ctrl/Cmd-clique e o modo lápis continuam reservados às placas. Arrastar/pinçar não seleciona.
+
+A grade vem desligada e não modifica a geração. IDs independem de Detail; os valores
+físicos podem variar com Detail. O clima atual usa temperatura anual em °C e chuva em mm/ano, com contagem das amostras continentais; dados legados mantêm seu índice de chuva identificado. Áreas
+assumem raio terrestre; escalas são diâmetros aproximados, não os valores exatos dos
+livros. Zoom não gera relevo mais preciso. Não há salvamento/edição de atlas nesta fase. O protótipo está ligado a Generate; ainda não inspeciona os momentos do Evolution.
+
+Execução: `python -m http.server 8000`, depois abrir `http://localhost:8000/generate.html` (a raiz continua sendo o Studio).
+Testes: `node tests/world-atlas.test.mjs` (Node 24; cinco testes de contrato).
+Arquitetura, auditoria e limites: [docs/architecture/world-atlas.md](docs/architecture/world-atlas.md).
+Novos módulos: `js/world-atlas.js` (indexação/agregação), `js/atlas-ui.js` (interação/grade).
+Dependência opcional: H3 JS 4.3.0 em `vendor/h3-js.es.js`, carregada sob demanda;
+licença Apache-2.0 em `vendor/h3-LICENSE`. GPL-3.0 do projeto preservada.
+
+Teste de integração opcional: com Python Playwright e Chromium disponíveis, execute
+`python tests/atlas-browser.py` contra o servidor local; repita com `ATLAS_MOBILE=1`.

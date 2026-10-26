@@ -1,0 +1,37 @@
+{
+  "mobile": false,
+  "initialLoadAndGenerationSeconds": 16.25858630699986,
+  "heapBytes": 108577381,
+  "global": "h3:816bbffffffffff\nMundo: Generate · seed 1265705648\nNível H3 1 · global\nCentro: 7.736°, 18.377°\nÁrea: 602082 km² · esfera terrestre\nTerra: 0.0% · altitude: -7138 m\nSem amostras continentais de clima\nReferência global: 816bbffffffffff · -7138 m · 0.0% terra\n19 amostras · 5.001 regiões físicas · 0.7 ms\n0 amostras continentais de clima\nVizinhos: h3:8158fffffffffff, h3:8182bffffffffff, h3:816abffffffffff, h3:816a3ffffffffff, h3:816b3ffffffffff, h3:81587ffffffffff\nFonte: Orogen · area-quadrature-nearest-v1 · atlas-h3-v1. Zoom não aumenta a precisão física.",
+  "regional": "h3:836bacfffffffff\nMundo: Generate · seed 1265705648\nNível H3 3 · regional\nCentro: 10.428°, 20.084°\nÁrea: 12870 km² · esfera terrestre\nTerra: 0.0% · altitude: -6967 m\nSem amostras continentais de clima\nReferência global: 816bbffffffffff · -7138 m · 0.0% terra\n19 amostras · 5.001 regiões físicas · 1.4 ms\n0 amostras continentais de clima\nVizinhos: h3:836ba1fffffffff, h3:836baefffffffff, h3:836ba8fffffffff, h3:836badfffffffff, h3:836b13fffffffff, h3:836b12fffffffff\nFonte: Orogen · area-quadrature-nearest-v1 · atlas-h3-v1. Zoom não aumenta a precisão física.",
+  "afterDetail": "h3:836bacfffffffff\nMundo: Generate · seed 1265705648\nNível H3 3 · regional\nCentro: 10.428°, 20.084°\nÁrea: 12870 km² · esfera terrestre\nTerra: 0.0% · altitude: -4048 m\nSem amostras continentais de clima\nReferência global: 816bbffffffffff · -4420 m · 0.0% terra\n19 amostras · 31.001 regiões físicas · 29.7 ms\n0 amostras continentais de clima\nVizinhos: h3:836ba1fffffffff, h3:836baefffffffff, h3:836ba8fffffffff, h3:836badfffffffff, h3:836b13fffffffff, h3:836b12fffffffff\nFonte: Orogen · area-quadrature-nearest-v1 · atlas-h3-v1. Zoom não aumenta a precisão física.\nΔ após Detail (5001 → 31001 regiões): altitude 2919.5 m; terra 0.0 pontos percentuais",
+  "projections": [
+    {
+      "projection": "equirect",
+      "centreLon": 0,
+      "id": "h3:816bbffffffffff"
+    },
+    {
+      "projection": "robinson",
+      "centreLon": 0,
+      "id": "h3:816bbffffffffff"
+    },
+    {
+      "projection": "mercator",
+      "centreLon": 0,
+      "id": "h3:816bbffffffffff"
+    },
+    {
+      "projection": "mollweide",
+      "centreLon": 0,
+      "id": "h3:816bbffffffffff"
+    },
+    {
+      "projection": "mollweide",
+      "centreLon": 35,
+      "id": "h3:816bbffffffffff"
+    }
+  ],
+  "testedBase": "7026cc6526fa637611d05804a4cec8eed04de017",
+  "date": "2026-10-26"
+}
