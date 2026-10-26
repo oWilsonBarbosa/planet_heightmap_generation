@@ -60,13 +60,18 @@ A [revisão de 26/10/2026](REVIEW_CLIMATE_RIVERS_20261026.md) confirmou a preser
 
 Os quatro itens R1–R4 da revisão foram endereçados em código e testes. O [relatório de correções](FIXES_CLIMATE_RIVERS_20261026.md) separa os resultados das métricas e do transporte, inclusive os indicadores sazonais que pioraram. As [evidências agregadas](validation/river-fixes-20261026.json) incluem 14 testes, regressões do Evolution, salvamento e o cenário adicional da seed 754534770. Esse cenário não substitui o estudo 241024.
 
+## Recalibração sazonal
+
+O [primeiro ajuste após a correção do percurso](RIVER_RECALIBRATION_20261026.md) adotou 45 km/dia, mantendo os demais parâmetros. Em 2.560.001 células, a pontuação global passou de 0,218 para 0,234 com clima observado e de −0,263 para −0,193 com clima simulado. As vazões anuais ficaram iguais. A parcela reservada teve resultados mistos: sua pontuação simulada caiu de −0,271 para −0,288. As salvaguardas operacionais passaram, mas não há melhora uniforme nem validação física concluída. Os [resultados agregados](validation/river-recalibration-20261026.json) incluem as perdas, os 14 testes, salvamento e regressões dos dois cenários.
+
 ## Falta antes de aprovar o PR #2
 
 - [x] Corrigir a ordem de propagação dos momentos de viagem após redirecionamentos de bacias.
 - [x] Atualizar os comprimentos associados aos receptores redirecionados.
 - [x] Exibir amostras sazonais, zeros e exclusões por métrica; tratar explicitamente penalidades de séries constantes no ajuste.
 
-- [ ] Recalibrar e validar a sazonalidade com o percurso corrigido; a velocidade e os demais parâmetros ainda não foram reajustados.
+- [x] Concluir a primeira recalibração sazonal com percurso corrigido: busca em 640 mil e confirmação em 2,56 milhões, incluindo grandes bacias e regiões frias.
+- [ ] Explicar e tratar as perdas na parcela reservada; investigar os excessos de chuva e neve da primavera setentrional antes de outra calibração climática.
 - [ ] Analisar as perdas em grupos climáticos e nas regiões identificadas; corrigir ou justificar os compromissos antes de declarar a candidata pronta.
 - [ ] Investigar os casos de vazão zero, o RMS infinito e as divergências de saída das bacias.
 - [ ] Decidir a integração após essa revisão. O PR #2 permanece em rascunho; nenhum merge automático foi feito.

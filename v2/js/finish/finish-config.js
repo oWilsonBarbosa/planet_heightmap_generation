@@ -174,16 +174,16 @@ export const FINISH = {
     // (baseflowShare where it is humid, none in deserts) and drains back to the rivers slowly (baseflowMonths: the time a
     // dry season takes to drain the ground to a third); big lakes even out what they pass on (lakeRegulation), a basin
     // its river cuts through, holding no water, does not (lakeRegulationDry). Set against measured flows on real Earth
-    // (tuning/water/earth-rivers.mjs: 130 of Dai & Trenberth's gauges; js/water-new.js tells how): with the observed
-    // climate the months correlate with the measured at 0.90 and peak within a month of it at 88 % of the gauges (0.5,
-    // 2.5 months, 0.6 and no travel time: 0.82 and 76 %); with the simulated one the year's score −0.55 → −0.14
+    // (tuning/water/earth-rivers.mjs). Recalibrated after the final-network travel fix, 2026-10-26:
+    // 45 km/day improves the v2 score for both observed and simulated climates at 640K and 2.56M. Other water
+    // constants stay fixed; subgroup/holdout tradeoffs remain (docs/RIVER_RECALIBRATION_20261026.md).
     snowMeltMmPerC: 90,
     monthEvapShare: 0.8,
     baseflowShare: 0.7,
     baseflowMonths: 3,
     lakeRegulation: 0.6,
     lakeRegulationDry: 0,
-    riverSpeedKmDay: 40,        // the water's way down to each river point, km a day: its months that much later, spread by
+    riverSpeedKmDay: 45,        // the water's way down to each river point, km a day: its months that much later, spread by
                                 // how far its water comes from (0: none, a month's water at the mouth within the month)
     // regimes: a month is dry when the river carries under dryShare of its mean (or under dryM3s); dry ephemeralMonths or
     // more — dry most of the year; fewer — seasonal; never — permanent, with a flood season if its peak month carries

@@ -20,7 +20,7 @@ All three are considered together; ties are broken in the order above.
 
 ## Fork integration
 
-The fork's active branches, completed checks and remaining integration work are tracked in [docs/FORK_STATUS.md](docs/FORK_STATUS.md). This candidate combines the upstream interface with the fork's climate and water work; it remains a draft until the observed-Earth and saved-file checks are complete.
+The fork's active branches, completed checks and remaining integration work are tracked in [docs/FORK_STATUS.md](docs/FORK_STATUS.md). This candidate combines the upstream interface with the fork's climate and water work; the observed-Earth and saved-file checks have run, and it remains a draft while regional errors and river failures are investigated. The [river recalibration report](docs/RIVER_RECALIBRATION_20261026.md) records the new 45 km/day seasonal travel default, improvements in the global score, and mixed reserved-station results.
 
 ## Features
 

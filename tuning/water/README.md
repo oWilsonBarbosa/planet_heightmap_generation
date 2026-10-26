@@ -52,6 +52,16 @@ Constant observed years are reported separately because a correlation/range rati
 The low-flow statistic retains its existing floor of 0.01 of the mean. `--set floodRatio=...` also changes the
 benchmark's flood classification, consistently with the model.
 
+## Seasonal recalibration (2026-10-26)
+
+The corrected final-network routing now defaults to `riverSpeedKmDay=45` (previously 40), shared by Evolution
+and Generate/Import. Other water constants are unchanged. A 33-profile screening at 640K and confirmation at
+2.56M improved the global seasonal score with both climate sources. Reserved-station results were mixed;
+annual zero-flow cases, cold-region biases and basin-outlet errors remain. This is an effective travel speed,
+not a predicted local velocity. See the [report](../../docs/RIVER_RECALIBRATION_20261026.md) for the fixed split,
+acceptance tolerances and regressions, and [aggregated results](../../docs/validation/river-recalibration-20261026.json).
+Earlier calibration tables below describe their original code and constants, not the current default.
+
 ## Usage
 
 ```bash

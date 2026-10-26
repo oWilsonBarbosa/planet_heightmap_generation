@@ -1,5 +1,7 @@
 # Primeiras correções de rios — 26/10/2026
 
+Registro histórico da primeira correção, ainda com 40 km/dia. A etapa posterior adota 45 km/dia e está em [RIVER_RECALIBRATION_20261026.md](RIVER_RECALIBRATION_20261026.md).
+
 Base: `69b0bd0`, incluindo o main atual do autor `7026cc6`. Esta rodada implementa os quatro itens da revisão: R3/R4 nas medições e R1/R2 no transporte. O código climático e os parâmetros de calibração permanecem iguais. O PR #2 continua em rascunho: corrigir os erros de percurso não garante melhora de todos os indicadores terrestres.
 
 ## Feito
