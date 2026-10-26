@@ -15,10 +15,9 @@
 // In m³/s, km, mm: the same rivers at every terrain detail, more of their bends on the finer.
 
 import { MinHeap } from '../core/min-heap.js';
+import { riverEdgeKm as edgeKmOf, travelMoments, travelTimes } from './river-travel.js';
 
 const SEC_PER_YEAR = 3.156e7, R = 6371;
-/** The distance (km) between two neighbouring cells (the chord: the same to well under a metre at a cell's size). */
-const edgeKmOf = (xyz, a, b) => R * Math.hypot(xyz[3 * a] - xyz[3 * b], xyz[3 * a + 1] - xyz[3 * b + 1], xyz[3 * a + 2] - xyz[3 * b + 2]);
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
 /** Lake kinds (per cell, and per pixel of the finished picture). */
@@ -507,6 +506,7 @@ export function hydrology(ctx, F) {
                 if (s > steepest) { steepest = s; pick = nb; }
             }
             recv[c] = pick >= 0 ? pick : lp[c];
+            stepKm[c] = edgeKmOf(xyz, c, recv[c]); // the redirected edge, also used by monthly bed losses
         }
         for (let i = lorder.length - 1; i >= 0; i--) {
             const c = lorder[i], r = recv[c];
@@ -566,13 +566,13 @@ export function hydrology(ctx, F) {
     const lakeOutlet = ctx.network ? new Int32Array(n).fill(-1) : null;
     if (ctx.network) for (const h of hollows) if (h.kind) {
         const to = h.outflow > 0 ? h.outlet : -1;
-        for (const x of h.cells) if (lakeKind[x]) { lakeOutlet[x] = to; if (x !== h.outlet) recv[x] = to; }
+        for (const x of h.cells) if (lakeKind[x]) { lakeOutlet[x] = to; if (x !== h.outlet) { recv[x] = to; stepKm[x] = to >= 0 ? edgeKmOf(xyz, x, to) : 0; } }
     }
     return {
         lake: lakeKind, lakeLevel, q, area,
         // (the network, on request: the cell each land cell drains into — a lake's water its outlet; −1 on the sea and
         // where the water goes no further — each lake cell's outlet, and each river point's cell)
-        ...(ctx.network ? { recv, lakeOutlet } : {}),
+        ...(ctx.network ? { recv, lakeOutlet, ...(ctx.debug ? { stepKm } : {}) } : {}),
         rivers: { start: Int32Array.from(L.start), lat: Float32Array.from(L.lat), lon: Float32Array.from(L.lon), q: Float32Array.from(L.q), season: Float32Array.from(L.season),
             ...(ctx.network ? { cell: Int32Array.from(L.at) } : {}), ...(regimes ?? {}) },
         terminal: ctx.debug ? hollows.filter(h => h.kind && h.kind !== Water.FRESH).sort((a, b) => b.inflow - a.inflow).slice(0, 12).map(h => {
@@ -645,17 +645,23 @@ function riverYears(ctx, F, G) {
     // month's water passing on over the months after it, the year round. A lake passes on its share of what flows in,
     // a closed one none)
     if (F.riverSpeedKmDay > 0) {
-        const Qa = new Float64Array(n), S1 = new Float64Array(n), S2 = new Float64Array(n);
-        for (let i = count - 1; i >= 0; i--) {
-            const c = order[i], h = hollow[c] >= 0 ? hollows[hollow[c]] : null;
-            Qa[c] += own(c);
-            if (h && h.lake && c === h.outlet) {
-                const f = h.outflow > 0 && h.inflow > 0 ? Math.min(1, h.outflow / h.inflow) : 0;
-                Qa[c] *= f; S1[c] *= f; S2[c] *= f;
-            }
-            const r = recv[c], s = stepKm[c];
-            if (r >= 0 && rank[r] >= 0 && Qa[c] > 0) { Qa[r] += Qa[c]; S2[r] += S2[c] + 2 * s * S1[c] + s * s * Qa[c]; S1[r] += S1[c] + s * Qa[c]; }
-        }
+        // The local floods redirected dry ground after the original priority-flood
+        // order was built. Route the final graph, not that obsolete ordering.
+        // Wet lake cells feed one outlet (or terminate); its annual passed fraction
+        // is applied once there. Lake residence smoothing remains in the monthly pass.
+        const receiver = c => {
+            const h = hollow[c] >= 0 ? hollows[hollow[c]] : null;
+            let r = recv[c];
+            if (h && h.lake && lakeKind[c] && c !== h.outlet) r = h.outflow > 0 ? h.outlet : -1;
+            if (h && h.lake && c === h.outlet && !(h.outflow > 0)) r = -1;
+            return r >= 0 && rank[r] >= 0 ? r : -1;
+        };
+        const through = c => {
+            const h = hollow[c] >= 0 ? hollows[hollow[c]] : null;
+            return h && h.lake && c === h.outlet ? (h.outflow > 0 && h.inflow > 0 ? Math.min(1, h.outflow / h.inflow) : 0) : 1;
+        };
+        const { q: Qa, s1: S1, s2: S2 } = travelMoments({ numCells: n, nodes: order.subarray(0, count),
+            xyz: ctx.mesh.xyz, receiver, own, through });
         const kmPerMonth = F.riverSpeedKmDay * 365.25 / 12, w = new Float64Array(12), year = new Float64Array(12);
         for (let p = 0; p < P; p++) {
             const c = cells[p];
@@ -684,25 +690,4 @@ function riverYears(ctx, F, G) {
         farFed[p] = regime[p] <= Regime.FLOOD && pet[c] > 0 && Math.max(0, rain[c]) < F.farFedAridity * pet[c] ? 1 : 0;
     }
     return ctx.debug ? { regime, floodFrom, floodTo, farFed, months } : { regime, floodFrom, floodTo, farFed };     // (the months: for checks only)
-}
-
-/**
- * The share of a month's water that reaches a river point k = 0 … 11 months later, the year round (w, summing to 1), for
- * travel times of the given mean and variance (months, months²): a gamma distribution — a Nash cascade of linear
- * reservoirs fitted by its moments, the classic unit hydrograph — sampled finely, each time shared between the two
- * months around it. A narrow one is a shift.
- */
-function travelTimes(mean, variance, w) {
-    w.fill(0);
-    const shape = variance > 0 ? mean * mean / variance : Infinity;
-    if (shape > 400) { const k = Math.floor(mean), f = mean - k; w[k % 12] += 1 - f; w[(k + 1) % 12] += f; return w; }
-    const scale = variance / mean, sd = Math.sqrt(variance), dt = Math.min(0.05, sd / 8), end = mean + 8 * sd;
-    let sum = 0;
-    for (let t = dt / 2; t < end; t += dt) {
-        const p = Math.exp((shape - 1) * Math.log(t / mean) - (t - mean) / scale);     // (the density, up to a factor)
-        const k = Math.floor(t), f = t - k;
-        w[k % 12] += p * (1 - f); w[(k + 1) % 12] += p * f; sum += p;
-    }
-    for (let k = 0; k < 12; k++) w[k] /= sum;
-    return w;
 }

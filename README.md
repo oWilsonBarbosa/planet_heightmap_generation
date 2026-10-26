@@ -328,7 +328,8 @@ tuning/
                         parameters to match (see tuning/climate/README.md)
   water/                The rivers check — scores js/water-new.js's rivers on an imported Earth heightmap against
                         the measured flows of ~130 great rivers (Dai & Trenberth, NCAR), with the simulated and the
-                        observed climate, and its closed basins against Earth's (see tuning/water/README.md)
+                        observed climate, and its closed basins against Earth's; explicit sample counts, zero-flow cases
+                        and per-gauge JSON reports (--json); see tuning/water/README.md
   relief/               Earth's hypsometry for js/earth-relief.js — downloads a sample of ETOPO 2022 (NOAA NCEI) and
                         computes how much of Earth's land lies below each height, and of its sea floor above each depth
                         (see tuning/relief/README.md)
@@ -336,6 +337,11 @@ tuning/
                         every output, to show a change to the code it shares leaves it as it was (see
                         tuning/evolution/README.md)
 ```
+
+The river travel calculation in `v2/js/finish/river-travel.js` follows the final redirected network in physical km,
+including lake outlets; its Node regression checks are `node tests/river-transport.test.mjs`. Benchmark scoring and
+coverage checks are `node tests/river-metrics.test.mjs`. Historical river scores and the correction's limits are
+recorded in `docs/FIXES_CLIMATE_RIVERS_20261026.md`. These are internal/developer tools; site controls are unchanged.
 
 ## Dependencies
 

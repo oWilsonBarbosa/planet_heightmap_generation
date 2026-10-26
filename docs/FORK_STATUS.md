@@ -35,7 +35,7 @@ Os testes de acabamento verificam finitude, formas dos arrays, regimes, níveis 
 
 ## O que os resultados mostram
 
-Valores agregados e referências exatas: [climate-hydrology-20261026.json](validation/climate-hydrology-20261026.json). Código físico avaliado: `1e56993`; alterações posteriores neste branch são de documentação.
+Valores agregados e referências exatas: [climate-hydrology-20261026.json](validation/climate-hydrology-20261026.json). A comparação climática foi feita sobre `1e56993`. O código climático permanece igual; as primeiras correções posteriores da hidrologia e suas medições estão registradas no relatório de correções abaixo.
 
 | Medida | Main | Candidata |
 |---|---:|---:|
@@ -56,12 +56,17 @@ Nos rios, 84% dos 122 postos comparáveis ficaram dentro de um fator dois com cl
 
 A [revisão de 26/10/2026](REVIEW_CLIMATE_RIVERS_20261026.md) confirmou a preservação dos históricos e identificou quatro pontos no transporte e na medição dos rios. Os números e limites estão em [validation/climate-river-review-20261026.json](validation/climate-river-review-20261026.json). As sondas não alteraram o motor.
 
+## Primeiras correções
+
+Os quatro itens R1–R4 da revisão foram endereçados em código e testes. O [relatório de correções](FIXES_CLIMATE_RIVERS_20261026.md) separa os resultados das métricas e do transporte, inclusive os indicadores sazonais que pioraram. As [evidências agregadas](validation/river-fixes-20261026.json) incluem 14 testes, regressões do Evolution, salvamento e o cenário adicional da seed 754534770. Esse cenário não substitui o estudo 241024.
+
 ## Falta antes de aprovar o PR #2
 
-- [ ] Corrigir a ordem de propagação dos momentos de viagem após redirecionamentos de bacias.
-- [ ] Atualizar os comprimentos associados aos receptores redirecionados.
-- [ ] Exibir amostras sazonais, zeros e exclusões por métrica; tratar explicitamente penalidades de séries constantes no ajuste.
+- [x] Corrigir a ordem de propagação dos momentos de viagem após redirecionamentos de bacias.
+- [x] Atualizar os comprimentos associados aos receptores redirecionados.
+- [x] Exibir amostras sazonais, zeros e exclusões por métrica; tratar explicitamente penalidades de séries constantes no ajuste.
 
+- [ ] Recalibrar e validar a sazonalidade com o percurso corrigido; a velocidade e os demais parâmetros ainda não foram reajustados.
 - [ ] Analisar as perdas em grupos climáticos e nas regiões identificadas; corrigir ou justificar os compromissos antes de declarar a candidata pronta.
 - [ ] Investigar os casos de vazão zero, o RMS infinito e as divergências de saída das bacias.
 - [ ] Decidir a integração após essa revisão. O PR #2 permanece em rascunho; nenhum merge automático foi feito.

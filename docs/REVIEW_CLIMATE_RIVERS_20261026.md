@@ -2,6 +2,8 @@
 
 Revisão do PR #2 em `7bab00e`, com código físico idêntico a `1e56993`, contra main `7026cc6`. A organização e a preservação dos históricos foram conferidas. A integração física continua sem aprovação para merge: esta revisão identifica quatro pontos a corrigir antes de calibrar parâmetros.
 
+Atualização posterior: os quatro itens desta revisão foram endereçados nas [primeiras correções](FIXES_CLIMATE_RIVERS_20261026.md), com testes e resultados antes/depois. Este documento preserva o diagnóstico da base revisada; a calibração e a aprovação da integração continuam pendentes.
+
 ## R1 — P1: os momentos do tempo de viagem usam uma ordem anterior à rede final
 
 Local: `v2/js/finish/finish-hydro.js`, linhas 649–657; redirecionamento anterior em 475–515.
