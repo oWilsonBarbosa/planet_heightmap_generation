@@ -32,6 +32,15 @@ jobs:
           name: github-pages
           failOnError: false
 
+      # Publish only the site: the tuning tools, plans, dev notes and lab pages stay in the repo, not on orogen.studio
+      # (the climate lab page reads gitignored data and cannot work there; its JS stays — Evolution imports
+      # v2/js/climate-lab/palettes.js). This edits the CI copy only.
+      - name: Leave out developer files
+        run: |
+          rm -rf tuning plans reports research_notes v2/tools
+          rm -f v2/index.html v2/lab.css v2/climate-lab.html v2/climate-lab.css v2/README.md
+          rm -f CLAUDE.md HEIGHTMAP_REALISM_PLAN.md OCEAN_REWORK_PLAN.md V1_REVIEW.md
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:

@@ -1,7 +1,12 @@
 /**
- * Runs the climate chain on a prebuilt Earth context with a given set of
- * climate parameter overrides, classifies Köppen zones, and scores them
- * against the real-Earth ground truth.
+ * Runs the climate on a prebuilt Earth context with a given set of climate
+ * parameter overrides, classifies Köppen zones, and scores them against the
+ * real-Earth ground truth.
+ *
+ * The climate scored is the app's: the new climate (v2/js/climate/, through
+ * js/climate-new.js — what Generate and Import run; plans/V1_NEW_CLIMATE_PLAN.md),
+ * its parameters v2/js/climate/config.js's PARAMS. runClimate() below is the
+ * old climate (js/wind.js … js/koppen.js), kept for the old diagnostic scripts.
  */
 
 import { SimplexNoise } from '../../../js/simplex-noise.js';
@@ -11,6 +16,8 @@ import { computeOceanCurrents } from '../../../js/ocean.js';
 import { computePrecipitation } from '../../../js/precipitation.js';
 import { computeTemperature } from '../../../js/temperature.js';
 import { classifyKoppen, KOPPEN_CLASSES } from '../../../js/koppen.js';
+import { runNewClimate } from '../../../js/climate-new.js';
+import { setParams, resetParams } from '../../../v2/js/climate/config.js';
 import { NO_DATA } from './ground-truth.mjs';
 import { similarity, majorGroupOf, MAJOR_GROUPS } from './koppen-distance.mjs';
 
@@ -35,8 +42,23 @@ const W_WATCHLIST = 0.13;   // trimmed from 0.20 to rein in the Mediterranean ov
 export const majorGroup = majorGroupOf;
 
 /**
- * Run the climate simulation chain (same call sequence and arguments as
- * planet-worker.js handleImportHeightmap) and classify Köppen.
+ * Run the app's climate (as planet-worker.js does for Generate and Import) with
+ * overrides of v2/js/climate/config.js's PARAMS, and classify Köppen.
+ */
+export function runAppClimate(ctx, paramOverrides = {}) {
+    resetParams();
+    setParams(paramOverrides);
+    try {
+        const climate = runNewClimate(ctx.r_xyz, ctx.r_elevation, {});
+        return { r_koppen: climate.koppen, climate };
+    } finally {
+        resetParams();
+    }
+}
+
+/**
+ * The OLD climate chain (js/wind.js … js/koppen.js, before the new climate) and
+ * its Köppen — for the old diagnostic scripts (probe-*, diagnose, stage-audit…).
  */
 export function runClimate(ctx, paramOverrides = {}) {
     resetClimateParams();
@@ -48,7 +70,7 @@ export function runClimate(ctx, paramOverrides = {}) {
         const precipResult = computePrecipitation(ctx.mesh, ctx.r_xyz, ctx.r_elevation, windResult, oceanResult, 0, 0.3);
         const tempResult = computeTemperature(ctx.mesh, ctx.r_xyz, ctx.r_elevation, windResult, oceanResult, precipResult, 0);
         const r_koppen = classifyKoppen(ctx.mesh, ctx.r_elevation, tempResult, precipResult);
-        return { r_koppen, windResult, precipResult, tempResult };
+        return { r_koppen, windResult, oceanResult, precipResult, tempResult };
     } finally {
         resetClimateParams();
     }
@@ -168,7 +190,7 @@ function truthHasClass(confusion, c) {
 /** Evaluate one parameter set end-to-end. */
 export function evaluateParams(ctx, paramOverrides = {}) {
     const t0 = performance.now();
-    const { r_koppen } = runClimate(ctx, paramOverrides);
+    const { r_koppen } = runAppClimate(ctx, paramOverrides);
     const metrics = scoreKoppen(ctx, r_koppen);
     metrics.evalMs = Math.round(performance.now() - t0);
     return { metrics, r_koppen };

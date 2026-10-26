@@ -7,3 +7,8 @@ tuning/results/*.json
 tuning/results/climate/
 tuning/climate/data/
 tuning/climate/maps/
+v2/out/
+
+# Private research and reports (kept locally, never committed)
+reports/
+research_notes/

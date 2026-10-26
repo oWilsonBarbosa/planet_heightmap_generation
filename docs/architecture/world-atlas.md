@@ -72,7 +72,7 @@ antigos citarem 2.000. Nenhum módulo do motor foi modificado.
 
 ### Reproduzir
 
-1. `python -m http.server 8000` na raiz; abrir http://localhost:8000.
+1. `python -m http.server 8000` na raiz; abrir http://localhost:8000/generate.html.
 2. Gerar planeta, abrir Atlas do mundo, ativar e selecionar posição. Alternar View
    e Escala cartográfica. Regenerar com a mesma semente e Detail diferente.
 3. `node tests/world-atlas.test.mjs`.
@@ -98,3 +98,53 @@ O teste não compara a geração atual com uma execução anterior da versão or
 verifica que ligar a grade não altera os campos. Não houve mudança de física/clima,
 portanto o tuning Earth-match não foi executado. Nenhum ganho de precisão local,
 persistência, edição de atlas ou conteúdo das fases seguintes é reivindicado.
+
+
+## Atualização para o main — 2026-10-26
+
+Base atual: `7026cc6`; o PR #1 incorpora esse main por merge, preservando o histórico
+`502a4c9` do protótipo. `index.html` permanece idêntico ao main, com o Studio como
+página inicial. O atlas está em **Generate** (`generate.html`); não está conectado ao
+Evolution nem abre os arquivos particulares de pesquisa.
+
+A montagem do painel acompanha a nova barra lateral. As linhas 2D passam pelo
+pipeline de projeção do main; o clique usa sua inversa `mapLonLatAt`, incluindo o
+meridiano central. Ctrl e Cmd continuam disponíveis para os controles de edição.
+Nenhum arquivo do motor físico ou de `v2/js` difere do main nesta proposta.
+
+Para o clima atual, o agregado lê `climate.cells.t.year` em graus Celsius e converte
+`climate.cells.p.year`, média mensal de precipitação, para mm/ano multiplicando por 12.
+Valores oceânicos NaN não entram na média continental; o painel informa a quantidade
+de amostras válidas. O formato legado continua identificado como índice normalizado.
+Essas médias aproximadas não são estimativas independentes do simulador.
+
+Verificações executadas:
+
+- Cinco testes Node passaram, incluindo as verificações anteriores de identidade,
+  área e vizinhança e os novos contratos de unidades climáticas e ausência de clima
+  continental em células oceânicas.
+- Chromium por HTTP, desktop 1280×800 e emulação móvel 390×844: página inicial Studio,
+  geração, grade opcional, clique/toque no globo, refinamento e Detail 5.001 → 31.001.
+  A ativação do atlas preservou os arrays de elevação e clima observados pelo teste.
+  Os IDs persistiram após a mudança de Detail; os valores físicos mudaram e seus
+  deltas permaneceram visíveis.
+- Cliques em equiretangular, Robinson, Mercator e Mollweide mantiveram o mesmo ID
+  geográfico. Mollweide também foi testada com meridiano central em 35°.
+- Sem erros JavaScript ou overflow horizontal nas duas execuções. Capturas finais
+  foram inspecionadas; logs estão em `docs/validation/atlas-20261026-*.json`.
+- Desktop: carregamento + geração inicial 16,26 s; agregados global/regional em
+  0,7/1,4 ms e regional após Detail em 29,7 ms; heap observado ~103,5 MiB.
+- Emulação móvel: carregamento + geração inicial 14,30 s; agregados em 1,5/1,7 ms
+  e regional após Detail em 13,9 ms; heap ~141,4 MiB.
+
+As execuções usaram mundos Generate com a seed inicial aleatória registrada nos
+logs; cada rebuild preservou sua seed. Os tempos incluem rede, renderização e
+polling, não são uma comparação controlada com 18/10. Emulação não mede um telefone
+físico, e heap JS não representa toda a memória do processo, dos workers ou da GPU.
+O teste por HTTP usou a exceção de CA já descrita apenas no navegador de teste.
+
+Continuam pendentes a convergência da quadratura de 25 candidatos, o desempenho
+em milhões de regiões, os eventos de todas as dez projeções e a conexão ao Evolution.
+As limitações O(25N), raio terrestre fixo e ausência de persistência/edição permanecem.
+Não foi necessário executar Earth-match nesta portabilidade: o motor físico é o
+mesmo do main; as verificações climáticas da outra proposta pertencem ao PR #2.

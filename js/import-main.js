@@ -4,13 +4,20 @@
 import * as THREE from 'three';
 import { renderer, scene, camera, ctrl, waterMesh, atmosMesh, starsMesh,
          mapCamera, updateMapCameraFrustum, mapCtrl, canvas,
-         tickZoom, tickMapZoom } from './scene.js';
+         tickZoom, tickMapZoom, fitCamera } from './scene.js';
 import { state } from './state.js';
+import { initGenerateExport } from './export-generate.js';
 import { importHeightmap, reapplyViaWorker, computeClimateViaWorker } from './generate.js';
-import { buildMesh, updateMeshColors, buildMapMesh, rebuildGrids, exportMap, exportMapBatch, buildWindArrows, buildOceanCurrentArrows, updateKoppenHoverHighlight, updateMapKoppenHoverHighlight } from './planet-mesh.js';
+import { buildMesh, updateMeshColors, buildMapMesh, rebuildGrids, buildWindArrows, buildOceanCurrentArrows, updateKoppenHoverHighlight, updateMapKoppenHoverHighlight } from './planet-mesh.js';
 import { detailFromSlider } from './detail-scale.js';
 import { KOPPEN_CLASSES } from './koppen.js';
-import { elevationToColor } from './color-map.js';
+import { needsClimate, climateLayer, climateLegendHTML, satelliteLegendHTML, showClimateArrows, initSeasonPicker, climateReadoutLines } from './climate-layers.js';
+import { initLayerBar } from './layer-bar.js';
+import { initViewStrip, initProjectionPicker } from './view-strip.js';
+import { renderView, setProjection, mapLonLatAt } from './map-projection.js';
+import { elevToHeightKm } from './color-map.js';
+import { terrainCss, initPaletteMenu } from './terrain-palette.js';
+import { showBuildError, clearBuildError, describeFailure, holdControls } from './build-error.js';
 
 // ─── File Upload ──────────────────────────────────────────────────
 
@@ -79,7 +86,10 @@ fileInput.addEventListener('change', (e) => {
 
 // ─── Detail slider ────────────────────────────────────────────────
 
-const AUTO_CLIMATE_THRESHOLD = 300000;
+// The climate is deferred (computed when a climate view is chosen) only above this detail: the new climate takes about
+// a second at any detail on a desktop (its work is on a fixed 1° grid), so never there; phones keep a limit, for the
+// per-region climate's memory (plans/V1_NEW_CLIMATE_PLAN.md, phase 4)
+const AUTO_CLIMATE_THRESHOLD = state.isTouchDevice ? 640000 : Infinity;
 const WARN_ORANGE = state.isTouchDevice ? 200000 : 640000;
 const WARN_RED    = state.isTouchDevice ? 500000 : 1280000;
 
@@ -144,8 +154,9 @@ for (const [s, v] of [['sN','vN'],['sTw','vTw'],['sS','vS'],['sGl','vGl'],['sHEr
             document.getElementById(v).textContent = detail.toLocaleString();
             updateDetailWarning(detail);
         } else if (s === 'sTmp') {
+            // Greenhouse: a forcing in W/m²
             const val = +e.target.value;
-            document.getElementById(v).textContent = (val > 0 ? '+' : val === 0 ? '\u00b1' : '') + val + '\u00b0C';
+            document.getElementById(v).textContent = (val > 0 ? '+' : val === 0 ? '\u00b1' : '\u2212') + Math.abs(val) + ' W/m\u00b2';
         } else if (s === 'sPrc') {
             const val = +e.target.value;
             const pct = Math.round(val * 50);
@@ -227,21 +238,22 @@ importBtn.addEventListener('click', () => {
     importHeightmap(grayCopy, storedWidth, storedHeight, onProgress, shouldSkipClimate());
 });
 
-// Generate-done handler (fired from generate.js after 'done' message)
+// Generate-done handler: js/generate.js dispatches 'generate-done' on #generate, which this page has no use for — a
+// hidden #generate receives it
 const genBtn = document.getElementById('importBtn');
-// The generate.js dispatches 'generate-done' on #generate, but for import page
-// we use the same element ID pattern. Actually generate.js dispatches on
-// document.getElementById('generate'). Since import page has no #generate,
-// we need to listen on the actual element. Let me check...
-// Actually, generate.js does: document.getElementById('generate').dispatchEvent(...)
-// Since import page doesn't have a #generate element, we need a workaround.
-// The cleanest approach: add a hidden #generate element, or listen differently.
-
-// For now, we'll create a hidden generate button to receive the event
 const hiddenGenBtn = document.createElement('button');
 hiddenGenBtn.id = 'generate';
 hiddenGenBtn.style.display = 'none';
 document.body.appendChild(hiddenGenBtn);
+
+// a failed import (js/generate.js): the overlay says what happened, and Import can be pressed again
+window.addEventListener('orogen:build-failed', (e) => {
+    overlayActive = false;
+    holdControls(false);
+    importBtn.disabled = !storedGrayscale;
+    importBtn.textContent = 'Import';
+    showBuildError(describeFailure(e.detail.message, 'import this heightmap'), e.detail.message);
+});
 
 hiddenGenBtn.addEventListener('generate-done', () => {
     hideBuildOverlay();
@@ -250,7 +262,7 @@ hiddenGenBtn.addEventListener('generate-done', () => {
     state.importedHeightmap = true;
     // Update info text
     const infoEl = document.getElementById('info');
-    if (infoEl) infoEl.textContent = 'Drag to rotate \u00b7 Scroll to zoom';
+    if (infoEl) infoEl.textContent = state.isTouchDevice ? 'Drag to rotate \u00b7 Pinch to zoom' : 'Drag to rotate \u00b7 Scroll to zoom';
     // Sync view
     if (!state.climateComputed && CLIMATE_LAYERS.has(state.debugLayer)) {
         state.debugLayer = '';
@@ -259,32 +271,19 @@ hiddenGenBtn.addEventListener('generate-done', () => {
         updateMeshColors();
     }
     syncTabsToLayer(state.debugLayer);
-    if (debugLayerEl) debugLayerEl.value = state.debugLayer;
     updateLegend(state.debugLayer);
     // Rebuild arrows if needed
     const v = state.debugLayer;
-    const isWindLayer = v === 'pressureSummer' || v === 'pressureWinter' ||
-                        v === 'windSpeedSummer' || v === 'windSpeedWinter';
-    const isOceanLayer = v === 'oceanCurrentSummer' || v === 'oceanCurrentWinter';
-    if (isWindLayer) buildWindArrows(v.includes('Winter') ? 'winter' : 'summer');
-    else if (isOceanLayer) buildOceanCurrentArrows(v.includes('Winter') ? 'winter' : 'summer');
+    showClimateArrows(v, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
 });
 
 // ─── Climate layers ───────────────────────────────────────────────
 
-const CLIMATE_LAYERS = new Set([
-    'pressureSummer', 'pressureWinter',
-    'windSpeedSummer', 'windSpeedWinter',
-    'oceanCurrentSummer', 'oceanCurrentWinter',
-    'precipSummer', 'precipWinter',
-    'rainShadowSummer', 'rainShadowWinter',
-    'tempSummer', 'tempWinter',
-    'koppen', 'biome', 'continentality'
-]);
+// Layers that need a climate: the Inspect climate layers, Köppen and Satellite (js/climate-layers.js)
+const CLIMATE_LAYERS = { has: needsClimate };
 
 // ─── Visualization (debug layers, tabs, legend) ───────────────────
 
-const mapTabs = document.getElementById('mapTabs');
 const vizLegend = document.getElementById('vizLegend');
 const debugLayerEl = document.getElementById('debugLayer');
 
@@ -304,61 +303,31 @@ function applyLayer(layer) {
     state.debugLayer = layer;
     state.hoveredKoppen = -1;
     updateMeshColors();
-    const isWindLayer = layer === 'pressureSummer' || layer === 'pressureWinter' ||
-                        layer === 'windSpeedSummer' || layer === 'windSpeedWinter';
-    const isOceanLayer = layer === 'oceanCurrentSummer' || layer === 'oceanCurrentWinter';
-    if (isOceanLayer) {
-        buildWindArrows(null);
-        buildOceanCurrentArrows(layer.includes('Winter') ? 'winter' : 'summer');
-    } else if (isWindLayer) {
-        buildOceanCurrentArrows(null);
-        buildWindArrows(layer.includes('Winter') ? 'winter' : 'summer');
-    } else {
-        buildWindArrows(null);
-        buildOceanCurrentArrows(null);
-    }
+    showClimateArrows(layer, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
+    syncTabsToLayer(layer);
     updateLegend(layer);
 }
 
+// The layers over the planet (js/layer-bar.js: the tabs, the Climate row and the season, the phone's list) and the
+// sidebar's Inspect list (the full heightmap, the sculpting's changes)
+const layerBar = initLayerBar(switchVisualization);
+initViewStrip();
+initProjectionPicker(setProjection);
+/** The bar, its season and the Inspect list, for the layer shown. */
 function syncTabsToLayer(layer) {
-    mapTabs.querySelectorAll('.map-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.layer === layer);
-    });
-    const mvs = document.getElementById('mobileViewSwitch');
-    if (mvs && [...mvs.options].some(o => o.value === layer)) {
-        mvs.value = layer;
-    }
+    layerBar.sync(layer);
+    if (debugLayerEl) debugLayerEl.value = [...debugLayerEl.options].some(o => o.value === layer) ? layer : '';
 }
 
-mapTabs.addEventListener('click', (e) => {
-    const tab = e.target.closest('.map-tab');
-    if (!tab) return;
-    const layer = tab.dataset.layer;
-    mapTabs.querySelectorAll('.map-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    if (debugLayerEl) debugLayerEl.value = layer;
-    const mvs = document.getElementById('mobileViewSwitch');
-    if (mvs) mvs.value = layer;
-    switchVisualization(layer);
+// The Inspect list (None: the terrain)
+if (debugLayerEl) debugLayerEl.addEventListener('change', (e) => switchVisualization(e.target.value));
+
+// Season picker (Year · January · July) for the climate's Inspect layers
+initSeasonPicker(state, () => {
+    updateMeshColors();
+    showClimateArrows(state.debugLayer, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
+    updateLegend(state.debugLayer);
 });
-
-const mobileViewSwitch = document.getElementById('mobileViewSwitch');
-if (mobileViewSwitch) {
-    mobileViewSwitch.addEventListener('change', (e) => {
-        const layer = e.target.value;
-        syncTabsToLayer(layer);
-        if (debugLayerEl) debugLayerEl.value = layer;
-        switchVisualization(layer);
-    });
-}
-
-if (debugLayerEl) {
-    debugLayerEl.addEventListener('change', (e) => {
-        const layer = e.target.value;
-        syncTabsToLayer(layer);
-        switchVisualization(layer);
-    });
-}
 
 // ─── Legend ────────────────────────────────────────────────────────
 
@@ -402,10 +371,7 @@ function updateLegend(layer) {
             { e: -0.50 }, { e: -0.25 }, { e: -0.05 }, { e: 0.00 },
             { e: 0.03 }, { e: 0.15 }, { e: 0.35 }, { e: 0.55 }, { e: 0.80 }
         ];
-        const colors = stops.map(s => {
-            const [r, g, b] = elevationToColor(s.e);
-            return `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
-        });
+        const colors = stops.map(s => terrainCss(s.e));
         const pcts = stops.map((_, i) => Math.round(i / (stops.length - 1) * 100));
         const gradStr = colors.map((c, i) => `${c} ${pcts[i]}%`).join(', ');
         vizLegend.innerHTML = `<div class="legend-gradient" style="background:linear-gradient(to right,${gradStr})"></div>` +
@@ -451,26 +417,12 @@ function updateLegend(layer) {
             });
         });
     } else if (layer === 'biome') {
-        const biomeStops = [
-            { color: [0.82,0.72,0.50], label: 'Desert' },
-            { color: [0.72,0.62,0.30], label: 'Steppe' },
-            { color: [0.42,0.50,0.18], label: 'Savanna' },
-            { color: [0.12,0.38,0.10], label: 'Forest' },
-            { color: [0.06,0.22,0.08], label: 'Taiga' },
-            { color: [0.35,0.32,0.22], label: 'Tundra' },
-            { color: [0.78,0.80,0.84], label: 'Ice' },
-        ];
-        const biomeColors = biomeStops.map(s => `rgb(${Math.round(s.color[0]*255)},${Math.round(s.color[1]*255)},${Math.round(s.color[2]*255)})`);
-        const biomePcts = biomeStops.map((_, i) => Math.round(i / (biomeStops.length - 1) * 100));
-        const biomeGrad = biomeColors.map((c, i) => `${c} ${biomePcts[i]}%`).join(', ');
-        vizLegend.innerHTML = `<div class="legend-gradient" style="background:linear-gradient(to right,${biomeGrad})"></div>` +
-            `<div class="legend-labels"><span>${biomeStops[0].label}</span><span>${biomeStops[3].label}</span><span>${biomeStops[6].label}</span></div>`;
-    } else if (layer === 'rainShadowSummer' || layer === 'rainShadowWinter') {
-        vizLegend.innerHTML = `<div class="legend-gradient" style="background:linear-gradient(to right,rgb(230,51,33) 0%,rgb(140,140,148) 50%,rgb(38,102,243) 100%)"></div>` +
-            `<div class="legend-labels"><span>Rain Shadow</span><span>Neutral</span><span>Windward</span></div>`;
+        vizLegend.innerHTML = satelliteLegendHTML(state.climateSeason);
     } else if (layer === 'landheightmap') {
         vizLegend.innerHTML = `<div class="legend-gradient" style="background:linear-gradient(to right,#000 0%,#fff 100%)"></div>` +
             `<div class="legend-labels"><span>Ocean / Sea Level</span><span>Peak</span></div>`;
+    } else if (climateLayer(layer)) {
+        vizLegend.innerHTML = climateLegendHTML(layer, state.climateSeason);
     } else {
         vizLegend.innerHTML = '';
     }
@@ -490,6 +442,7 @@ function onProgress(pct, label) {
 }
 
 function showBuildOverlay() {
+    clearBuildError();
     if (!buildBarFill || !buildOverlay) return;
     buildBarFill.style.transition = 'none';
     buildBarFill.style.transform = 'scaleX(0)';
@@ -498,11 +451,13 @@ function showBuildOverlay() {
     buildBarFill.style.transition = '';
     overlayActive = true;
     buildOverlay.classList.remove('hidden');
+    holdControls(true);
 }
 
 function hideBuildOverlay() {
     setTimeout(() => {
         overlayActive = false;
+        holdControls(false);
         if (buildOverlay) {
             buildOverlay.classList.add('hidden');
             buildOverlay.classList.remove('initial');
@@ -532,8 +487,10 @@ document.getElementById('gridSpacing').addEventListener('change', (e) => {
     rebuildGrids();
 });
 
+// The Terrain view's colours (the view strip's Colours; js/terrain-palette.js)
+initPaletteMenu(() => { updateMeshColors(); updateLegend(state.debugLayer); });
+
 // Map center longitude
-const mapCenterLonGroup = document.getElementById('mapCenterLonGroup');
 const sMapCenterLon = document.getElementById('sMapCenterLon');
 const vMapCenterLon = document.getElementById('vMapCenterLon');
 
@@ -546,6 +503,7 @@ sMapCenterLon.addEventListener('input', () => {
         const builtLon = state.mapMesh._builtCenterLon || 0;
         const dx = (builtLon - state.mapCenterLon) * (2 / Math.PI);
         state.mapMesh.position.x = dx;
+        for (const c of state.mapMesh.userData.wrap) c.visible = dx !== 0;
         if (state.mapGridMesh) state.mapGridMesh.position.x = dx;
     }
 });
@@ -554,11 +512,7 @@ sMapCenterLon.addEventListener('change', () => {
     if (state.mapMode) {
         buildMapMesh();
         const layer = state.debugLayer;
-        const isWind = layer === 'pressureSummer' || layer === 'pressureWinter' ||
-                       layer === 'windSpeedSummer' || layer === 'windSpeedWinter';
-        const isOcean = layer === 'oceanCurrentSummer' || layer === 'oceanCurrentWinter';
-        if (isWind) buildWindArrows(layer.includes('Winter') ? 'winter' : 'summer');
-        if (isOcean) buildOceanCurrentArrows(layer.includes('Winter') ? 'winter' : 'summer');
+        showClimateArrows(layer, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
     }
 });
 
@@ -604,7 +558,6 @@ document.getElementById('viewMode').addEventListener('change', (e) => {
         updateMapCameraFrustum();
         mapCtrl.target.set(0, 0, 0);
         mapCtrl.update();
-        mapCenterLonGroup.style.display = '';
     } else {
         if (state.planetMesh) state.planetMesh.visible = true;
         atmosMesh.visible = true;
@@ -630,78 +583,15 @@ document.getElementById('viewMode').addEventListener('change', (e) => {
         scene.background = new THREE.Color(0x030308);
         mapCtrl.enabled = false;
         ctrl.enabled = true;
-        mapCenterLonGroup.style.display = 'none';
     }
 });
 
 // ─── Export modal ─────────────────────────────────────────────────
 
-(function initExport() {
-    const overlay   = document.getElementById('exportOverlay');
-    const closeBtn  = document.getElementById('exportClose');
-    const cancelBtn = document.getElementById('exportCancel');
-    const goBtn     = document.getElementById('exportGo');
-    const widthEl   = document.getElementById('exportWidth');
-    const dimsEl    = document.getElementById('exportDims');
-    const typeEl    = document.getElementById('exportType');
-    const openBtn   = document.getElementById('exportBtn');
-
-    function updateDims() {
-        const w = +widthEl.value;
-        dimsEl.textContent = w + ' \u00D7 ' + (w / 2);
-    }
-
-    function openModal() {
-        overlay.classList.remove('hidden');
-        updateDims();
-        for (const opt of typeEl.options) {
-            if (opt.value === 'biome' || opt.value === 'koppen') {
-                opt.disabled = !state.climateComputed;
-                if (opt.disabled && typeEl.value === opt.value) typeEl.value = 'color';
-            }
-        }
-    }
-    function closeModal() { overlay.classList.add('hidden'); }
-
-    openBtn.addEventListener('click', openModal);
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeModal();
-    });
-    widthEl.addEventListener('change', updateDims);
-
-    goBtn.addEventListener('click', async () => {
-        const type = typeEl.value;
-        const w = +widthEl.value;
-        closeModal();
-        showBuildOverlay();
-        onProgress(0, 'Preparing export...');
-        await exportMap(type, w, onProgress);
-        hideBuildOverlay();
-    });
-
-    const exportAllBtn = document.getElementById('exportAllGo');
-    const EXPORT_ALL_TYPES = [
-        { type: 'biome',         label: 'Satellite' },
-        { type: 'koppen',        label: 'Climate' },
-        { type: 'landheightmap', label: 'Heightmap' },
-        { type: 'landmask',      label: 'Land Mask' },
-    ];
-
-    exportAllBtn.addEventListener('click', async () => {
-        const w = +widthEl.value;
-        closeModal();
-        showBuildOverlay();
-        if (!state.climateComputed) {
-            onProgress(0, 'Computing climate...');
-            await new Promise(resolve => computeClimateViaWorker(onProgress, resolve));
-        }
-        await exportMapBatch(EXPORT_ALL_TYPES, w, onProgress);
-        hideBuildOverlay();
-    });
-})();
+// The export panel (v2/js/view/export-panel.js; the maps: js/export-generate.js)
+const exportPanel = initGenerateExport({ page: 'import', ensureClimate: (progress) => new Promise(resolve => computeClimateViaWorker(progress, resolve)),
+    code: () => '' });
+document.getElementById('exportBtn').addEventListener('click', exportPanel.open);
 
 // ─── Sidebar toggle + bottom sheet ────────────────────────────────
 
@@ -806,25 +696,12 @@ if (state.isTouchDevice) {
     if (infoEl) infoEl.textContent = 'Import a heightmap to get started';
 }
 
-// Disable export widths > 8192 on touch devices
-if (state.isTouchDevice) {
-    const exportWidth = document.getElementById('exportWidth');
-    if (exportWidth) {
-        for (const opt of exportWidth.options) {
-            if (+opt.value > 8192) {
-                opt.disabled = true;
-                opt.textContent = opt.value + ' (too large for mobile)';
-            }
-        }
-    }
-}
 
 // ─── Orientation change ───────────────────────────────────────────
 
 window.addEventListener('orientationchange', () => {
     setTimeout(() => {
-        camera.aspect = innerWidth / innerHeight;
-        camera.updateProjectionMatrix();
+        fitCamera(innerWidth, innerHeight);
         updateMapCameraFrustum();
         renderer.setSize(innerWidth, innerHeight);
     }, 100);
@@ -844,14 +721,13 @@ function animate() {
         if (state.oceanCurrentArrowGroup) state.oceanCurrentArrowGroup.rotation.y = state.planetMesh.rotation.y;
         if (state.globeGridMesh) state.globeGridMesh.rotation.y = state.planetMesh.rotation.y;
     }
-    renderer.render(scene, state.mapMode ? mapCamera : camera);
+    renderView();
 }
 
 // ─── Resize handler ───────────────────────────────────────────────
 
 window.addEventListener('resize', () => {
-    camera.aspect = innerWidth / innerHeight;
-    camera.updateProjectionMatrix();
+    fitCamera(innerWidth, innerHeight);
     updateMapCameraFrustum();
     renderer.setSize(innerWidth, innerHeight);
 });
@@ -913,14 +789,9 @@ window.addEventListener('resize', () => {
         const o = raycaster.ray.origin, d = raycaster.ray.direction;
         if (Math.abs(d.z) < 1e-10) return -1;
         const t = -o.z / d.z;
-        const wx = o.x + t * d.x, wy = o.y + t * d.y;
-        const PI = Math.PI, sx = 2 / PI;
-        let lon = wx / sx + (state.mapCenterLon || 0);
-        const lat = wy / sx;
-        if (lat < -PI / 2 || lat > PI / 2) return -1;
-        if (lon > PI) lon -= 2 * PI;
-        else if (lon < -PI) lon += 2 * PI;
-        const cosLat = Math.cos(lat);
+        const ll = mapLonLatAt(o.x + t * d.x, o.y + t * d.y);       // (through the map's projection: js/map-projection.js)
+        if (!ll) return -1;
+        const [lon, lat] = ll, cosLat = Math.cos(lat);
         return findNearestRegion(cosLat * Math.sin(lon), Math.sin(lat), cosLat * Math.cos(lon));
     }
 
@@ -945,20 +816,14 @@ window.addEventListener('resize', () => {
         const lat = Math.asin(Math.max(-1, Math.min(1, y))) * 180 / Math.PI;
         const lon = Math.atan2(x, z) * 180 / Math.PI;
         const elev = d.r_elevation[r];
-        const heightKm = elev <= 0 ? (elev * 10).toFixed(1) : (6 * elev * elev).toFixed(1);
+        const heightKm = elevToHeightKm(elev).toFixed(1);
         const isOcean = elev <= 0;
 
         let html = `<span class="hi-label">Elev</span> ${heightKm} km (${isOcean ? 'ocean' : 'land'})<br>`;
         html += `<span class="hi-label">Coord</span> ${Math.abs(lat).toFixed(1)}\u00b0${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(1)}\u00b0${lon >= 0 ? 'E' : 'W'}`;
 
-        if (d.r_temperature_summer && d.r_precip_summer) {
-            const ts = d.r_temperature_summer[r], tw = d.r_temperature_winter[r];
-            const ps = d.r_precip_summer[r], pw = d.r_precip_winter[r];
-            const tAvg = ((ts + tw) / 2).toFixed(1);
-            const pTotal = Math.round(ps + pw);
-            html += `<br><span class="hi-label">Temp</span> ${tAvg}\u00b0C avg (${ts.toFixed(1)} summer, ${tw.toFixed(1)} winter)`;
-            html += `<br><span class="hi-label">Prec</span> ${pTotal} mm/yr`;
-        }
+        // the climate, in real units (js/climate-layers.js) — before, this printed the old climate's 0–1 values as °C and mm
+        if (d.climate) html += '<br>' + climateReadoutLines(d, r).join('<br>');
 
         if (d.debugLayers?.koppen) {
             const kIdx = d.debugLayers.koppen[r];
@@ -981,11 +846,10 @@ window.addEventListener('resize', () => {
 window.takePreview = function(width = 1200, height = 630) {
     const savedW = renderer.domElement.width;
     const savedH = renderer.domElement.height;
-    const savedAspect = camera.aspect;
     const savedPixelRatio = renderer.getPixelRatio();
 
     const hiddenEls = [];
-    for (const sel of ['#ui', '#topInfo', '#info', '#hoverInfo', '#helpBtn',
+    for (const sel of ['#ui', '#layerBar', '#legendCard', '#info', '#hoverInfo', '#helpBtn',
                         '#editToggle', '#refreshFab', '#rebuildFab', '#mobileViewSwitch',
                         '#buildOverlay', '#tutorialOverlay', '#exportOverlay', '#whatsNewOverlay']) {
         const el = document.querySelector(sel);
@@ -995,8 +859,7 @@ window.takePreview = function(width = 1200, height = 630) {
         }
     }
 
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
+    fitCamera(width, height);
     renderer.setPixelRatio(1);
     renderer.setSize(width, height);
     renderer.render(scene, state.mapMode ? mapCamera : camera);
@@ -1008,10 +871,9 @@ window.takePreview = function(width = 1200, height = 630) {
 
     renderer.setPixelRatio(savedPixelRatio);
     renderer.setSize(savedW / savedPixelRatio, savedH / savedPixelRatio);
-    camera.aspect = savedAspect;
-    camera.updateProjectionMatrix();
+    fitCamera(innerWidth, innerHeight);
     for (const { el, prev } of hiddenEls) el.style.display = prev;
-    renderer.render(scene, state.mapMode ? mapCamera : camera);
+    renderView(true);
     console.log('preview.png downloaded!');
 };
 

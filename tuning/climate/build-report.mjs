@@ -259,7 +259,7 @@ const html = `<div class="wrap">
 
   <footer>
     <p>Rendered by <code>tuning/climate/evaluate.mjs</code> at a 160,000-cell resolution. Scoring counts only land cells where the simulated and real land masks agree (96.6% of simulated land).</p>
-    <p>Reproduce: <code>node tuning/climate/optimize.mjs</code> → <code>apply-params.mjs</code>. Still open: Mediterranean (Csa) and monsoon subtypes score near zero — the seasonal precipitation reversal isn't yet strong enough for the classifier to catch them.</p>
+    <p>(Made with the old climate's optimizer, since removed — see git history.) Still open: Mediterranean (Csa) and monsoon subtypes score near zero — the seasonal precipitation reversal isn't yet strong enough for the classifier to catch them.</p>
   </footer>
 </div>
 

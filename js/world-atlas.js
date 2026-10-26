@@ -54,9 +54,12 @@ export function sampleCell(index, data, elevationKm) {
     }
     if (!points.length) points.push([c.latDeg,c.lonDeg]);
     const result = { landFraction:0, elevationMeanM:0 }, votes = new Map();
-    const climate = data.r_temperature_summer && data.r_temperature_winter;
-    const rain = data.r_precip_summer && data.r_precip_winter;
+    const annualT=data.climate?.cells?.t?.year, annualP=data.climate?.cells?.p?.year;
+    const climate = annualT || (data.r_temperature_summer && data.r_temperature_winter);
+    const rain = !annualP && data.r_precip_summer && data.r_precip_winter;
+    let temperatureSamples=0, rainSamples=0;
     if(climate) result.temperatureMeanC=0;
+    if(annualP) result.precipitationAnnualMm=0;
     if(rain) result.precipitationIndex=0;
     for(const p of points) {
         const v=direction(...p); let best=-Infinity, r=0;
@@ -66,11 +69,16 @@ export function sampleCell(index, data, elevationKm) {
         }
         result.landFraction += data.r_elevation[r]>0 ? 1 : 0;
         result.elevationMeanM += elevationKm(data.r_elevation[r])*1000;
-        if(climate) result.temperatureMeanC += -45+90*(data.r_temperature_summer[r]+data.r_temperature_winter[r])/2;
+        const t=annualT?annualT[r]:climate?-45+90*(data.r_temperature_summer[r]+data.r_temperature_winter[r])/2:NaN;
+        if(Number.isFinite(t)){result.temperatureMeanC+=t;temperatureSamples++;}
+        if(annualP&&Number.isFinite(annualP[r])){result.precipitationAnnualMm+=12*annualP[r];rainSamples++;}
         if(rain) result.precipitationIndex += (data.r_precip_summer[r]+data.r_precip_winter[r])/2;
-        const k=data.debugLayers?.koppen?.[r]; if(k!==undefined) votes.set(k,(votes.get(k)||0)+1);
+        const k=data.debugLayers?.koppen?.[r]; if(k>0) votes.set(k,(votes.get(k)||0)+1);
     }
-    for(const key of Object.keys(result)) result[key]/=points.length;
+    for(const key of ['landFraction','elevationMeanM','precipitationIndex'])if(key in result)result[key]/=points.length;
+    if(temperatureSamples)result.temperatureMeanC/=temperatureSamples;else delete result.temperatureMeanC;
+    if(rainSamples)result.precipitationAnnualMm/=rainSamples;else delete result.precipitationAnnualMm;
+    result.climateSource=annualT?'annual-cell-climate':climate?'legacy-seasonal':undefined;
     result.koppenIndex = [...votes].sort((a,b)=>b[1]-a[1] || a[0]-b[0])[0]?.[0];
-    return { ...result, source:'Orogen', method:'area-quadrature-nearest-v1', samples:points.length, simulationRegions:data.r_elevation.length, version:ATLAS_VERSION };
+    return { ...result, source:'Orogen', method:'area-quadrature-nearest-v1', samples:points.length, climateSamples:temperatureSamples, rainSamples, simulationRegions:data.r_elevation.length, version:ATLAS_VERSION };
 }

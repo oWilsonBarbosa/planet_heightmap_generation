@@ -4,15 +4,21 @@ import * as THREE from 'three';
 import { tickAtlas } from './atlas-ui.js';
 import { renderer, scene, camera, ctrl, waterMesh, atmosMesh, starsMesh,
          mapCamera, updateMapCameraFrustum, mapCtrl, canvas,
-         tickZoom, tickMapZoom } from './scene.js';
+         tickZoom, tickMapZoom, fitCamera } from './scene.js';
 import { state } from './state.js';
+import { initGenerateExport } from './export-generate.js';
 import { generate, reapplyViaWorker, computeClimateViaWorker, editRecomputeViaWorker } from './generate.js';
 import { encodePlanetCode, decodePlanetCode } from './planet-code.js';
-import { buildMesh, updateMeshColors, updateSuperPlateBorders, buildMapMesh, rebuildGrids, exportMap, exportMapBatch, buildWindArrows, buildOceanCurrentArrows, updateKoppenHoverHighlight, updateMapKoppenHoverHighlight, updatePendingHighlight, updateMapPendingHighlight } from './planet-mesh.js';
+import { buildMesh, updateMeshColors, updateSuperPlateBorders, buildMapMesh, rebuildGrids, buildWindArrows, buildOceanCurrentArrows, updateKoppenHoverHighlight, updateMapKoppenHoverHighlight, updatePendingHighlight, updateMapPendingHighlight } from './planet-mesh.js';
 import { setupEditMode } from './edit-mode.js';
 import { detailFromSlider, sliderFromDetail } from './detail-scale.js';
 import { KOPPEN_CLASSES } from './koppen.js';
-import { elevationToColor } from './color-map.js';
+import { needsClimate, climateLayer, climateLegendHTML, satelliteLegendHTML, showClimateArrows, initSeasonPicker } from './climate-layers.js';
+import { initLayerBar } from './layer-bar.js';
+import { initViewStrip, initProjectionPicker } from './view-strip.js';
+import { renderView, setProjection } from './map-projection.js';
+import { terrainCss, initPaletteMenu } from './terrain-palette.js';
+import { showBuildError, clearBuildError, describeFailure, holdControls } from './build-error.js';
 
 // Slider value displays + stale tracking
 const sliderIds = ['sN','sP','sCn','sJ','sNs','sCsv','sLc'];
@@ -81,7 +87,10 @@ reapplyBtn.addEventListener('click', () => {
 });
 
 // Auto Climate checkbox — default OFF above threshold
-const AUTO_CLIMATE_THRESHOLD = 300000;
+// The climate is deferred (computed when a climate view is chosen) only above this detail: the new climate takes about
+// a second at any detail on a desktop (its work is on a fixed 1° grid), so never there; phones keep a limit, for the
+// per-region climate's memory (plans/V1_NEW_CLIMATE_PLAN.md, phase 4)
+const AUTO_CLIMATE_THRESHOLD = state.isTouchDevice ? 640000 : Infinity;
 
 // Detail slider warning update (lower thresholds on touch devices)
 const WARN_ORANGE = state.isTouchDevice ? 200000 : 640000;
@@ -120,15 +129,15 @@ function initSliderTooltip(slider) {
         tip.style.left = thumbOffset + 'px';
     }
 
+    const label = document.getElementById(slider.id.replace('s', 'v'));
+    // (the label is written by the slider's own input handler, which may run after this one — Firefox showed the
+    // previous value, issue #34 — so the bubble reads it once every handler has run)
+    const show = () => { tip.textContent = label ? label.textContent : slider.value; positionTip(); };
     slider.addEventListener('pointerdown', () => {
-        tip.textContent = document.getElementById(slider.id.replace('s', 'v')).textContent;
-        positionTip();
+        show();
         tip.classList.add('visible');
     });
-    slider.addEventListener('input', () => {
-        tip.textContent = document.getElementById(slider.id.replace('s', 'v')).textContent;
-        positionTip();
-    });
+    slider.addEventListener('input', () => queueMicrotask(show));
     const hide = () => tip.classList.remove('visible');
     slider.addEventListener('pointerup', hide);
     slider.addEventListener('pointercancel', hide);
@@ -143,8 +152,9 @@ for (const [s,v] of [['sN','vN'],['sP','vP'],['sCn','vCn'],['sJ','vJ'],['sNs','v
             document.getElementById(v).textContent = detail.toLocaleString();
             updateDetailWarning(detail);
         } else if (s === 'sTmp') {
+            // Greenhouse: a forcing in W/m²
             const val = +e.target.value;
-            document.getElementById(v).textContent = (val > 0 ? '+' : val === 0 ? '\u00b1' : '') + val + '\u00b0C';
+            document.getElementById(v).textContent = (val > 0 ? '+' : val === 0 ? '\u00b1' : '\u2212') + Math.abs(val) + ' W/m\u00b2';
         } else if (s === 'sPrc') {
             const val = +e.target.value;
             const pct = Math.round(val * 50);
@@ -194,21 +204,14 @@ function shouldSkipClimate() {
     return detailFromSlider(+document.getElementById('sN').value) > AUTO_CLIMATE_THRESHOLD;
 }
 
-// Climate layer keys — layers that require climate data
-const CLIMATE_LAYERS = new Set([
-    'pressureSummer', 'pressureWinter',
-    'windSpeedSummer', 'windSpeedWinter',
-    'oceanCurrentSummer', 'oceanCurrentWinter',
-    'precipSummer', 'precipWinter',
-    'rainShadowSummer', 'rainShadowWinter',
-    'tempSummer', 'tempWinter',
-    'koppen', 'biome', 'continentality'
-]);
+// Layers that need a climate: the Inspect climate layers, Köppen and Satellite (js/climate-layers.js)
+const CLIMATE_LAYERS = { has: needsClimate };
 
-// Map tabs → tab-layer mapping
-const mapTabs = document.getElementById('mapTabs');
+// The layers over the planet (js/layer-bar.js: the tabs, the Climate row and the season, the phone's list) and the
+// sidebar's Inspect list (the terrain's inner layers). 'plates' is the plate colours over no layer (state.showPlates).
 const vizLegend = document.getElementById('vizLegend');
 const debugLayerEl = document.getElementById('debugLayer');
+const shownLayer = () => (state.showPlates ? 'plates' : state.debugLayer);
 
 function switchVisualization(layer) {
     if (CLIMATE_LAYERS.has(layer) && !state.climateComputed) {
@@ -224,60 +227,24 @@ function switchVisualization(layer) {
 }
 
 function applyLayer(layer) {
-    state.debugLayer = layer;
+    state.showPlates = layer === 'plates';
+    state.debugLayer = state.showPlates ? '' : layer;
     state.hoveredKoppen = -1;
     updateMeshColors();
-    // Show/hide wind/ocean arrows
-    const isWindLayer = layer === 'pressureSummer' || layer === 'pressureWinter' ||
-                        layer === 'windSpeedSummer' || layer === 'windSpeedWinter';
-    const isOceanLayer = layer === 'oceanCurrentSummer' || layer === 'oceanCurrentWinter';
-    if (isOceanLayer) {
-        const season = layer.includes('Winter') ? 'winter' : 'summer';
-        buildWindArrows(null);
-        buildOceanCurrentArrows(season);
-    } else if (isWindLayer) {
-        const season = layer.includes('Winter') ? 'winter' : 'summer';
-        buildOceanCurrentArrows(null);
-        buildWindArrows(season);
-    } else {
-        buildWindArrows(null);
-        buildOceanCurrentArrows(null);
-    }
+    updateSuperPlateBorders();
+    showClimateArrows(state.debugLayer, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
+    syncTabsToLayer(layer);
     updateLegend(layer);
 }
 
+const layerBar = initLayerBar(switchVisualization);
+initViewStrip();
+initProjectionPicker(setProjection);
+/** The bar, its season and the Inspect list, for the layer shown. */
 function syncTabsToLayer(layer) {
-    mapTabs.querySelectorAll('.map-tab').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.layer === layer);
-    });
-    // Sync mobile view switcher (only for main views it knows about)
-    const mvs = document.getElementById('mobileViewSwitch');
-    if (mvs && [...mvs.options].some(o => o.value === layer)) {
-        mvs.value = layer;
-    }
+    layerBar.sync(layer);
+    if (debugLayerEl) debugLayerEl.value = [...debugLayerEl.options].some(o => o.value === layer) ? layer : '';
 }
-
-mapTabs.addEventListener('click', (e) => {
-    const tab = e.target.closest('.map-tab');
-    if (!tab) return;
-    const layer = tab.dataset.layer;
-    // Update active tab
-    mapTabs.querySelectorAll('.map-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    // Sync debug dropdown + mobile switcher
-    if (debugLayerEl) debugLayerEl.value = layer;
-    mobileViewSwitch.value = layer;
-    switchVisualization(layer);
-});
-
-// Mobile view switcher
-const mobileViewSwitch = document.getElementById('mobileViewSwitch');
-mobileViewSwitch.addEventListener('change', (e) => {
-    const layer = e.target.value;
-    syncTabsToLayer(layer);
-    if (debugLayerEl) debugLayerEl.value = layer;
-    switchVisualization(layer);
-});
 
 // Koppen climate zone descriptions for hover tooltips
 const KOPPEN_DESCRIPTIONS = {
@@ -330,10 +297,7 @@ function updateLegend(layer) {
             { e: 0.55, label: '' },
             { e: 0.80, label: '' }
         ];
-        const colors = stops.map(s => {
-            const [r, g, b] = elevationToColor(s.e);
-            return `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
-        });
+        const colors = stops.map(s => terrainCss(s.e));
         const pcts = stops.map((_, i) => Math.round(i / (stops.length - 1) * 100));
         const gradStr = colors.map((c, i) => `${c} ${pcts[i]}%`).join(', ');
         vizLegend.innerHTML = `<div class="legend-gradient" style="background:linear-gradient(to right,${gradStr})"></div>` +
@@ -385,31 +349,14 @@ function updateLegend(layer) {
             });
         });
     } else if (layer === 'biome') {
-        // Satellite biome legend — gradient bar of key biome colors
-        const biomeStops = [
-            { color: [0.82,0.72,0.50], label: 'Desert' },
-            { color: [0.72,0.62,0.30], label: 'Steppe' },
-            { color: [0.42,0.50,0.18], label: 'Savanna' },
-            { color: [0.12,0.38,0.10], label: 'Forest' },
-            { color: [0.06,0.22,0.08], label: 'Taiga' },
-            { color: [0.35,0.32,0.22], label: 'Tundra' },
-            { color: [0.78,0.80,0.84], label: 'Ice' },
-        ];
-        const biomeColors = biomeStops.map(s => {
-            const [r, g, b] = s.color;
-            return `rgb(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)})`;
-        });
-        const biomePcts = biomeStops.map((_, i) => Math.round(i / (biomeStops.length - 1) * 100));
-        const biomeGrad = biomeColors.map((c, i) => `${c} ${biomePcts[i]}%`).join(', ');
-        vizLegend.innerHTML = `<div class="legend-gradient" style="background:linear-gradient(to right,${biomeGrad})"></div>` +
-            `<div class="legend-labels"><span>${biomeStops[0].label}</span><span>${biomeStops[3].label}</span><span>${biomeStops[6].label}</span></div>`;
-    } else if (layer === 'rainShadowSummer' || layer === 'rainShadowWinter') {
-        // Rain shadow diverging legend: leeward shadow ↔ neutral ↔ windward boost
-        vizLegend.innerHTML = `<div class="legend-gradient" style="background:linear-gradient(to right,rgb(230,51,33) 0%,rgb(140,140,148) 50%,rgb(38,102,243) 100%)"></div>` +
-            `<div class="legend-labels"><span>Rain Shadow</span><span>Neutral</span><span>Windward</span></div>`;
+        vizLegend.innerHTML = satelliteLegendHTML(state.climateSeason);
     } else if (layer === 'landheightmap') {
         vizLegend.innerHTML = `<div class="legend-gradient" style="background:linear-gradient(to right,#000 0%,#fff 100%)"></div>` +
             `<div class="legend-labels"><span>Ocean / Sea Level</span><span>Peak</span></div>`;
+    } else if (layer === 'plates') {
+        vizLegend.innerHTML = `<div class="legend-note">The plates in their colours. ${state.isTouchDevice ? 'Turn on edit mode (the button at the bottom right), then tap a plate' : 'Ctrl-click (⌘-click on a Mac) a plate'} to raise or sink it &mdash; in any view &mdash; then Rebuild.</div>`;
+    } else if (climateLayer(layer)) {
+        vizLegend.innerHTML = climateLegendHTML(layer, state.climateSeason);
     } else {
         vizLegend.innerHTML = '';
     }
@@ -420,6 +367,7 @@ const buildOverlay  = document.getElementById('buildOverlay');
 const buildBarFill  = document.getElementById('buildBarFill');
 const buildBarLabel = document.getElementById('buildBarLabel');
 let overlayActive = true; // starts active (visible in HTML on first load)
+holdControls(true);
 
 function onProgress(pct, label) {
     if (!overlayActive) return;
@@ -428,6 +376,7 @@ function onProgress(pct, label) {
 }
 
 function showBuildOverlay() {
+    clearBuildError();
     if (!buildBarFill || !buildOverlay) return;
     // Snap bar to 0 instantly — disable transition, reset transform, force reflow
     buildBarFill.style.transition = 'none';
@@ -437,11 +386,13 @@ function showBuildOverlay() {
     buildBarFill.style.transition = '';
     overlayActive = true;
     buildOverlay.classList.remove('hidden');
+    holdControls(true);
 }
 
 function hideBuildOverlay() {
     setTimeout(() => {
         overlayActive = false;
+        holdControls(false);
         if (buildOverlay) {
             buildOverlay.classList.add('hidden');
             // After first generation, switch from opaque to semi-transparent
@@ -471,6 +422,12 @@ genBtn.addEventListener('click', () => {
 });
 genBtn.addEventListener('generate-done', snapshotSliders);
 genBtn.addEventListener('generate-done', hideBuildOverlay);
+// a failed build (js/generate.js): the overlay says what happened instead of spinning on over the planet
+window.addEventListener('orogen:build-failed', (e) => {
+    overlayActive = false;
+    holdControls(false);
+    showBuildError(describeFailure(e.detail.message), e.detail.message);
+});
 genBtn.addEventListener('generate-done', () => {
     const infoEl = document.getElementById('info');
     if (!infoEl.dataset.nudged) {
@@ -550,20 +507,11 @@ genBtn.addEventListener('generate-done', () => {
         syncTabsToLayer('');
         updateMeshColors();
     }
-    syncTabsToLayer(state.debugLayer);
-    if (debugLayerEl) debugLayerEl.value = state.debugLayer;
-    updateLegend(state.debugLayer);
+    syncTabsToLayer(shownLayer());
+    updateLegend(shownLayer());
 
     // Rebuild wind/ocean arrows if a relevant debug layer is active
-    const v = state.debugLayer;
-    const isWindLayer = v === 'pressureSummer' || v === 'pressureWinter' ||
-                        v === 'windSpeedSummer' || v === 'windSpeedWinter';
-    const isOceanLayer = v === 'oceanCurrentSummer' || v === 'oceanCurrentWinter';
-    if (isWindLayer) {
-        buildWindArrows(v.includes('Winter') ? 'winter' : 'summer');
-    } else if (isOceanLayer) {
-        buildOceanCurrentArrows(v.includes('Winter') ? 'winter' : 'summer');
-    }
+    showClimateArrows(state.debugLayer, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
 });
 
 document.addEventListener('plates-edited', () => {
@@ -600,7 +548,7 @@ function paramsToSliderMap(params) {
         sCsv: params.continentSizeVariety, sLc: params.landCoverage,
         sTw: params.terrainWarp, sS: params.smoothing, sGl: params.glacialErosion,
         sHEr: params.hydraulicErosion, sTEr: params.thermalErosion,
-        sRs: params.ridgeSharpening, sTmp: params.temperatureOffset,
+        sRs: params.ridgeSharpening, sTmp: params.greenhouse,
         sPrc: params.precipitationOffset,
     };
 }
@@ -636,8 +584,7 @@ seedInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') applyCode(seedInput.value);
 });
 
-// View-mode checkboxes
-document.getElementById('chkPlates').addEventListener('change', () => { updateMeshColors(); updateSuperPlateBorders(); });
+// Wireframe (the Inspect section)
 document.getElementById('chkWire').addEventListener('change', buildMesh);
 
 // Grid toggle
@@ -660,8 +607,10 @@ document.getElementById('gridSpacing').addEventListener('change', (e) => {
     rebuildGrids();
 });
 
+// The Terrain view's colours (the view strip's Colours; js/terrain-palette.js)
+initPaletteMenu(() => { updateMeshColors(); updateLegend(shownLayer()); });
+
 // Map center longitude slider — translate on drag (instant), rebuild on release
-const mapCenterLonGroup = document.getElementById('mapCenterLonGroup');
 const sMapCenterLon = document.getElementById('sMapCenterLon');
 const vMapCenterLon = document.getElementById('vMapCenterLon');
 
@@ -675,6 +624,7 @@ sMapCenterLon.addEventListener('input', () => {
         const builtLon = state.mapMesh._builtCenterLon || 0;
         const dx = (builtLon - state.mapCenterLon) * (2 / Math.PI);
         state.mapMesh.position.x = dx;
+        for (const c of state.mapMesh.userData.wrap) c.visible = dx !== 0;
         if (state.mapGridMesh) state.mapGridMesh.position.x = dx;
     }
 });
@@ -684,11 +634,7 @@ sMapCenterLon.addEventListener('change', () => {
         buildMapMesh();
         // Rebuild arrows if a wind/ocean layer is active
         const layer = state.debugLayer;
-        const isWind = layer === 'pressureSummer' || layer === 'pressureWinter' ||
-                       layer === 'windSpeedSummer' || layer === 'windSpeedWinter';
-        const isOcean = layer === 'oceanCurrentSummer' || layer === 'oceanCurrentWinter';
-        if (isWind) buildWindArrows(layer.includes('Winter') ? 'winter' : 'summer');
-        if (isOcean) buildOceanCurrentArrows(layer.includes('Winter') ? 'winter' : 'summer');
+        showClimateArrows(layer, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
     }
 });
 
@@ -736,7 +682,6 @@ document.getElementById('viewMode').addEventListener('change', (e) => {
         updateMapCameraFrustum();
         mapCtrl.target.set(0, 0, 0);
         mapCtrl.update();
-        mapCenterLonGroup.style.display = '';
     } else {
         if (state.planetMesh) state.planetMesh.visible = true;
         atmosMesh.visible = true;
@@ -759,96 +704,28 @@ document.getElementById('viewMode').addEventListener('change', (e) => {
                 if (c.name === 'oceanMap') c.visible = false;
             });
         }
-        const showPlates = document.getElementById('chkPlates').checked;
-        waterMesh.visible = !showPlates && !state.debugLayer;
+        waterMesh.visible = !state.showPlates && !state.debugLayer;
         scene.background = new THREE.Color(0x030308);
         mapCtrl.enabled = false;
         ctrl.enabled = true;
-        mapCenterLonGroup.style.display = 'none';
     }
 });
 
-// Debug layer dropdown
-if (debugLayerEl) {
-    debugLayerEl.addEventListener('change', (e) => {
-        const layer = e.target.value;
-        syncTabsToLayer(layer);
-        switchVisualization(layer);
-    });
-}
+// The Inspect list (None: the terrain)
+if (debugLayerEl) debugLayerEl.addEventListener('change', (e) => switchVisualization(e.target.value));
+
+// Season picker (Year · January · July) for the climate's Inspect layers
+initSeasonPicker(state, () => {
+    updateMeshColors();
+    showClimateArrows(state.debugLayer, state.climateSeason, buildWindArrows, buildOceanCurrentArrows);
+    updateLegend(state.debugLayer);
+});
 
 // Export modal
-(function initExport() {
-    const overlay   = document.getElementById('exportOverlay');
-    const closeBtn  = document.getElementById('exportClose');
-    const cancelBtn = document.getElementById('exportCancel');
-    const goBtn     = document.getElementById('exportGo');
-    const widthEl   = document.getElementById('exportWidth');
-    const dimsEl    = document.getElementById('exportDims');
-    const typeEl    = document.getElementById('exportType');
-    const openBtn   = document.getElementById('exportBtn');
-
-    function updateDims() {
-        const w = +widthEl.value;
-        dimsEl.textContent = w + ' \u00D7 ' + (w / 2);
-    }
-
-    function openModal() {
-        overlay.classList.remove('hidden');
-        updateDims();
-        // Disable climate-dependent export types when climate isn't computed
-        for (const opt of typeEl.options) {
-            if (opt.value === 'biome' || opt.value === 'koppen') {
-                opt.disabled = !state.climateComputed;
-                if (opt.disabled && typeEl.value === opt.value) typeEl.value = 'color';
-            }
-        }
-    }
-    function closeModal() { overlay.classList.add('hidden'); }
-
-    openBtn.addEventListener('click', openModal);
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeModal();
-    });
-    widthEl.addEventListener('change', updateDims);
-
-    goBtn.addEventListener('click', async () => {
-        const type = typeEl.value;
-        const w = +widthEl.value;
-        closeModal();
-        showBuildOverlay();
-        onProgress(0, 'Preparing export...');
-        await exportMap(type, w, onProgress);
-        hideBuildOverlay();
-    });
-
-    // Export All — downloads Satellite, Climate, Heightmap, and Land Mask
-    const exportAllBtn = document.getElementById('exportAllGo');
-    const EXPORT_ALL_TYPES = [
-        { type: 'biome',          label: 'Satellite' },
-        { type: 'koppen',         label: 'Climate' },
-        { type: 'landheightmap',  label: 'Heightmap' },
-        { type: 'landmask',       label: 'Land Mask' },
-    ];
-
-    exportAllBtn.addEventListener('click', async () => {
-        const w = +widthEl.value;
-        closeModal();
-        showBuildOverlay();
-
-        // Compute climate first if needed (Satellite & Climate require it)
-        if (!state.climateComputed) {
-            onProgress(0, 'Computing climate...');
-            await new Promise(resolve => computeClimateViaWorker(onProgress, resolve));
-        }
-
-        await exportMapBatch(EXPORT_ALL_TYPES, w, onProgress);
-        hideBuildOverlay();
-    });
-})();
+// The export panel (v2/js/view/export-panel.js; the maps: js/export-generate.js)
+const exportPanel = initGenerateExport({ page: 'generate', ensureClimate: (progress) => new Promise(resolve => computeClimateViaWorker(progress, resolve)),
+    code: () => location.hash.replace(/^#/, "").trim() || (state.curData ? String(state.curData.seed) : "") });
+document.getElementById('exportBtn').addEventListener('click', exportPanel.open);
 
 // Edit mode setup (pointer events, sub-mode buttons)
 setupEditMode();
@@ -1090,24 +967,11 @@ if (state.isTouchDevice) {
     if (infoEl) infoEl.textContent = 'Drag to rotate \u00b7 Pinch to zoom \u00b7 Use edit button to reshape';
 }
 
-// Disable export widths > 8192 on touch devices
-if (state.isTouchDevice) {
-    const exportWidth = document.getElementById('exportWidth');
-    if (exportWidth) {
-        for (const opt of exportWidth.options) {
-            if (+opt.value > 8192) {
-                opt.disabled = true;
-                opt.textContent = opt.value + ' (too large for mobile)';
-            }
-        }
-    }
-}
 
 // Orientation change handler
 window.addEventListener('orientationchange', () => {
     setTimeout(() => {
-        camera.aspect = innerWidth / innerHeight;
-        camera.updateProjectionMatrix();
+        fitCamera(innerWidth, innerHeight);
         updateMapCameraFrustum();
         renderer.setSize(innerWidth, innerHeight);
     }, 100);
@@ -1127,16 +991,22 @@ function animate() {
         if (state.globeGridMesh) state.globeGridMesh.rotation.y = state.planetMesh.rotation.y;
     }
     tickAtlas();
-    renderer.render(scene, state.mapMode ? mapCamera : camera);
+    renderView();
 }
 
 // Resize handler
 window.addEventListener('resize', () => {
-    camera.aspect = innerWidth/innerHeight;
-    camera.updateProjectionMatrix();
+    fitCamera(innerWidth, innerHeight);
     updateMapCameraFrustum();
     renderer.setSize(innerWidth, innerHeight);
 });
+
+// Site storage can be blocked (privacy settings, some private windows): reading or writing it then throws. Treat that
+// as nothing stored, so the tutorial and What's New still work and the page still builds a planet.
+const store = {
+    get(key) { try { return localStorage.getItem(key); } catch { return null; } },
+    set(key, value) { try { localStorage.setItem(key, value); } catch { /* not remembered where the browser forbids it */ } },
+};
 
 // Tutorial modal
 (function initTutorial() {
@@ -1158,6 +1028,7 @@ window.addEventListener('resize', () => {
         dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
         backBtn.disabled = i === 0;
         nextBtn.textContent = i === TOTAL - 1 ? 'Get Started' : 'Next';
+        card.scrollTop = 0;     // (a card taller than the screen scrolls: each step from its top)
     }
 
     function openModal() {
@@ -1168,7 +1039,7 @@ window.addEventListener('resize', () => {
 
     function closeModal() {
         overlay.classList.add('hidden');
-        localStorage.setItem(LS_KEY, '1');
+        store.set(LS_KEY, '1');
     }
 
     nextBtn.addEventListener('click', () => {
@@ -1203,7 +1074,7 @@ window.addEventListener('resize', () => {
 
     // Auto-show on first visit — wait until the build overlay has faded out
     overlay.classList.add('hidden');
-    if (!localStorage.getItem(LS_KEY)) {
+    if (!store.get(LS_KEY)) {
         genBtn.addEventListener('generate-done', () => {
             if (buildOverlay) {
                 buildOverlay.addEventListener('transitionend', () => openModal(), { once: true });
@@ -1216,7 +1087,7 @@ window.addEventListener('resize', () => {
 
 // What's New modal — shown once per version for returning users
 (function initWhatsNew() {
-    const VERSION    = '2';
+    const VERSION    = '4';
     const LS_KEY     = 'wo-whatsnew-seen';
     const LS_TUTORIAL = 'atlas-engine-tutorial-seen';
     const overlay    = document.getElementById('whatsNewOverlay');
@@ -1237,11 +1108,12 @@ window.addEventListener('resize', () => {
         dots.forEach((d, idx) => d.classList.toggle('active', idx === i));
         backBtn.disabled = i === 0;
         nextBtn.textContent = i === TOTAL - 1 ? 'Got It' : 'Next';
+        card.scrollTop = 0;     // (a card taller than the screen scrolls: each step from its top)
     }
 
     function closeModal() {
         overlay.classList.add('hidden');
-        localStorage.setItem(LS_KEY, VERSION);
+        store.set(LS_KEY, VERSION);
     }
 
     nextBtn.addEventListener('click', () => {
@@ -1259,8 +1131,8 @@ window.addEventListener('resize', () => {
 
     // Only show for returning users (tutorial already seen) who haven't seen this version
     overlay.classList.add('hidden');
-    const seenVersion = localStorage.getItem(LS_KEY);
-    const isReturningUser = localStorage.getItem(LS_TUTORIAL);
+    const seenVersion = store.get(LS_KEY);
+    const isReturningUser = store.get(LS_TUTORIAL);
     if (isReturningUser && seenVersion !== VERSION) {
         genBtn.addEventListener('generate-done', () => {
             showStep(0);
@@ -1274,7 +1146,7 @@ window.addEventListener('resize', () => {
     const LS = 'wo-usage';
     const LS_DISMISSED = 'wo-survey-dismissed';
 
-    if (localStorage.getItem(LS_DISMISSED)) return;
+    if (store.get(LS_DISMISSED)) return;
 
     // Simple hash so we don't store raw timestamps
     function hash(str) {
@@ -1284,7 +1156,7 @@ window.addEventListener('resize', () => {
     }
 
     let data;
-    try { data = JSON.parse(localStorage.getItem(LS)) || {}; } catch (_) { data = {}; }
+    try { data = JSON.parse(store.get(LS)) || {}; } catch (_) { data = {}; }
     const hours = data.h || 0;
     const days  = data.d || 0;
     const lastH = data.lh || '';
@@ -1297,7 +1169,7 @@ window.addEventListener('resize', () => {
     const newHours = hourKey !== lastH ? hours + 1 : hours;
     const newDays  = dayKey  !== lastD ? days  + 1 : days;
 
-    localStorage.setItem(LS, JSON.stringify({ h: newHours, d: newDays, lh: hourKey, ld: dayKey }));
+    store.set(LS, JSON.stringify({ h: newHours, d: newDays, lh: hourKey, ld: dayKey }));
 
     if (newHours >= 3 && newDays >= 2) {
         const overlay    = document.getElementById('surveyOverlay');
@@ -1308,7 +1180,7 @@ window.addEventListener('resize', () => {
 
         function dismiss() {
             overlay.classList.add('hidden');
-            localStorage.setItem(LS_DISMISSED, '1');
+            store.set(LS_DISMISSED, '1');
         }
 
         // Show after the first generation completes
@@ -1332,12 +1204,11 @@ window.takePreview = function(width = 1200, height = 630) {
     // Save current state
     const savedW = renderer.domElement.width;
     const savedH = renderer.domElement.height;
-    const savedAspect = camera.aspect;
     const savedPixelRatio = renderer.getPixelRatio();
 
     // Hide all UI elements
     const hiddenEls = [];
-    for (const sel of ['#ui', '#topInfo', '#info', '#hoverInfo', '#helpBtn',
+    for (const sel of ['#ui', '#layerBar', '#legendCard', '#info', '#hoverInfo', '#helpBtn',
                         '#editToggle', '#refreshFab', '#rebuildFab', '#mobileViewSwitch',
                         '#buildOverlay', '#tutorialOverlay', '#exportOverlay', '#surveyOverlay', '#whatsNewOverlay']) {
         const el = document.querySelector(sel);
@@ -1348,8 +1219,7 @@ window.takePreview = function(width = 1200, height = 630) {
     }
 
     // Keep the current camera angle, just adjust aspect ratio for the output size
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
+    fitCamera(width, height);
 
     // Render at exact target size
     renderer.setPixelRatio(1);
@@ -1365,11 +1235,10 @@ window.takePreview = function(width = 1200, height = 630) {
     // Restore everything
     renderer.setPixelRatio(savedPixelRatio);
     renderer.setSize(savedW / savedPixelRatio, savedH / savedPixelRatio);
-    camera.aspect = savedAspect;
-    camera.updateProjectionMatrix();
+    fitCamera(innerWidth, innerHeight);
     for (const { el, prev } of hiddenEls) el.style.display = prev;
     tickAtlas();
-    renderer.render(scene, state.mapMode ? mapCamera : camera);
+    renderView(true);
     console.log('preview.png downloaded!');
 };
 

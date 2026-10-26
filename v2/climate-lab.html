@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex">
+    <title>World Orogen — Climate Lab</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="lab.css">
+    <link rel="stylesheet" href="climate-lab.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <main id="stage">
+        <canvas id="globe"></canvas>
+        <canvas id="map" hidden></canvas>
+        <div id="compare" hidden>
+            <figure><figcaption id="capA">Observed</figcaption><canvas id="mapA"></canvas></figure>
+            <figure><figcaption id="capB">V1</figcaption><canvas id="mapB"></canvas></figure>
+        </div>
+        <div id="hover" hidden></div>
+        <div id="busy" hidden>Loading…</div>
+        <div id="viewSwitch" class="segmented">
+            <button data-view="globe" class="on" aria-pressed="true">Globe</button>
+            <button data-view="map" aria-pressed="false">Map</button>
+            <button data-view="compare" aria-pressed="false">Side by side</button>
+        </div>
+        <div id="notice" hidden></div>
+    </main>
+
+    <aside id="panel">
+        <button id="panelHandle" aria-label="Expand or collapse panel"></button>
+        <header>
+            <div class="eyebrow">World Orogen · Climate Lab · Phases 0–2</div>
+            <h1>The new climate, checked against real Earth</h1>
+            <p>Phase 0: real observations beside V1's climate on the imported Earth, stage by stage, on the new 1° climate
+               grid. Phase 1: the new climate's skeleton run with real data. Phase 2: its temperature stage, on Earth and on
+               test planets. Nothing here changes the app.</p>
+            <p id="loadError" class="error" hidden></p>
+        </header>
+
+        <section>
+            <h2>Field</h2>
+            <div id="fields" class="segmented"></div>
+            <h2 class="sub">Source</h2>
+            <div id="sources" class="segmented"></div>
+            <h2 class="sub" id="seasonHead">Season</h2>
+            <div id="seasons" class="segmented"></div>
+            <div class="param" id="monthRow">
+                <span>Month (observed and new)</span><output id="monthLabel">—</output>
+                <input id="month" type="range" min="0" max="12" step="1" value="0" aria-label="Month">
+            </div>
+            <label class="toggle"><input type="checkbox" id="optItcz" checked> Rain belt (ITCZ): observed <span class="swatch obs"></span> V1 <span class="swatch v1"></span> new <span class="swatch new"></span></label>
+            <label class="toggle"><input type="checkbox" id="optCoast" checked> Coastlines</label>
+            <div id="legend"></div>
+            <p class="hint" id="fieldNote"></p>
+        </section>
+
+        <section>
+            <h2>New climate</h2>
+            <p class="hint">Runs the new climate on this device: temperature (Phase 2), pressure and wind (3), ocean (4) and
+                rain (5). On Earth the winds and the rain can be swapped for real observations, and the temperature for real
+                data (the Phase 1 oracle), to judge one stage at a time. Then any field → source "New".</p>
+            <h2 class="sub">Planet</h2>
+            <div id="ncPlanet" class="segmented"></div>
+            <p class="hint" id="ncPlanetNote"></p>
+            <h2 class="sub" id="ncTempHead">Temperature</h2>
+            <div id="ncTemp" class="segmented"></div>
+            <h2 class="sub" id="ncWindsHead">Winds</h2>
+            <div id="ncWinds" class="segmented"></div>
+            <h2 class="sub" id="ncRainHead">Rain</h2>
+            <div id="ncRain" class="segmented"></div>
+            <h2 class="sub">Detail below the climate grid</h2>
+            <div id="ncDetail" class="segmented"></div>
+            <p class="hint">Terrain: rain follows ridges, valleys, windward slopes and rain shadows; the seasons follow the
+                coast. Texture: gentle variety at a fixed size in km (the same planet at every terrain resolution).</p>
+            <h2 class="sub">Terrain cells</h2>
+            <div id="skRes" class="segmented"></div>
+            <h2 class="sub">Points in the year</h2>
+            <div id="skK" class="segmented"></div>
+            <label class="toggle"><input type="checkbox" id="skLapse" checked> Correct each cell for its own height</label>
+            <button class="tool" id="skRun">Run on this device</button>
+            <div class="tablewrap"><table id="skTable"></table></div>
+            <p class="hint">Phase 1 — real Earth data through the new pipeline, measured in Node on the developer's desktop:</p>
+            <div class="tablewrap"><table id="skNodeTable"></table></div>
+        </section>
+
+        <section>
+            <h2>Phase 2 · the temperature stage</h2>
+            <p class="hint">The energy balance on Earth with the observed winds, per continent (each weighted equally),
+                against the real monthly temperatures — and V1's temperature on the same land.</p>
+            <div class="tablewrap"><table id="tempTable"></table></div>
+            <p class="hint">Köppen with the real rain — how much the temperature alone gets right:</p>
+            <div class="tablewrap"><table id="tempSwapTable"></table></div>
+            <p class="hint">Test planets — what physics expects, with no reference to Earth:</p>
+            <div class="tablewrap"><table id="tempPlanetTable"></table></div>
+            <p class="hint" id="tempNote"></p>
+        </section>
+
+        <section>
+            <h2>Phase 3 · pressure and wind</h2>
+            <p class="hint">Derived from the temperature — open loop: given the real near-surface temperature, scored
+                against the real pressure and winds per continent and ocean basin (each weighted equally), with V1 on the
+                same cells (June–August and December–February means).</p>
+            <div class="tablewrap"><table id="circTable"></table></div>
+            <p class="hint">Named features on Earth:</p>
+            <div class="tablewrap"><table id="circNamedTable"></table></div>
+            <p class="hint">Test planets and the coupled run:</p>
+            <div class="tablewrap"><table id="circPlanetTable"></table></div>
+            <p class="hint" id="circNote"></p>
+        </section>
+
+        <section>
+            <h2>Phase 4 · ocean</h2>
+            <p class="hint">Wind-driven gyres and circumpolar currents, and the heat they move (currents + upwelling) into the
+                temperature. Open loop: the real winds drive the ocean; the temperature runs with and without its heat.</p>
+            <div class="tablewrap"><table id="oceanTable"></table></div>
+            <p class="hint">Named currents and coasts on Earth, and the test planets:</p>
+            <div class="tablewrap"><table id="oceanNamedTable"></table></div>
+            <p class="hint" id="oceanNote"></p>
+        </section>
+
+        <section>
+            <h2>Phase 5 · rain</h2>
+            <p class="hint">A column-water budget: evaporation, transport by the winds, rain-out as the air nears saturation,
+                storms, mountains. Open loop (real temperature), with the real winds and with the circulation stage's own
+                winds; scored against Beck on land and GPCP at sea, per continent and ocean basin (each weighted equally).</p>
+            <div class="tablewrap"><table id="rainTable"></table></div>
+            <p class="hint">Against V1 on the same land:</p>
+            <div class="tablewrap"><table id="rainCmpTable"></table></div>
+            <p class="hint">Named features on Earth (real winds) and the test planets:</p>
+            <div class="tablewrap"><table id="rainNamedTable"></table></div>
+            <p class="hint" id="rainNote"></p>
+        </section>
+
+        <section>
+            <h2>Phase 6 · the coupled climate</h2>
+            <p class="hint">Every stage new on Earth (160K terrain cells), scored on Köppen against Beck's map per continent
+                (each weighted equally), with every stage's own score as a guardrail. The rain now feeds back: clouds shade
+                rainy land. The last few settings were tuned on Köppen within their literature ranges.</p>
+            <div class="tablewrap"><table id="coupledTable"></table></div>
+            <p class="hint">Regimes, drift across terrain resolutions and the test planets:</p>
+            <div class="tablewrap"><table id="coupledMoreTable"></table></div>
+            <p class="hint" id="coupledNote"></p>
+        </section>
+
+        <section>
+            <h2>Which parts of V1's climate work?</h2>
+            <p class="hint">Each stage scored on its own against observations (June–August / December–February).</p>
+            <div class="tablewrap"><table id="stageTable"></table></div>
+        </section>
+
+        <section>
+            <h2>Where V1's Köppen error comes from</h2>
+            <p class="hint">Every row uses the same classifier (Beck's rules). Swapping real data in for one of V1's fields shows how much of the error that field causes.</p>
+            <div class="tablewrap"><table id="swapTable"></table></div>
+        </section>
+
+        <section>
+            <h2>Can the climate run at a few points in the year?</h2>
+            <p class="hint">Real Earth's 12 months, cut down to K points and rebuilt: how much of the Köppen map survives.</p>
+            <div class="tablewrap"><table id="seasonTable"></table></div>
+            <p class="hint" id="seasonNote"></p>
+        </section>
+
+        <section>
+            <h2>Speed on this device</h2>
+            <p class="hint">Open this page on your phone and press the buttons. V1's climate at 40K is the speed budget the new climate must meet.</p>
+            <div class="buttons">
+                <button class="tool" id="timeV1_40">Time V1 climate · 40K</button>
+                <button class="tool" id="timeV1_160">Time V1 climate · 160K</button>
+                <button class="tool" id="timeKernels">Time new-climate building blocks</button>
+            </div>
+            <div class="tablewrap"><table id="timingTable"></table></div>
+            <p class="hint" id="deviceInfo"></p>
+        </section>
+    </aside>
+
+    <script type="module" src="js/climate-lab/lab-main.js"></script>
+</body>
+</html>

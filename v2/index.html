@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex">
+    <title>World Orogen V2 — Tectonics Lab</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="lab.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+            "delaunator": "https://cdn.jsdelivr.net/npm/delaunator@5.0.1/+esm"
+        }
+    }
+    </script>
+</head>
+<body>
+    <main id="stage">
+        <canvas id="globe"></canvas>
+        <canvas id="map" hidden></canvas>
+        <div id="hover" hidden></div>
+        <div id="busy" hidden>Building…</div>
+        <div id="viewSwitch" class="segmented">
+            <button data-view="globe" class="on" aria-pressed="true">Globe</button>
+            <button data-view="map" aria-pressed="false">Map</button>
+        </div>
+        <div id="timebar">
+            <button id="play" aria-label="Play / pause">▶</button>
+            <button id="stepBack" class="step" aria-label="Back one frame">◀</button>
+            <button id="stepForward" class="step" aria-label="Forward one frame">▶</button>
+            <input id="time" type="range" min="0" max="300" step="1" value="0" aria-label="Time">
+            <output id="timeLabel">0 Myr</output>
+            <select id="rate" aria-label="Playback speed">
+                <option value="1">1 Myr/s · very slow</option>
+                <option value="2.5">2.5 Myr/s</option>
+                <option value="5">5 Myr/s · slow</option>
+                <option value="10" selected>10 Myr/s</option>
+                <option value="25">25 Myr/s</option>
+                <option value="60">60 Myr/s · fast</option>
+            </select>
+        </div>
+    </main>
+
+    <aside id="panel">
+        <button id="panelHandle" aria-label="Expand or collapse panel"></button>
+        <header>
+            <div class="eyebrow">World Orogen V2 · Tectonics Lab</div>
+            <nav id="phaseNav" aria-label="Phases"></nav>
+            <h1 id="phaseTitle">Loading…</h1>
+            <p id="phaseSummary"></p>
+            <p id="buildError" class="error" hidden></p>
+        </header>
+
+        <section>
+            <h2>Display</h2>
+            <div id="layers" class="segmented"></div>
+            <label class="toggle" id="optConflictsRow"><input type="checkbox" id="optConflicts" checked> Show gaps &amp; overlaps</label>
+            <label class="toggle" id="optBoundariesRow"><input type="checkbox" id="optBoundaries" checked> Plate boundaries &amp; trenches</label>
+            <label class="toggle"><input type="checkbox" id="optArrows" checked> Velocity arrows</label>
+            <label class="toggle" id="optForcesRow" hidden><input type="checkbox" id="optForces" checked> Force arrows (net, per plate)</label>
+            <label class="toggle"><input type="checkbox" id="optMarkers" checked> Euler poles</label>
+            <label class="toggle"><input type="checkbox" id="optGrid" checked> Graticule (30°)</label>
+            <button id="sectionTool" class="tool" aria-pressed="false" hidden>Cross-section</button>
+            <div id="sectionPanel" hidden><canvas id="sectionChart"></canvas><p class="hint" id="sectionHint"></p></div>
+            <div class="legend" id="legend"></div>
+        </section>
+
+        <section id="paramsSection" hidden>
+            <h2>Generator</h2>
+            <div id="params"></div>
+            <p class="hint">Release a slider to rebuild. The same seed and settings always give the same world.</p>
+        </section>
+
+        <section>
+            <h2>Live numbers</h2>
+            <div id="budget"></div>
+            <div id="chartSection" hidden><canvas id="chart"></canvas><div id="chartKey" class="legend"></div></div>
+            <div class="tablewrap"><table id="plateTable"></table></div>
+            <p class="hint" id="statsHint"></p>
+        </section>
+
+        <section>
+            <h2>What to verify</h2>
+            <ol id="checklist"></ol>
+            <p class="hint">Numeric version: <code id="checkCommand"></code></p>
+        </section>
+
+        <footer>
+            <span id="meshInfo"></span>
+            <span><label>Seed <input id="seed" type="number" value="12345" min="0" max="9999999"></label> <button id="reseed" title="Random seed">New</button></span>
+        </footer>
+    </aside>
+
+    <script type="module" src="js/app/lab-main.js"></script>
+</body>
+</html>

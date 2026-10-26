@@ -2,6 +2,10 @@
 Project: World Orogen
 Site: https://orogen.studio
 Contact: https://github.com/raguilar011095/planet_heightmap_generation
+Bluesky: https://bsky.app/profile/did:plc:quknpdz3qcoid5uh4qv27w2t
+X: https://x.com/worldorogen
+Threads: https://www.threads.com/@orogen.studio
+Ko-fi: https://ko-fi.com/orogenstudio
 
 /* THANKS */
 Red Blob Games — Fibonacci sphere meshing and planet generation inspiration
@@ -9,8 +13,9 @@ Three.js — 3D rendering
 Delaunator — Delaunay triangulation
 Worldbuilding Pasta (https://worldbuildingpasta.blogspot.com/) — worldbuilding science and climate reference
 Artifexian (https://www.youtube.com/@Artifexian) — worldbuilding tutorials and planetary science inspiration
-Madeline James (https://www.youtube.com/@MadelineJamesWorldbuilds, https://www.madelinejameswrites.com/) — worldbuilding methodology and climate design reference
+Madeline James (https://www.youtube.com/@MadelineJamesWorldbuilds, https://www.youtube.com/@madelinejameswrites, https://www.madelinejameswrites.com/) — worldbuilding methodology and climate design reference
 Fractal Philosophy (https://www.youtube.com/watch?v=7xL0udlhnqI) — procedural terrain generation inspiration
+Kilroy's Kartography (https://www.youtube.com/@KilroysKartography) — world-scale terrain with Gaea; a conceptual inspiration
 
 /* SITE */
 Standards: HTML5, ES Modules, WebGL

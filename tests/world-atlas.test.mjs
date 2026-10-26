@@ -31,3 +31,17 @@ test('bounded regional generation and deterministic physical aggregation indepen
  const a=atlas.sampleCell(id,data,x=>x*2);assert.deepEqual(a,atlas.sampleCell(id,data,x=>x*2));assert.equal(a.elevationMeanM,1000);assert.equal(a.landFraction,1);assert.equal(a.temperatureMeanC,0);assert.ok(Math.abs(a.precipitationIndex-.3)<1e-9);
  assert.equal(atlas.locate(12,30),id);
 });
+test('current climate uses degrees and annual millimetres instead of legacy normalized fields',()=>{
+ const id=atlas.locate(12,30),data={r_xyz:new Float32Array(atlas.direction(12,30)),r_elevation:new Float32Array([.5]),
+  climate:{cells:{t:{year:new Float32Array([14])},p:{year:new Float32Array([100])}}},
+  r_temperature_summer:[.5],r_temperature_winter:[.5],r_precip_summer:[.2],r_precip_winter:[.4]};
+ const a=atlas.sampleCell(id,data,x=>x*2);
+ assert.equal(a.temperatureMeanC,14);assert.equal(a.precipitationAnnualMm,1200);
+ assert.equal(a.precipitationIndex,undefined);assert.equal(a.climateSource,'annual-cell-climate');
+});
+test('ocean samples without continental climate do not produce NaN climate values or a land class',()=>{
+ const data={r_xyz:new Float32Array(atlas.direction(12,30)),r_elevation:new Float32Array([-.5]),
+  climate:{cells:{t:{year:new Float32Array([NaN])},p:{year:new Float32Array([NaN])}}},debugLayers:{koppen:new Uint8Array([0])}};
+ const a=atlas.sampleCell(atlas.locate(12,30),data,x=>x*2);
+ assert.equal(a.landFraction,0);assert.equal(a.temperatureMeanC,undefined);assert.equal(a.precipitationAnnualMm,undefined);assert.equal(a.koppenIndex,undefined);
+});

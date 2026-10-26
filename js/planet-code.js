@@ -16,14 +16,17 @@ const SLIDERS = [
     { min: 0,     step: 0.05, count: 21  }, // Soil Creep
     { min: 0,     step: 0.05, count: 21  }, // Terrain Warp
     { min: 0,     step: 0.05, count: 21  }, // 12: Continent Size Variety
-    { min: -15,   step: 1,    count: 31  }, // 13: Temperature
+    { min: -30,   step: 2,    count: 31  }, // 13: Temperature (a forcing in W/m²; before 2026-10 −15…15 °C — same positions)
     { min: -1,    step: 0.1,  count: 21  }, // 14: Precipitation
     { min: 0,     step: 0.01, count: 101 }, // 15: Land Coverage
 ];
 
 // Mixed-radix bases (right-to-left): lcIdx, prcIdx, tmpIdx, csvIdx, twIdx, scIdx, rsIdx, teIdx, heIdx, glIdx, smIdx, nsIdx, cnIdx, pIdx, jIdx, nIdx, seed
 const RADICES = [101, 21, 31, 21, 21, 21, 21, 21, 21, 21, 21, 51, 10, 117, 21, 2556];
-const SEED_MAX = 16777216; // 2^24
+// Seeds 0 … 2,147,483,645: js/rng.js starts in a state of its own for each (plans/SEED_RANGE_PLAN.md; before 2026-10,
+// 0 … 2^24 − 1). The seed is the code's top digit, so the codes of those seeds are as they were, and a seed this large
+// still fits in BASE_LEN characters.
+export const SEED_MAX = 2147483646;
 const BASE_LEN = 22; // base code length (no toggles)
 const PREV5_LEN = 21; // previous 21-char codes (before land coverage)
 const PREV4_LEN = 18; // previous 18-char codes (before continent variety/temp/precip)
@@ -83,7 +86,7 @@ const DECODE_FORMATS = {
         ],
         defaults: { terrainWarp: 0.5, glacialErosion: 0, thermalErosion: 0.1,
                     ridgeSharpening: 0.35, soilCreep: 0.05, continentSizeVariety: 0,
-                    temperatureOffset: 0, precipitationOffset: 0, landCoverage: 0.3 }
+                    greenhouse: 0, precipitationOffset: 0, landCoverage: 0.3 }
     },
     [PREV_LEN]: {
         radices: PREV_RADICES,
@@ -93,7 +96,7 @@ const DECODE_FORMATS = {
         ],
         defaults: { terrainWarp: 0.5, glacialErosion: 0, ridgeSharpening: 0.35,
                     soilCreep: 0.05, continentSizeVariety: 0,
-                    temperatureOffset: 0, precipitationOffset: 0, landCoverage: 0.3 }
+                    greenhouse: 0, precipitationOffset: 0, landCoverage: 0.3 }
     },
     [PREV2_LEN]: {
         radices: PREV2_RADICES,
@@ -102,7 +105,7 @@ const DECODE_FORMATS = {
             ['smoothing', 5], ['roughness', 4], ['numContinents', 3], ['P', 2], ['jitter', 1], ['N', 0],
         ],
         defaults: { terrainWarp: 0.5, glacialErosion: 0, continentSizeVariety: 0,
-                    temperatureOffset: 0, precipitationOffset: 0, landCoverage: 0.3 }
+                    greenhouse: 0, precipitationOffset: 0, landCoverage: 0.3 }
     },
     [PREV3_LEN]: {
         radices: PREV3_RADICES,
@@ -112,7 +115,7 @@ const DECODE_FORMATS = {
             ['numContinents', 3], ['P', 2], ['jitter', 1], ['N', 0],
         ],
         defaults: { terrainWarp: 0.5, continentSizeVariety: 0,
-                    temperatureOffset: 0, precipitationOffset: 0, landCoverage: 0.3 }
+                    greenhouse: 0, precipitationOffset: 0, landCoverage: 0.3 }
     },
     [PREV4_LEN]: {
         radices: PREV4_RADICES,
@@ -121,12 +124,12 @@ const DECODE_FORMATS = {
             ['thermalErosion', 8], ['hydraulicErosion', 7], ['glacialErosion', 6],
             ['smoothing', 5], ['roughness', 4], ['numContinents', 3], ['P', 2], ['jitter', 1], ['N', 0],
         ],
-        defaults: { continentSizeVariety: 0, temperatureOffset: 0, precipitationOffset: 0, landCoverage: 0.3 }
+        defaults: { continentSizeVariety: 0, greenhouse: 0, precipitationOffset: 0, landCoverage: 0.3 }
     },
     [PREV5_LEN]: {
         radices: PREV5_RADICES,
         fields: [
-            ['precipitationOffset', 14], ['temperatureOffset', 13], ['continentSizeVariety', 12],
+            ['precipitationOffset', 14], ['greenhouse', 13], ['continentSizeVariety', 12],
             ['terrainWarp', 11], ['soilCreep', 10], ['ridgeSharpening', 9],
             ['thermalErosion', 8], ['hydraulicErosion', 7], ['glacialErosion', 6],
             ['smoothing', 5], ['roughness', 4], ['numContinents', 3], ['P', 2], ['jitter', 1], ['N', 0],
@@ -136,7 +139,7 @@ const DECODE_FORMATS = {
     [BASE_LEN]: {
         radices: RADICES,
         fields: [
-            ['landCoverage', 15], ['precipitationOffset', 14], ['temperatureOffset', 13],
+            ['landCoverage', 15], ['precipitationOffset', 14], ['greenhouse', 13],
             ['continentSizeVariety', 12], ['terrainWarp', 11], ['soilCreep', 10], ['ridgeSharpening', 9],
             ['thermalErosion', 8], ['hydraulicErosion', 7], ['glacialErosion', 6],
             ['smoothing', 5], ['roughness', 4], ['numContinents', 3], ['P', 2], ['jitter', 1], ['N', 0],
@@ -174,7 +177,7 @@ function decodeFormat(packed, config, toggleStr) {
 
 /**
  * Encode planet parameters into a base36 planet code.
- * @param {number} seed - Integer seed 0–16777215
+ * @param {number} seed - Integer seed 0–2147483645
  * @param {number} N - Detail (5000–2560000, step 1000)
  * @param {number} jitter - Irregularity (0–1, step 0.05)
  * @param {number} P - Plates (4–120, step 1)
@@ -188,13 +191,13 @@ function decodeFormat(packed, config, toggleStr) {
  * @param {number} ridgeSharpening - Ridge Sharpening (0–1, step 0.05)
  * @param {number} soilCreep - Soil Creep (0–1, step 0.05)
  * @param {number} continentSizeVariety - Continent Size Variety (0–1, step 0.05)
- * @param {number} temperatureOffset - Temperature offset (-15–15, step 1)
+ * @param {number} greenhouse - the Temperature slider: a forcing in W/m² (-30–30, step 2)
  * @param {number} precipitationOffset - Precipitation offset (-1–1, step 0.1)
  * @param {number} landCoverage - Land Coverage (0–1, step 0.05)
  * @param {number[]} [toggledIndices=[]] - Sorted array of toggled plate indices
  * @returns {string} base36 code (22 chars without edits, 22 + '-' + 2*k with k edits)
  */
-export function encodePlanetCode(seed, N, jitter, P, numContinents, roughness, terrainWarp, smoothing, glacialErosion, hydraulicErosion, thermalErosion, ridgeSharpening, soilCreep, continentSizeVariety, temperatureOffset, precipitationOffset, landCoverage, toggledIndices = []) {
+export function encodePlanetCode(seed, N, jitter, P, numContinents, roughness, terrainWarp, smoothing, glacialErosion, hydraulicErosion, thermalErosion, ridgeSharpening, soilCreep, continentSizeVariety, greenhouse, precipitationOffset, landCoverage, toggledIndices = []) {
     const nIdx  = toIndex(N, SLIDERS[0]);
     const jIdx  = toIndex(jitter, SLIDERS[1]);
     const pIdx  = toIndex(P, SLIDERS[2]);
@@ -208,7 +211,7 @@ export function encodePlanetCode(seed, N, jitter, P, numContinents, roughness, t
     const scIdx = toIndex(soilCreep, SLIDERS[10]);
     const twIdx = toIndex(terrainWarp, SLIDERS[11]);
     const csvIdx = toIndex(continentSizeVariety, SLIDERS[12]);
-    const tmpIdx = toIndex(temperatureOffset, SLIDERS[13]);
+    const tmpIdx = toIndex(greenhouse, SLIDERS[13]);
     const prcIdx = toIndex(precipitationOffset, SLIDERS[14]);
     const lcIdx  = toIndex(landCoverage, SLIDERS[15]);
 
@@ -247,7 +250,7 @@ export function encodePlanetCode(seed, N, jitter, P, numContinents, roughness, t
  * Decode a base36 planet code back into planet parameters.
  * Supports 22-char (current), 21-char (prev5), 18-char (prev4), 17-char (prev3), 16-char (prev2), 14-char (previous-gen), and 13-char (legacy) codes.
  * @param {string} code - base36 code (13, 14, 16, 17, 18, 21, or 22 chars, optionally followed by "-" + toggle indices)
- * @returns {{ seed: number, N: number, jitter: number, P: number, numContinents: number, roughness: number, terrainWarp: number, smoothing: number, glacialErosion: number, hydraulicErosion: number, thermalErosion: number, ridgeSharpening: number, soilCreep: number, continentSizeVariety: number, temperatureOffset: number, precipitationOffset: number, landCoverage: number, toggledIndices: number[] } | null}
+ * @returns {{ seed: number, N: number, jitter: number, P: number, numContinents: number, roughness: number, terrainWarp: number, smoothing: number, glacialErosion: number, hydraulicErosion: number, thermalErosion: number, ridgeSharpening: number, soilCreep: number, continentSizeVariety: number, greenhouse: number, precipitationOffset: number, landCoverage: number, toggledIndices: number[] } | null}
  */
 export function decodePlanetCode(code) {
     if (typeof code !== 'string') return null;

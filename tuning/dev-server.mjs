@@ -34,6 +34,12 @@ function resolveFile(urlPath) {
 }
 
 http.createServer((req, res) => {
+    // a directory asked for without its trailing slash (/v2) → redirect to /v2/, as the production host does,
+    // so the page's relative links resolve inside the directory
+    const url = new URL(req.url, 'http://x'), dir = path.join(ROOT, decodeURIComponent(url.pathname));
+    if (!url.pathname.endsWith('/') && dir.startsWith(ROOT) && fs.existsSync(dir) && fs.statSync(dir).isDirectory() && fs.existsSync(path.join(dir, 'index.html'))) {
+        res.writeHead(301, { Location: url.pathname + '/' + url.search }); res.end(); return;
+    }
     const fp = resolveFile(req.url);
     if (!fp) { res.writeHead(404, { 'Content-Type': 'text/plain' }); res.end('404 Not Found'); return; }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream' });
