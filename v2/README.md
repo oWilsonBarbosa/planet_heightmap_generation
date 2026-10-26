@@ -108,11 +108,15 @@ greener the drier the climate and season (none under snow); the picture above's 
 of it over all for its texture; its snow where the climate has snow in the season shown. The sea ice is drawn with a
 sharp, noise-ragged edge and loose floes where the cover is partial. **Rivers and lakes** by the climate
 (`finish-hydro.js`): discharge in m³/s from each place's runoff, less what dry river beds lose; each river's year — its
-monthly flows from each month's rain and snowmelt (and groundwater draining back slowly), routed down the rivers — and
+monthly flows from each month's rain and snowmelt (and groundwater draining back slowly), routed down the rivers, each
+month's water reaching each point as late as its way down takes (40 km a day, spread out as its water comes from near
+and far; a basin its river cuts through, holding no water, does not even the months out), set against the measured flows
+of Earth's great rivers (`tuning/water/`; since 2026-10-25) — and
 its regime: permanent, permanent with a yearly flood season (the Nile's), seasonal, dry most of the year; every river ends at the sea: a
 lake stays only where its river fills it and it is big for its river, and passes all its water on; anything smaller —
 or a basin its river cannot fill — is cut through by a gorge to its floor (old basins that overflow have cut their rims
-down; the ice age's hollows are lake districts). A gorge keeps its river's own course through the basin, every bend of
+down; the ice age's hollows are lake districts); a basin a gorge from upstream already drains below its floor holds no
+water along that gorge. A gorge keeps its river's own course through the basin, every bend of
 it, unless a shortcut is enough less work — the rock cut and a little for the length: along its own course a river does
 only `riverDirectness` of the work (0.1), so a bend is cut through only where the way round is over ten times the
 shortcut's (the worst hooks and tangles across drained basins — developer, rivers "that go back and forth", but "some

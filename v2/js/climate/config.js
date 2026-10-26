@@ -50,6 +50,13 @@ export const PARAMS_DEFAULTS = Object.freeze({
     TEMP_SEA_ICE_H0: 0.5,       // m          the sea is covered once its ice is this thick (and holds at most 6× this)
     TEMP_SEA_ICE_SPREAD_KM: 700,// km         the ice follows the sea's temperature averaged within this (a warm current's
                                 //            water spreads well out from its coast; the pack drifts)
+    TEMP_SNOW_MELT_MM: 90,      // mm/°C      snow on the ground melts this much water a month per °C above freezing, its
+                                //            latent heat taken from the air (spring late where the snow is deep; with the
+                                //            rain stage's rain; 0 = off) …
+    TEMP_SNOW_COVER_MM: 60,     // mm         … and covers the ground for the albedo as 1 − e^{−water/this} (0 = the month's
+                                //            cold alone, TEMP_ICE_WARM_C … TEMP_ICE_COLD_C) …
+    TEMP_SNOW_ALBEDO: 0.45,     // –          … reflecting this much (the snow itself; TEMP_ALBEDO_SNOW where the cold alone
+                                //            stands for it, counting dry frozen ground as snowy)
     TEMP_BLOCK_KM: 1.5,           // km         mountains block the low air's heat exchange: e^{−(ridge above the lower side)/this}; 0 = off
     TEMP_LOCAL_K: 11,            // W/m²/K     land's own seasons below the grid: a column's exchange with its surroundings (0 = off)
     TEMP_LOCAL_KM: 1925,        // km         … its departure from the region within this (Gaussian σ) is added over land
@@ -147,6 +154,7 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_TROPICAL_RH: 0.3,      // day        … and by tropical disturbances (monsoon depressions, easterly waves), per unit of the
     RAIN_TROPICAL_KM: 600,      // km         low-level winds' cyclonic vorticity (1/day), smoothed over this, within the tropics
                                 //            (the derived winds are smooth: their vorticity is ≈ ¼ of a real monsoon trough's)
+    RAIN_EADY_SMOOTH_DEG: 8,    // °          the storms grow on the zonal-mean temperature gradient smoothed over ± this
     RAIN_WIND_ROT: 0.757,       // –          rotational wind carrying the column's water, as a share of the wind above the friction layer …
     RAIN_WIND_DIV_DRY: 0.3,     // –          … and the divergent (converging / spreading) part, as a share of the near-surface
     RAIN_WIND_DIV_MOIST: 0.6,   //            wind: under dry air (a shallow layer), and in moist convecting air (a deep one)
@@ -162,6 +170,7 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_FRONT_DEG: 10,         // °          … its band (Gaussian σ) …
     RAIN_FRONT_HIGH_HPA: 4,     // hPa        … faded by e per this much pressure above the latitude's mean (the highs)
     RAIN_SOIL_MM: 87.5,         // mm         water the soil holds for evaporation in dry months
+    RAIN_MELT_SOAK: 0.5,        // –          share of the melting snow the ground takes in (the rest runs off over the frozen soil)
     RAIN_LAND_CONVECTION: 0.065, // –         spread of the column's relative humidity by afternoon storms over sunlit, wet land
     RAIN_COLUMN_LOCAL: 0.2,     // –          share of the surface's departure from its latitude's temperature felt through the air column
     RAIN_OROG_STORM: 1,         // –          share of the storms' wind speed (Eady rate × their size) in the lift over mountains
@@ -172,7 +181,13 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_OROG_SPREAD_KM: 600,   // km         windward / lee rain is moved within this distance, not made
     RAIN_SLOPE_FACTOR: 1.2,     // –          windward / lee rain on the 1° grid: × e^{β·(upslope speed / 0.1 m/s)}
     RAIN_OROGRAPHIC: 0.6,       // –          share of the water lifted by winds blowing up rising ground that rains out
-    RAIN_NEWTON: 30,            //            at most this many Newton steps per point in the year …
+    RAIN_OROG_MULT_MAX: 3,      // –          … and at most this many times its rain on any one 1° cell from the windward / lee step
+    RAIN_CELL_FACTOR_MAX: 1.5,  // –          a terrain cell's rain for its height above or below its surroundings: within × / ÷ this
+    RAIN_SUPPLY_START_MM: 5000, // mm/yr      the air brings only so much water: a 1° cell's year of rain above this is drawn toward …
+    RAIN_SUPPLY_MAX_MM: 0,      // mm/yr      … this, at most, every month alike. 0: no bound — the pages' climate; js/earth-relief.js
+                                //            EARTH_RELIEF_CLIMATE sets 7,500 for a planet on Earth's heights
+    RAIN_COLUMN_LAPSE_MAX: 6.5, // °C/km      the air column holds its water as if cooled with height by at most this (over ice sheets)
+    RAIN_NEWTON: 30,          //            at most this many Newton steps per point in the year …
     RAIN_TOL: 2e-3,             //            … stopping when the column water changes less than this (relative)
     RAIN_CYCLES: 4,             //            multigrid cycles per Newton step
     RAIN_POISSON_CYCLES: 6,     //            … for the wind's divergent part (each point starting from the last) …
@@ -223,6 +238,9 @@ export const PARAM_PRIORS = Object.freeze({
     TEMP_SEA_ICE_H0:    { value: 0.5, min: 0.3, max: 1, source: 'ice ≈ 0.3–1 m thick closes the sea (consolidated pack vs new ice and leads)' },
     TEMP_SEA_ICE_SPREAD_KM: { value: 700, min: 300, max: 1200, source: 'sea-ice drift ≈ 5–10 km/day — a few hundred to a thousand km over a season (IABP buoys)' },
     TEMP_POLAR_SUMMER_DAMP: { value: 0.5, min: 0.2, max: 0.7, source: 'Arctic summers: the surface stays near 0 °C while snow and sea ice melt, and the July 10 °C isotherm (the tree line) lies near 65–72°N on every continent; land poleward of 75° is tundra or ice everywhere on Earth (Beck et al. 2023). No direct value — set so the model\'s 66–80°N summers match, winters untouched' },
+    TEMP_SNOW_MELT_MM:  { value: 90, min: 45, max: 150, source: 'degree-day factors for snow ≈ 1.5–5 mm/°C/day (Hock 2003; Braithwaite 2008): ≈ 45–150 mm/°C a month; the latent heat of fusion 334 kJ/kg' },
+    TEMP_SNOW_COVER_MM: { value: 30, min: 10, max: 80, source: 'snow depletion curves: open ground fully covered from ≈ 10–40 mm of snow water, patchy below; forests and rough ground need more (Liston 2004; Niu & Yang 2007)' },
+    TEMP_SNOW_ALBEDO:   { value: 0.45, min: 0.35, max: 0.6, source: 'planetary (top-of-atmosphere) albedo over snow-covered land ≈ 0.35–0.45 over boreal forest, 0.5–0.65 over open land, against ≈ 0.25–0.35 snow-free (CERES, MODIS; Qu & Hall 2007)' },
     TEMP_ICE_START_C:   { value: -30, min: -40, max: -20, source: 'ice-sheet hysteresis: once grown, polar ice sheets persist under climates that would not grow them (e.g. DeConto & Pollard 2003; Abe-Ouchi et al. 2013)' },
 
     CIRC_HADLEY_SCALE:  { value: 1.2, min: 0.9, max: 1.5, source: 'Held & Hou 1980 underestimates the observed Hadley edge by ~20 % (e.g. Frierson et al. 2007)' },
@@ -291,6 +309,8 @@ export const PARAM_PRIORS = Object.freeze({
     RAIN_FRONT_HIGH_HPA: { value: 4, min: 2, max: 8, source: 'fronts steer around blocking and subtropical highs (a few hPa above the zonal mean)' },
     RAIN_SOIL_MM:       { value: 150, min: 50, max: 300, source: 'plant-available soil water capacity ≈ 100–200 mm (e.g. Manabe 1969 bucket: 150 mm)' },
     RAIN_LAND_CONVECTION: { value: 0.08, min: 0, max: 0.12, source: 'daytime convection over wet land: rain over land peaks in the afternoon and picks up at ≈ 5–10 % lower column humidity than over the sea (Schiro et al. 2016; Bergemann & Jakob 2016); soil-moisture–precipitation coupling in monsoon regions (Koster et al. 2004)' },
+    RAIN_MELT_SOAK:     { value: 0.5, min: 0.2, max: 1, source: 'little snowmelt soaks into frozen ground (Woo 1986): the spring flood carries much of the year\'s flow of rivers on frozen soils — the Lena\'s May–June flood about half (Yang et al. 2002)' },
+    RAIN_EADY_SMOOTH_DEG: { value: 8, min: 6, max: 16, source: 'the storm tracks\' baroclinic zones are ≈ 15–25° of latitude wide in the free troposphere; the surface\'s sharpest gradients (sea-ice edges, the Arctic coast in summer) are shallow and grow storms less than in proportion' },
     RAIN_COLUMN_LOCAL:  { value: 0.5, min: 0.2, max: 0.9, source: 'lower-tropospheric temperature anomalies over continents are ≈ 40–60 % of the surface anomaly' },
     RAIN_OROG_STORM:    { value: 1, min: 0.5, max: 1, source: 'orographic precipitation is concentrated in storms with strong cross-barrier flow (≈ 10–20 m/s), not the weak monthly-mean wind (Roe 2005)' },
     RAIN_LEE_PER_KM:    { value: 1, min: 0.3, max: 2, source: 'lee-side rain falls ≈ ×0.2–0.5 of windward within a few hundred km behind 1–2 km of relief (Cascades, Andes, Southern Alps; Roe 2005)' },
@@ -300,6 +320,11 @@ export const PARAM_PRIORS = Object.freeze({
     RAIN_OROG_SPREAD_KM: { value: 600, min: 300, max: 1000, source: 'water wrung out on the windward side is missing downwind — the rain-shadow budget closes over a few hundred km' },
     RAIN_SLOPE_FACTOR:  { value: 1.0, min: 0.3, max: 1.5, source: 'orographic enhancement ≈ ×2–3 on windward slopes, ×0.3–0.6 in the lee at ≈ 0.1–0.2 m/s of forced ascent in storms (Roe 2005; Smith & Barstad 2004); moved within the spread distance, not made' },
     RAIN_OROGRAPHIC:    { value: 0.5, min: 0.1, max: 1.0, source: 'precipitation efficiency of orographic clouds ≈ 20–50 % (Jiang & Smith 2003)' },
+    RAIN_OROG_MULT_MAX: { value: 3, min: 2, max: 5, source: 'orographic enhancement ≈ ×2–3 on windward slopes (Roe 2005; Smith & Barstad 2004); observed 1° land rain peaks at ≈ 7,500 mm/yr (Beck et al. 2023)' },
+    RAIN_CELL_FACTOR_MAX: { value: 1.5, min: 1.25, max: 2.5, source: 'no direct literature value: windward rain grows ≈ 5–10 % per 100 m (Roe 2005), so the few hundred metres a terrain cell stands above or below its 1° surroundings make ≈ ×1.2–1.6' },
+    RAIN_SUPPLY_START_MM: { value: 5000, min: 4000, max: 7500, source: "Earth's wettest 1° land cells get ≈ 5–7.5 m a year (Beck et al. 2023 at 1°: 7.5 m) — the Chocó, Mt Cameroon, the Khasi Hills; the climate gives Earth that with or without the bound" },
+    RAIN_SUPPLY_MAX_MM: { value: 7500, min: 7000, max: 12000, source: 'no 1° land cell on Earth reaches 8 m a year (Beck et al. 2023); the wettest stations ≈ 11.9 m (Mawsynram, Cherrapunji), a terrain cell up to ×RAIN_CELL_FACTOR_MAX its 1° cell' },
+    RAIN_COLUMN_LAPSE_MAX: { value: 6.5, min: 6.5, max: 10, source: 'the free troposphere cools ≈ 6.5 K/km (standard atmosphere); the ≈ 8 K/km of an ice-sheet surface (Fortuin & Oerlemans 1990) is its near-surface inversion, which holds little of the column\'s water' },
 });
 
 export function setParams(p) { Object.assign(PARAMS, p); }

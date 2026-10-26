@@ -20,6 +20,7 @@ import { LatLonGrid } from './grid.js';
 import { interpolationMatrix, PRECIP_TRANSFORMS } from './seasons.js';
 import { classifyCell } from './koppen.js';
 import { FastNoise } from '../core/fast-noise.js';
+import { PARAMS } from './config.js';
 
 /** Default settings. Units in the names. */
 export const CORE_DEFAULTS = Object.freeze({
@@ -30,7 +31,7 @@ export const CORE_DEFAULTS = Object.freeze({
     lapseRateCPerKm: 6.5,       // standard environmental lapse rate
     greenhouseWm2: 0,           // radiative forcing (W/m²): the pages' Greenhouse — in the energy balance (temperature.js)
     precipScale: 1,
-    rainPerKm: 1.0,             // rain × e^{this × (cell height − its surroundings’ mean, km)}, bounded 0.4–2.5
+    rainPerKm: 1.0,             // rain × e^{this × (cell height − its surroundings’ mean, km)}, bounded by RAIN_CELL_FACTOR_MAX
     terrainRelief: 0.5,         // share of a cell's own relief (its height beyond its surroundings' 1° mean) the climate
                                 //   follows — for the lapse rate and rain by height: the air near the ground mixes over
                                 //   small hills; 1 = every cell's own height (speckled on rough terrain)
@@ -261,6 +262,7 @@ function finishCells(grid, surface, months, lat, lon, elevKm, land, o, xyz, onCe
     const tAnnual = new Float32Array(n).fill(NaN), pAnnual = new Float32Array(n).fill(NaN);
     const T12 = new Float64Array(12), P12 = new Float64Array(12);
     const step = grid.step;
+    const pfMax = PARAMS.RAIN_CELL_FACTOR_MAX, pfMin = 1 / pfMax;
     for (let r = 0; r < n; r++) {
         if (!land[r]) continue;
         const x = (lon[r] + 180) / step - 0.5, y = Math.max(0, Math.min(h - 1, (90 - lat[r]) / step - 0.5));
@@ -273,8 +275,9 @@ function finishCells(grid, surface, months, lat, lon, elevKm, land, o, xyz, onCe
         const hAround = w00 * hLand[c00] + w10 * hLand[c10] + w01 * hLand[c01] + w11 * hLand[c11];
         const hc = hAround + o.terrainRelief * (Math.max(0, elevKm[r]) - hAround);
         // rain grows with the cell's height above its surroundings (orographic enhancement: ridges wetter, valleys
-        // drier), bounded — so rain, like temperature, follows the terrain below the grid's scale
-        let pf = o.rainPerKm ? Math.max(0.4, Math.min(2.5, Math.exp(o.rainPerKm * (hc - hAround)))) : 1, dt = 0;
+        // drier), bounded either way by RAIN_CELL_FACTOR_MAX — so rain, like temperature, follows the terrain below the
+        // grid's scale, without one steep cell taking many times the rain of the land around it
+        let pf = o.rainPerKm ? Math.max(pfMin, Math.min(pfMax, Math.exp(o.rainPerKm * (hc - hAround)))) : 1, dt = 0;
         if (tex) {
             const x = xyz[3 * r] * texScale, y = xyz[3 * r + 1] * texScale, z = xyz[3 * r + 2] * texScale;
             dt = tex.tempC * noiseT.fbm(x, y, z, 3, 0.5);
