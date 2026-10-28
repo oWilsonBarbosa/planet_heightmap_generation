@@ -93,6 +93,23 @@ function basin(speed) {
     return { ctx, out };
 }
 
+test('a closed basin\'s outlet drains into the basin with its own area, not over the rim with the basin\'s', () => {
+    const { ctx, out } = basin(40), n = ctx.mesh.numCells, cellKm2 = 4 * Math.PI * 6371 ** 2 / n;
+    assert.equal(out.lake[5], Water.SALT);
+    assert.equal(out.recv[2], 3); // the outlet, at the rim: it used to point over the rim, toward the sea
+    near(out.area[2], cellKm2, 1e-6 * cellKm2); // (Float32 areas)
+    assert.ok(out.q[2] > 0);
+    // every dry region's area is what drains into it down the network, and its water ends at the sea or the salt lake
+    const tree = new Float64Array(n);
+    for (const c of [1, 2, 3, 4]) {
+        let x = c;
+        while (x >= 0 && !ctx.ocean[x] && !out.lake[x]) { tree[x] += cellKm2; x = out.recv[x]; }
+        assert.ok(x >= 0 && (ctx.ocean[x] || out.lake[x] === Water.SALT));
+    }
+    for (const c of [1, 2, 3, 4]) near(out.area[c], tree[c], 1e-6 * tree[c]);
+    assert.ok(Array.from(out.rivers.cell).includes(2));
+});
+
 test('a real basin redirection changes the hydrograph while conserving its annual flow', () => {
     const instant = basin(0), delayed = basin(40), a = instant.out, b = delayed.out;
     assert.equal(b.recv[3], 4); // it used to drain toward 2 in the original flood order

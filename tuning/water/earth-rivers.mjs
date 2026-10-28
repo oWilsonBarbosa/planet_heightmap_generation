@@ -16,10 +16,18 @@
  *            violet), simulated and measured; how early the simulated year comes (the shift, in months, that best
  *            correlates it with the measured: the mean over all gauges, and over the great basins, from 500,000 km²)
  * And the closed basins: the share of the land (without Antarctica) whose water ends in a lake with no outflow (Earth:
- * ≈ 18–20 %, Wang et al. 2018), and which of Earth's own closed basins close (CLOSED).
+ * ≈ 18–20 %, Wang et al. 2018), and which of Earth's own closed basins close (CLOSED); and the network's consistency
+ * (the dry land whose drainage area is more than twice what drains into it down the network: 0 when sound).
  *
  *   node tuning/water/earth-rivers.mjs [--n 640000] [--climate obs|sim|both] [--min-area 25000] [--set key=value,…]
- *                                      [--tune [--grid key=v/v/v,…]] [--list] [--json report.json]
+ *                                      [--evolution] [--tune [--grid key=v/v/v,…]] [--list] [--json report.json]
+ *                                      [--trace low|<gauge index>,…] [--from lat,lon;…]
+ *
+ * --evolution runs the Evolution's rules (FINISH: no closed basins on land, no inland seas below seaBasinKm2) instead of
+ * Generate's (WATER). --trace follows each listed gauge's river (`low`: those under a tenth of the measured flow): the
+ * region it is matched to, where its water ends, its main stem up to its source with the discharge, runoff and bed's
+ * dryness, the rain over its basin observed and simulated, the closed lakes near it and the wettest region within
+ * 100 km; --from follows the water down from a place. Both for finding why a river comes out dry or is not matched.
  *
  * --set overrides the hydrology's constants (js/water-new.js WATER); --tune searches the constants of the rivers' year
  * (TUNE below) with the observed climate (--climate sim: the simulated), ranked by the year's score: correlation −
@@ -40,6 +48,7 @@ import Delaunator from 'delaunator';
 import { setDelaunator } from '../../js/sphere-mesh.js';
 import { elevToHeightKm } from '../../js/color-map.js';
 import { runNewWater, WATER } from '../../js/water-new.js';
+import { FINISH } from '../../v2/js/finish/finish-config.js';
 import { planetClimate } from '../../v2/js/climate/climate.js';
 import { CORE_DEFAULTS } from '../../v2/js/climate/core.js';
 import { loadEarthGrayscale } from '../climate/lib/earth-context.mjs';
@@ -50,10 +59,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIONS = path.join(__dirname, 'data', 'stations.json');
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const N = Number(arg('--n', 640000)), CLIMATE = arg('--climate', 'both'), MIN_AREA = Number(arg('--min-area', 25000)), TUNING = process.argv.includes('--tune'), LIST = process.argv.includes('--list');
-const JSON_OUT = arg('--json', null);
+const JSON_OUT = arg('--json', null), TRACE = arg('--trace', null), FROM = arg('--from', null);
 if (!['obs', 'sim', 'both'].includes(CLIMATE)) throw new Error('--climate must be obs, sim or both');
 const SET = Object.fromEntries((arg('--set', '') || '').split(',').filter(Boolean).map(kv => { const [k, v] = kv.split('='); return [k, v === 'true' ? true : v === 'false' ? false : Number(v)]; }));
 for (const k of Object.keys(SET)) if (!(k in WATER)) throw new Error(`--set: no constant ${k} in WATER`);
+// (--evolution: the Evolution's own rules — no closed basins on land, no inland seas below its seaBasinKm2 — not Generate's)
+if (process.argv.includes('--evolution')) for (const k of ['closedBasins', 'seaRemnantAnySize']) if (!(k in SET)) SET[k] = FINISH[k];
 const RADIUS_KM = 100, AREA_TOL = 1.5, R = 6371, SEC = 3.15576e7;
 /** The constants of the rivers' year searched by --tune, each one's values (--grid key=v/v/v,… instead). */
 const TUNE = arg('--grid', null) ? Object.fromEntries(arg('--grid').split(',').map(kv => { const [k, v] = kv.split('='); return [k, v.split('/').map(Number)]; }))
@@ -162,6 +173,105 @@ function score(W, F) {
     }).filter(Boolean);
     return { rows, unmatched };
 }
+/** --trace: each listed gauge's river followed (gauge indices, or `low`: those whose flow comes out under a tenth of
+ *  the measured): the region it is matched to; its water down to where it ends; up its main stem (the largest area
+ *  upstream at each step) to its source, with the discharge, the runoff, the bed's dryness and the lakes on the way;
+ *  the runoff of everything upstream against what arrives (the rest lost along the beds or off lakes); the closed lakes
+ *  near it; and the region within 100 km carrying the most water — where the river is, if the match missed it. */
+function trace(W, rows, unmatched, which) {
+    const D = W.debug, cellKm2 = 4 * Math.PI * R * R / n, own = c => Math.max(0, D.runoff[c]) * cellKm2 * 1e3 / SEC;
+    const first = new Int32Array(n).fill(-1), next = new Int32Array(n).fill(-1);
+    for (let c = 0; c < n; c++) { const r = W.recv[c]; if (r >= 0) { next[c] = first[r]; first[r] = c; } }
+    const arid = c => D.pet[c] > 0 ? Math.max(0, Math.min(1, (D.pet[c] - Math.max(0, D.rain[c])) / D.pet[c])) : 0;
+    const at = c => `${lat[c].toFixed(1)},${lon[c].toFixed(1)}`;
+    const km = (a, b) => R * Math.acos(Math.max(-1, Math.min(1, xyz[3 * a] * xyz[3 * b] + xyz[3 * a + 1] * xyz[3 * b + 1] + xyz[3 * a + 2] * xyz[3 * b + 2])));
+    const kind = c => W.ocean[c] ? 'sea' : ['', 'fresh lake', 'salt lake', 'salt pan', 'brackish lake'][W.lake[c]] || 'land';
+    // (and the rain over it, observed and simulated: what the climate gives the basin)
+    const upstream = (c0) => {
+        let sum = 0, cells = 0, pObs = 0, pSim = 0; const st = [c0];
+        while (st.length) { const c = st.pop(); sum += own(c); cells++; pObs += Math.max(0, zoneClimate.cell.pAnnual[c] || 0); pSim += Math.max(0, sim.cell.pAnnual[c] || 0); for (let u = first[c]; u >= 0; u = next[u]) st.push(u); }
+        return { sum, cells, pObs: pObs / cells, pSim: pSim / cells };
+    };
+    const ids = which === 'low' ? rows.filter(x => !(x.runoff >= 0.1)).map(x => x.gaugeIndex) : which.split(',').map(Number);
+    for (const gi of ids) {
+        const s = gauges[gi], row = rows.find(x => x.gaugeIndex === gi), um = unmatched.find(x => x.gaugeIndex === gi);
+        console.log(`\n  ── ${gi} ${s.river} at ${s.station} (${s.lat.toFixed(2)},${s.lon.toFixed(2)}): measured ${s.q.toFixed(0)} m³/s from ${s.areaKm2.toLocaleString()} km²`);
+        if (!row) { console.log(`     unmatched: ${um?.reason}`); continue; }
+        const c0 = row.cell, up = upstream(c0), g = Math.cos(s.lat * Math.PI / 180), gx = g * Math.sin(s.lon * Math.PI / 180), gy = Math.sin(s.lat * Math.PI / 180), gz = g * Math.cos(s.lon * Math.PI / 180);
+        const fromGauge = Math.round(R * Math.acos(Math.max(-1, Math.min(1, xyz[3 * c0] * gx + xyz[3 * c0 + 1] * gy + xyz[3 * c0 + 2] * gz))));
+        console.log(`     matched ${at(c0)}, ${fromGauge} km from the gauge; ${W.q[c0].toFixed(1)} m³/s from ${Math.round(W.area[c0]).toLocaleString()} km²; `
+            + `upstream runoff ${up.sum.toFixed(1)} m³/s over ${up.cells} regions → ${up.sum > 0 ? Math.round(100 * (1 - W.q[c0] / up.sum)) : 0} % lost on the way; `
+            + `rain over it observed ${up.pObs.toFixed(0)} mm, simulated ${up.pSim.toFixed(0)} mm (×${(up.pSim / Math.max(1, up.pObs)).toFixed(2)})`);
+        // down to where the water ends
+        let c = c0, steps = 0, dist = 0, peak = W.q[c0];
+        while (W.recv[c] >= 0 && steps < 1e5) { const r = W.recv[c]; dist += km(c, r); c = r; steps++; if (W.q[c] > peak) peak = W.q[c]; }
+        console.log(`     down: ${steps} steps, ${Math.round(dist)} km to ${kind(c)} at ${at(c)} (its region's recv ${W.recv[c]}); most on the way ${peak.toFixed(1)} m³/s`);
+        // up the main stem
+        const path = [c0];
+        for (let x = c0; ;) { let best = -1; for (let u = first[x]; u >= 0; u = next[u]) if (best < 0 || W.area[u] > W.area[best]) best = u; if (best < 0) break; path.push(best); x = best; }
+        path.reverse();          // from the source down
+        let qMax = 0, iMax = 0, len = 0;
+        for (let i = 0; i < path.length; i++) { if (W.q[path[i]] > qMax) { qMax = W.q[path[i]]; iMax = i; } if (i) len += km(path[i - 1], path[i]); }
+        console.log(`     main stem: ${path.length} regions, ${Math.round(len)} km from its source; most water ${qMax.toFixed(1)} m³/s at ${at(path[iMax])}, ${path.length - 1 - iMax} regions above the gauge`);
+        const show = new Set([0, iMax, path.length - 1]);
+        for (let i = 0; i < path.length; i += Math.max(1, Math.round(path.length / 12))) show.add(i);
+        for (let i = 1; i < path.length; i++) if (W.lake[path[i]] !== W.lake[path[i - 1]]) { show.add(i - 1); show.add(i); }
+        let d = 0;
+        for (let i = 0; i < path.length; i++) {
+            if (i) d += km(path[i - 1], path[i]);
+            if (!show.has(i)) continue;
+            const x = path[i];
+            console.log(`       ${String(Math.round(d)).padStart(5)} km  ${at(x).padEnd(12)} ${kind(x).padEnd(10)} q ${W.q[x].toFixed(1).padStart(8)}  area ${Math.round(W.area[x]).toLocaleString().padStart(9)}  h ${(1000 * W.heightKm[x]).toFixed(0).padStart(5)} m  rain ${D.rain[x].toFixed(0).padStart(5)}  pet ${D.pet[x].toFixed(0).padStart(5)}  runoff ${D.runoff[x].toFixed(0).padStart(4)} mm  arid ${arid(x).toFixed(2)}`);
+        }
+        // the closed lakes within 1000 km (inflow: what drains into them)
+        const inflow = new Map();
+        for (let x = 0; x < n; x++) { const r = W.recv[x]; if (r >= 0 && W.lake[r] >= 2 && W.recv[r] < 0 && !W.lake[x]) inflow.set(r, (inflow.get(r) ?? 0) + W.q[x]); }
+        const near = [...inflow.entries()].filter(([x, v]) => v > 1 && km(c0, x) < 1000).sort((a, b) => b[1] - a[1]).slice(0, 4);
+        if (near.length) console.log(`     closed lakes within 1000 km: ${near.map(([x, v]) => `${kind(x)} at ${at(x)} (${Math.round(km(c0, x))} km), ${v.toFixed(1)} m³/s in`).join('; ')}`);
+        // the wettest region near the gauge
+        let wet = -1;
+        for (const r of candidates[gi]) if (!W.ocean[r] && !W.lake[r] && (wet < 0 || W.q[r] > W.q[wet])) wet = r;
+        if (wet >= 0) console.log(`     most water within 100 km: ${W.q[wet].toFixed(1)} m³/s from ${Math.round(W.area[wet]).toLocaleString()} km² at ${at(wet)} (${Math.round(km(c0, wet))} km from the match)`);
+    }
+}
+/** The network against its drainage areas: the dry land whose area is more than twice what drains into it down the
+ *  network (`recv`) — a region given a basin's area that none of the basin drains to — and its largest such area. */
+function networkCheck(W) {
+    const cellKm2 = 4 * Math.PI * R * R / n, deg = new Int32Array(n), tree = new Float64Array(n);
+    for (let c = 0; c < n; c++) if (!W.ocean[c] && W.recv[c] >= 0) deg[W.recv[c]]++;
+    const queue = [];
+    for (let c = 0; c < n; c++) if (!W.ocean[c] && deg[c] === 0) queue.push(c);
+    for (let i = 0; i < queue.length; i++) { const c = queue[i], r = W.recv[c]; tree[c] += cellKm2; if (r >= 0 && !W.ocean[r]) { tree[r] += tree[c]; if (--deg[r] === 0) queue.push(r); } }
+    let bad = 0, worst = 0;
+    for (let c = 0; c < n; c++) if (!W.ocean[c] && !W.lake[c] && W.area[c] > 2 * tree[c] + 1) { bad++; worst = Math.max(worst, W.area[c]); }
+    return `network: ${bad} dry regions with a drainage area over twice what drains into them (largest ${Math.round(worst).toLocaleString()} km²)`;
+}
+/** --from lat,lon;lat,lon…: the water followed down from the dry-land region nearest each place to where it ends (the
+ *  sea or a closed lake), its discharge and the lakes on the way — where a river goes when no gauge finds it. */
+function follow(W, places) {
+    const D = W.debug, at = c => `${lat[c].toFixed(1)},${lon[c].toFixed(1)}`;
+    const kind = c => W.ocean[c] ? 'sea' : ['', 'fresh lake', 'salt lake', 'salt pan', 'brackish lake'][W.lake[c]] || 'land';
+    for (const p of places.split(';')) {
+        const [la, lo] = p.split(',').map(Number);
+        let c = -1, bd = Infinity;
+        for (let a = Math.floor(la) - 1; a <= Math.floor(la) + 1; a++) for (let o = Math.floor(lo) - 1; o <= Math.floor(lo) + 1; o++) for (const r of buckets.get(bkey(a, o)) ?? []) {
+            if (W.ocean[r] || W.lake[r]) continue;
+            const d = (lat[r] - la) ** 2 + ((lon[r] - lo) * Math.cos(la * Math.PI / 180)) ** 2;
+            if (d < bd) { bd = d; c = r; }
+        }
+        if (c < 0) { console.log(`\n  ── from ${p}: no dry land near`); continue; }
+        const path = [c];
+        while (W.recv[c] >= 0 && path.length < 1e5) { c = W.recv[c]; path.push(c); }
+        console.log(`\n  ── from ${p}: ${path.length} regions to ${kind(c)} at ${at(c)}`);
+        const show = new Set([0, path.length - 1]);
+        for (let i = 0; i < path.length; i += Math.max(1, Math.round(path.length / 14))) show.add(i);
+        for (let i = 1; i < path.length; i++) if (W.lake[path[i]] !== W.lake[path[i - 1]] || (W.q[path[i]] === 0) !== (W.q[path[i - 1]] === 0)) { show.add(i - 1); show.add(i); }
+        for (const i of [...show].sort((a, b) => a - b)) {
+            const x = path[i];
+            console.log(`       ${String(i).padStart(4)}  ${at(x).padEnd(12)} ${kind(x).padEnd(10)} q ${W.q[x].toFixed(1).padStart(8)}  area ${Math.round(W.area[x]).toLocaleString().padStart(9)}  h ${(1000 * W.heightKm[x]).toFixed(0).padStart(5)} m  rain ${D.rain[x].toFixed(0).padStart(5)}  pet ${D.pet[x].toFixed(0).padStart(5)}  runoff ${D.runoff[x].toFixed(0).padStart(4)} mm`);
+        }
+    }
+}
 const f = (x, digits = 2) => Number.isNaN(x) ? 'n/a' : x.toFixed(digits);
 const pc = x => Number.isNaN(x) ? 'n/a' : Math.round(100 * x) + ' %';
 function summary(rows) {
@@ -232,12 +342,15 @@ if (TUNING) {
         console.log(`  matched ${rows.length}/${gauges.length} eligible (${sourceGauges.length} source); unmatched ${unmatched.length}`);
         console.log(`── ${label}: year score ${yearScore(rows).toFixed(3)}`);
         console.log(`  ${closedBasins(W)}`);
+        console.log(`  ${networkCheck(W)}`);
         console.log(`  all      ${summary(rows)}`);
         console.log(`  no lake  ${summary(rows.filter(x => !x.lake))}`);
         for (const z of ZONES) { const zr = rows.filter(x => x.zone === z); if (zr.length >= 3) console.log(`  zone ${z}   ${summary(zr)}`); }
         if (LIST) for (const x of rows.slice().sort((a, b) => b.q - a.q)) console.log(`    ${x.river.slice(0, 16).padEnd(17)}${x.zone} runoff ×${x.runoff.toFixed(2)}`
             + (x.r === undefined ? ` [${x.seasonalStatus}]` : ` r ${x.r.toFixed(2)} range ×${x.range.toFixed(2)} low ×${x.low.toFixed(2)} early ${x.early ?? 'n/a'} | ${x.year.map(v => v.toFixed(1)).join(' ')} | measured ${x.measured.map(v => v.toFixed(1)).join(' ')}`));
         if (LIST) for (const x of unmatched) console.log(`    ${x.river} / ${x.station}: unmatched [${x.reason}]`);
+        if (TRACE) trace(W, rows, unmatched, TRACE);
+        if (FROM) follow(W, FROM);
     }
 }
 if (JSON_OUT) {

@@ -73,7 +73,10 @@ O [primeiro ajuste após a correção do percurso](RIVER_RECALIBRATION_20261026.
 - [x] Concluir a primeira recalibração sazonal com percurso corrigido: busca em 640 mil e confirmação em 2,56 milhões, incluindo grandes bacias e regiões frias.
 - [ ] Explicar e tratar as perdas na parcela reservada; investigar os excessos de chuva e neve da primavera setentrional antes de outra calibração climática.
 - [ ] Analisar as perdas em grupos climáticos e nas regiões identificadas; corrigir ou justificar os compromissos antes de declarar a candidata pronta.
-- [ ] Investigar os casos de vazão zero, o RMS infinito e as divergências de saída das bacias.
+- [x] Investigar os casos de vazão zero, o RMS infinito e as divergências de saída das bacias. Os zeros eram saídas de
+  bacias fechadas (regras do Generate) com a área da bacia inteira e nenhuma água; corrigidas em `finish-hydro.js`. Com
+  as regras do Evolution não havia zeros. O que resta é a chuva do clima simulado e o mapa grosseiro da Terra
+  ([relatório de 28/10](ZERO_FLOWS_20261028.md)).
 - [ ] Decidir a integração após essa revisão. O PR #2 permanece em rascunho; nenhum merge automático foi feito.
 
 ## Organização e pesquisa que continuam abertas

@@ -429,8 +429,11 @@ export function hydrology(ctx, F) {
             for (const x of water) { lakeKind[x] = kind; lakeLevel[x] = level; }
             if (h.sea ? kind === Water.FRESH : !closed && !water.length) cutPockets(h, id, c);
             h.kind = water.length ? kind : h.pan ? Water.PAN : Water.NONE; h.levelNow = level; h.outflow = outflow; h.fullEvap = full; h.outletIn = h.inflow;
-            q[c] = outflow; qw[c] = h.seasonW; area[c] = h.area;
+            // (a basin its rivers end in passes nothing on: its outlet is its dry ground like the rest, its own water and
+            // area drained down into the basin (below) — not a river leaving over the rim with the basin's area and none
+            // of its water)
             if (!(outflow > 0)) continue;
+            q[c] = outflow; qw[c] = h.seasonW; area[c] = h.area;
         }
         // down the bed to the next cell, losing water where it is dry (width ∝ √Q, loss ∝ width × length × aridity)
         let out = q[c];
@@ -473,8 +476,10 @@ export function hydrology(ctx, F) {
     const lr = new Int32Array(n).fill(-1), lp = new Int32Array(n).fill(-1), lfill = new Float32Array(n), lorder = [];
     for (const h of hollows) {
         if (!h.lake) continue;
-        const cells = h.cells, dry = c => hollow[c] === hollow[h.outlet] && !lakeKind[c] && c !== h.outlet;
-        const seeds = cells.filter(c => lakeKind[c]);
+        const cells = h.cells, seeds = cells.filter(c => lakeKind[c]);
+        // (a basin its rivers end in: its outlet drains down to its water too)
+        h.outletDry = h.outflow === 0 && seeds.length > 0;
+        const dry = c => hollow[c] === hollow[h.outlet] && !lakeKind[c] && (c !== h.outlet || h.outletDry);
         if (!seeds.length) seeds.push(h.outlet);
         const hp = new MinHeap(256);
         lorder.length = 0;
@@ -611,7 +616,7 @@ function riverYears(ctx, F, G) {
             for (let j = 0; j < M; j++) acc[j][c] += r0 * sh[j];
             if (h && h.lake) {
                 for (let j = 0; j < M; j++) h.inM[j] += acc[j][c];
-                if (c !== h.outlet) continue;
+                if (c !== h.outlet || h.outletDry) continue;
                 // (a lake passes on its year's outflow, shaped by its inflow's months — evened out by its storage; a basin
                 // its river cuts through holds none to even them out with: F.lakeRegulationDry)
                 const lam = h.kind === Water.FRESH || h.kind === Water.SALT ? F.lakeRegulation : F.lakeRegulationDry;
@@ -653,12 +658,12 @@ function riverYears(ctx, F, G) {
             const h = hollow[c] >= 0 ? hollows[hollow[c]] : null;
             let r = recv[c];
             if (h && h.lake && lakeKind[c] && c !== h.outlet) r = h.outflow > 0 ? h.outlet : -1;
-            if (h && h.lake && c === h.outlet && !(h.outflow > 0)) r = -1;
+            if (h && h.lake && c === h.outlet && !(h.outflow > 0) && !h.outletDry) r = -1;
             return r >= 0 && rank[r] >= 0 ? r : -1;
         };
         const through = c => {
             const h = hollow[c] >= 0 ? hollows[hollow[c]] : null;
-            return h && h.lake && c === h.outlet ? (h.outflow > 0 && h.inflow > 0 ? Math.min(1, h.outflow / h.inflow) : 0) : 1;
+            return h && h.lake && c === h.outlet && !h.outletDry ? (h.outflow > 0 && h.inflow > 0 ? Math.min(1, h.outflow / h.inflow) : 0) : 1;
         };
         const { q: Qa, s1: S1, s2: S2 } = travelMoments({ numCells: n, nodes: order.subarray(0, count),
             xyz: ctx.mesh.xyz, receiver, own, through });

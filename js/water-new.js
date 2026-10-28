@@ -248,6 +248,8 @@ export function runNewWater({ r_xyz, r_elevation, adjOffset, adjList, climate: r
     }
     return {
         heightKm: z, ocean, lake, lakeLevel, balanceLevel, lakeOutlet: Hy.lakeOutlet, q: Hy.q, area: Hy.area, recv: Hy.recv, rivers: Hy.rivers, glaciated,
+        // (for the checks: each region's runoff and potential evaporation, and the rain the water used — mm/yr)
+        ...(riverMonths ? { debug: { runoff, pet, rain: pAnn } } : {}),
         stats: { ...Hy.stats, inlandSeas: { spilling: spilled, salt, brackish, rounds, unsettled: short }, ...(iceAgeOut ? { iceAge: iceAgeOut.stats } : {}) },
         timing: { total: performance.now() - t0 },
     };

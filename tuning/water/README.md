@@ -74,7 +74,31 @@ node tuning/water/earth-rivers.mjs --n 2560000 --list --json report.json    # at
 node tuning/water/earth-rivers.mjs --set baseflowShare=0.6,baseflowMonths=2.5    # other constants (WATER keys)
 node tuning/water/earth-rivers.mjs --tune [--grid baseflowShare=0.5/0.7,baseflowMonths=2/3]   # search, observed climate
 node tuning/water/earth-rivers.mjs --tune --climate sim --grid baseflowShare=0.6/0.7          # search, simulated climate
+node tuning/water/earth-rivers.mjs --evolution            # the Evolution's rules (no closed basins on land) instead of Generate's
+node tuning/water/earth-rivers.mjs --trace low            # each gauge under a tenth of its measured flow, its river followed
+node tuning/water/earth-rivers.mjs --trace 44,114 --from 38.9,39.0    # given gauges; and the water down from a place
 ```
+
+`--trace` prints, per gauge: the region it is matched to and its distance from the gauge; the runoff of everything
+upstream against what arrives; the rain over the basin, observed and simulated; where its water ends; its main stem
+from the source down (discharge, area, height, rain, potential evaporation, runoff, the bed's dryness); the closed
+lakes within 1000 km; and the region within 100 km carrying the most water. Each run also prints the **network
+check**: the dry land whose drainage area is more than twice what drains into it down the network — 0 when the
+network and the areas agree.
+
+## Zero flows and closed basins' outlets (2026-10-28)
+
+The gauges with zero simulated flow (2 observed / 7 simulated at 2.56M, all with Generate's rules) were the outlets of
+closed basins: the hydrology gave a basin's rim cell — where it would spill — the whole basin's drainage area and no
+water, and left it draining over the rim. The match took it for the river (its area was right). The outlet now drains
+down into its basin with its own water and area, as the rest of the basin's dry ground does (`finish-hydro.js`): the
+network check went from 283 regions (640K) and 735–771 (2.56M) to 0, the zeros to none, the rms factor from infinite to
+×1.7–3.4, and the year's score rose (2.56M: observed 0.234 → 0.237, simulated −0.193 → −0.147). Those gauges are now
+unmatched: Generate's rules close their basins upstream (the simulated climate's rain is 0.35–0.72 of the observed
+over the Jacuí, Mangoky, Ashburton and Narmada; the coarse map's flat plateaus close the Victoria's). With the
+Evolution's rules (`--evolution`) no gauge has zero flow at 640K or 2.56M, and nothing changed. The Euphrates at
+Hindiya stays low with both: on the coarse map it joins the Tigris far upstream, and the region of its drainage area
+near the gauge is a dry Arabian wadi. Details: [docs/ZERO_FLOWS_20261028.md](../../docs/ZERO_FLOWS_20261028.md).
 
 ## Historical results (before the routing/scoring corrections)
 
