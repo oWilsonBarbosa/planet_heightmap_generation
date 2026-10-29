@@ -323,8 +323,11 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
             tp = performance.now();
             F0.fill(0); F1r.fill(0); F1i.fill(0); F2r.fill(0); F2i.fill(0); iceYear.fill(0); seaIceYear.fill(0);
             snowYearPrev.set(snowYear); snowYear.fill(0);
+            // (ice sheets on land only: a frozen sea's ice is sea ice, a few metres at sea level — taken for a sheet, a
+            // polar sea frozen most of the year stood as a TEMP_ICE_DOME_KM dome, its air ~12 °C too cold in summer and
+            // the coasts that read it too)
             for (let c = 0; c < G; c++) {
-                perennial[c] = Math.max(iceSheet(snowYearPrev[c]), perennial[c] * keepSheet(snowYearPrev[c]));
+                perennial[c] = landFrac[c] > 0 ? Math.max(iceSheet(snowYearPrev[c]), perennial[c] * keepSheet(snowYearPrev[c])) : 0;
                 lapseEff[c] = P.TEMP_PLATEAU_LAPSE + (P.TEMP_ICE_LAPSE - P.TEMP_PLATEAU_LAPSE) * perennial[c];
                 surfKm[c] = Math.max(landKm[c], P.TEMP_ICE_DOME_KM * perennial[c]);
             }
@@ -596,7 +599,7 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
         // surface air temperature at each grid cell's reference height
         const href = ctx.surface.meanLandKm;
         const domeG = new Float64Array(G);
-        for (let c = 0; c < G; c++) { const p = perennial[c] = Math.max(iceSheet(snowYear[c]), perennial[c] * keepSheet(snowYear[c])); lapseEff[c] = P.TEMP_PLATEAU_LAPSE + (P.TEMP_ICE_LAPSE - P.TEMP_PLATEAU_LAPSE) * p; domeG[c] = P.TEMP_ICE_DOME_KM * p; }
+        for (let c = 0; c < G; c++) { const p = perennial[c] = landFrac[c] > 0 ? Math.max(iceSheet(snowYear[c]), perennial[c] * keepSheet(snowYear[c])) : 0; lapseEff[c] = P.TEMP_PLATEAU_LAPSE + (P.TEMP_ICE_LAPSE - P.TEMP_PLATEAU_LAPSE) * p; domeG[c] = P.TEMP_ICE_DOME_KM * p; }
         const lapseCore = new Float32Array(core.size), domeCore = new Float32Array(core.size);
         refine(g, core, ratio, lapseEff, lapseCore, 0);
         refine(g, core, ratio, domeG, domeCore, 0);

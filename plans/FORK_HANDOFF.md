@@ -259,8 +259,13 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
    - Na Terra, as terras baixas nessas latitudes têm julho de +1 a +8 °C e tundra fora das calotas; lá o PR #74
      melhorou o Ártico (Köppen exato de 66,5° N para cima 22 → 40 %). O extremo norte do planeta é um continente
      largo, não ilhas e costas.
-   - A investigar com `tuning/climate/diag-polar.mjs` num planeta assim: o tamanho do continente, a parte do verão na
-     amplitude anual, a neve no chão (item 15). O gelo marinho ficou mais plausível: o mar polar já não abre no verão.
+   - O gelo marinho ficou mais plausível: o mar polar já não abre no verão.
+   - **Investigado em 29/10** (`docs/ARCTIC_20261029.md`):
+     - um defeito: células só de mar formavam manto de gelo, com domo de 1,5 km e ar 12 °C frio demais sobre o mar
+       congelado e na costa ao lado. Corrigido em `temperature.js`, com `CIRC_HADLEY_SCALE` 1,44 → 1,47;
+     - o resto é histerese: o modelo começa com gelo acima de ≈ 62° e mantém os mantos que se sustentam; ao lado de um
+       mar congelado, a terra baixa mantém. Começar com gelo só em terra alta resolveria o 0r063N, mas tira o gelo de
+       continentes polares como a Antártida (planeta de teste evo-101). Decisão pendente.
 
 ## Regras de trabalho
 
