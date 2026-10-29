@@ -57,6 +57,7 @@ const MAX_SHEAR = 4e-3;                       // 1/s, strongest vertical wind sh
 const STABLE_RELAX_S = 86400;                 // s, time for air to take on the stability of the surface beneath it
 const CONVECT_SUN_LOW = SOLAR_CONSTANT / 8;   // W/m² daily sunlight (top of the air) below which land does not convect …
 const CONVECT_SUN_FULL = SOLAR_CONSTANT / 4;  // … and above which it does fully (the tropics, the summer)
+const THAW_LAG_MONTHS = 1;                    // the ground's temperature lags the air's by about this
 
 /** Saturation specific humidity (kg/kg) at T (°C), 1013 hPa — Magnus formula. */
 export function qSat(T) {
@@ -273,9 +274,12 @@ export function columnWaterRain() {
 
         // ── Per point in the year: the moisture wind, mixing, storm and stability factors, lift, evaporation ──
         const prep = [], eadyOut = [];
+        const TairK = Array.from({ length: K }, (_, k) => co(tA.subarray(k * core.size, (k + 1) * core.size)));
         for (let k = 0; k < K; k++) {
             const sl = (arr) => arr.subarray(k * core.size, (k + 1) * core.size);
-            const u = co(sl(uA)), v = co(sl(vA)), Tair = co(sl(tA)), Tsl = co(sl(sA));
+            const u = co(sl(uA)), v = co(sl(vA)), Tair = TairK[k], Tsl = co(sl(sA));
+            // the ground's temperature: the air's THAW_LAG_MONTHS before (between this anchor and the one before)
+            const lagW = Math.min(1, THAW_LAG_MONTHS * K / 12), TairPrev = TairK[(k + K - 1) % K];
             const ice = iA ? co(sl(iA)) : null;
             const p = { gu: new Float64Array(G), gv: new Float64Array(G), ur: new Float64Array(G), vr: new Float64Array(G), ud: null, vd: null,
                 Krow: new Float64Array(h), rate: new Float64Array(G),
@@ -420,7 +424,15 @@ export function columnWaterRain() {
                     const rn = Math.max(0, SURFACE_SW * (1 - alb) * sun[j] - NET_LW);
                     const tc = Math.max(-40, Math.min(45, Tair[c])), es = 6.112 * Math.exp(17.67 * tc / (tc + 243.5));
                     const slope = es * 17.67 * 243.5 / ((tc + 243.5) ** 2);
-                    p.eLand[c] = evapScale * PT_ALPHA * slope / (slope + 0.66) * rn / LATENT;   // kg m⁻² s⁻¹ per unit land area
+                    // Until the ground thaws the land gives little water to the air: frozen soil keeps it from the roots
+                    // and the sun's heat goes into the thaw — RAIN_FROZEN_EVAP of the rate while the ground (the air's
+                    // temperature a month before) is below RAIN_THAW_FROM_C, all of it above RAIN_THAW_FULL_C. (Without it
+                    // the cold land evaporated as much in May as in July, and the water rained back on it: 3–6 times
+                    // the observed May rain from 60 to 80° N.)
+                    let thaw = ((1 - lagW) * Tair[c] + lagW * TairPrev[c] - P_.RAIN_THAW_FROM_C) / (P_.RAIN_THAW_FULL_C - P_.RAIN_THAW_FROM_C);
+                    thaw = thaw <= 0 ? 0 : thaw >= 1 ? 1 : thaw * thaw * (3 - 2 * thaw);
+                    p.eLand[c] = evapScale * PT_ALPHA * slope / (slope + 0.66) * rn / LATENT     // kg m⁻² s⁻¹ per unit land area
+                        * (P_.RAIN_FROZEN_EVAP + (1 - P_.RAIN_FROZEN_EVAP) * thaw);
                 }
             }
             // The column's share over high ground: the moist boundary layer rides up with ground that heats the air

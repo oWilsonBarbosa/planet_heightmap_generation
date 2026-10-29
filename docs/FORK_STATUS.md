@@ -72,6 +72,9 @@ O [primeiro ajuste após a correção do percurso](RIVER_RECALIBRATION_20261026.
 
 - [x] Concluir a primeira recalibração sazonal com percurso corrigido: busca em 640 mil e confirmação em 2,56 milhões, incluindo grandes bacias e regiões frias.
 - [ ] Explicar e tratar as perdas na parcela reservada; investigar os excessos de chuva e neve da primavera setentrional antes de outra calibração climática.
+  Em 29/10 ([relatório](SPRING_RAIN_20261029.md)): o solo congelado passou a evaporar pouco (`RAIN_FROZEN_EVAP`); a chuva
+  de maio a 60–70° N foi de ×3,4 para ×2,2 a observada, Köppen 47,9 → 48,7 % exato. Resta o transporte das tempestades em
+  maio–julho a 70–80° N (×4–6), e rever a evaporação dos rios em terra fria (vazão da zona D ×0,92 → ×0,81).
 - [ ] Analisar as perdas em grupos climáticos e nas regiões identificadas; corrigir ou justificar os compromissos antes de declarar a candidata pronta.
 - [x] Investigar os casos de vazão zero, o RMS infinito e as divergências de saída das bacias. Os zeros eram saídas de
   bacias fechadas (regras do Generate) com a área da bacia inteira e nenhuma água; corrigidas em `finish-hydro.js`. Com

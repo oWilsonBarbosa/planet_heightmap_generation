@@ -175,6 +175,9 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_FRONT_HIGH_HPA: 4,     // hPa        … faded by e per this much pressure above the latitude's mean (the highs)
     RAIN_SOIL_MM: 87.5,         // mm         water the soil holds for evaporation in dry months
     RAIN_MELT_SOAK: 0.5,        // –          share of the melting snow the ground takes in (the rest runs off over the frozen soil)
+    RAIN_FROZEN_EVAP: 0.2,      // –          land's evaporation while its ground is frozen, as a share of the thawed rate …
+    RAIN_THAW_FROM_C: -2,       // °C         … the ground (the air a month before) thawing from this …
+    RAIN_THAW_FULL_C: 4,        // °C         … to this
     RAIN_LAND_CONVECTION: 0.065, // –         spread of the column's relative humidity by afternoon storms over sunlit, wet land
     RAIN_COLUMN_LOCAL: 0.2,     // –          share of the surface's departure from its latitude's temperature felt through the air column
     RAIN_OROG_STORM: 1,         // –          share of the storms' wind speed (Eady rate × their size) in the lift over mountains
@@ -315,6 +318,9 @@ export const PARAM_PRIORS = Object.freeze({
     RAIN_SOIL_MM:       { value: 150, min: 50, max: 300, source: 'plant-available soil water capacity ≈ 100–200 mm (e.g. Manabe 1969 bucket: 150 mm)' },
     RAIN_LAND_CONVECTION: { value: 0.08, min: 0, max: 0.12, source: 'daytime convection over wet land: rain over land peaks in the afternoon and picks up at ≈ 5–10 % lower column humidity than over the sea (Schiro et al. 2016; Bergemann & Jakob 2016); soil-moisture–precipitation coupling in monsoon regions (Koster et al. 2004)' },
     RAIN_MELT_SOAK:     { value: 0.5, min: 0.2, max: 1, source: 'little snowmelt soaks into frozen ground (Woo 1986): the spring flood carries much of the year\'s flow of rivers on frozen soils — the Lena\'s May–June flood about half (Yang et al. 2002)' },
+    RAIN_FROZEN_EVAP:   { value: 0.25, min: 0.1, max: 0.5, source: 'eddy-covariance records over boreal forest and tundra: evapotranspiration stays low through the snowmelt and rises only as the soil thaws, weeks later — a few tenths of a millimetre a day against 2–3 in midsummer; no single value' },
+    RAIN_THAW_FROM_C:   { value: -2, min: -5, max: 0, source: 'the active layer thaws as the air warms through freezing, about a month behind it (soil temperature lags the air by weeks)' },
+    RAIN_THAW_FULL_C:   { value: 4, min: 1, max: 8, source: 'as RAIN_THAW_FROM_C: soils thawed and transpiring once the month before averaged a few degrees above freezing' },
     RAIN_EADY_SMOOTH_DEG: { value: 8, min: 6, max: 16, source: 'the storm tracks\' baroclinic zones are ≈ 15–25° of latitude wide in the free troposphere; the surface\'s sharpest gradients (sea-ice edges, the Arctic coast in summer) are shallow and grow storms less than in proportion' },
     RAIN_COLUMN_LOCAL:  { value: 0.5, min: 0.2, max: 0.9, source: 'lower-tropospheric temperature anomalies over continents are ≈ 40–60 % of the surface anomaly' },
     RAIN_OROG_STORM:    { value: 1, min: 0.5, max: 1, source: 'orographic precipitation is concentrated in storms with strong cross-barrier flow (≈ 10–20 m/s), not the weak monthly-mean wind (Roe 2005)' },
