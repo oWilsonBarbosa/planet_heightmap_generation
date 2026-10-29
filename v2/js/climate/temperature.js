@@ -293,26 +293,28 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
         // around it and creep the winter edge out.) 0 = off: each month's cold alone.
         const thickOn = P.TEMP_SEA_ICE_GROW > 0;
         const iceHm = new Float64Array(12 * G);
-        // (the sea's share within TEMP_SEA_ICE_SPREAD_KM, for the averaging below)
-        const spreadKm = P.TEMP_SEA_ICE_SPREAD_KM, wS = new Float64Array(G), tmpS = new Float64Array(G);
-        for (let c = 0; c < G; c++) wS[c] = 1 - landFrac[c];
-        if (spreadKm > 0) gaussianSmooth(g, wS, tmpS, spreadKm);
+        // (the sea's share within TEMP_SEA_ICE_SPREAD_KM, for the averaging below: when first needed)
+        const spreadKm = P.TEMP_SEA_ICE_SPREAD_KM, tmpS = new Float64Array(G);
+        let wS = null;
         const seaH = Array.from({ length: 5 }, () => new Float64Array(G));
-        const thickCycle = (out, n, phase, rate = null) => {   // (n months from January: n = 12, phase 0.5 — mid-month; rate: m/day)
+        // (n months from January: n = 12, phase 0.5 — mid-month; rate: m/day. spread: false — each cell's own sea; need: the
+        // cells wanted, the rest left alone)
+        const thickCycle = (out, n, phase, rate = null, spread = true, need = null) => {
             const dt = 365 / n, hMax = 6 * P.TEMP_SEA_ICE_H0, st = P.TEMP_SEA_ICE_STEFAN_M;
             // the sea's temperature through the year, averaged over the sea within TEMP_SEA_ICE_SPREAD_KM (a warm current's
             // water spreads well out from its coast, and the ice drifts) — its harmonics averaged, as each month's would be
+            if (spread && spreadKm > 0 && !wS) { wS = Float64Array.from(landFrac, x => 1 - x); gaussianSmooth(g, wS, tmpS, spreadKm); }
             [c0, c1r, c1i, c2r, c2i].forEach((x, q) => {
                 const f = seaH[q];
                 for (let c = 0; c < G; c++) f[c] = (1 - landFrac[c]) * x[c];
-                if (spreadKm > 0) { gaussianSmooth(g, f, tmpS, spreadKm); for (let c = 0; c < G; c++) f[c] = wS[c] > 1e-3 ? f[c] / wS[c] : 0; }
+                if (spreadKm > 0 && spread) { gaussianSmooth(g, f, tmpS, spreadKm); for (let c = 0; c < G; c++) f[c] = wS[c] > 1e-3 ? f[c] / wS[c] : 0; }
                 else for (let c = 0; c < G; c++) f[c] = landFrac[c] < 1 ? f[c] / (1 - landFrac[c]) : 0;
             });
             const cs = Array.from({ length: n }, (_, k) => { const th = 2 * Math.PI * (k + phase) / n; return [2 * Math.cos(th), -2 * Math.sin(th), 2 * Math.cos(2 * th), -2 * Math.sin(2 * th)]; });
             const [h0, h1r, h1i, h2r, h2i] = seaH;
             const Tn = new Float64Array(n);
             for (let c = 0; c < G; c++) {
-                if (landFrac[c] >= 1) continue;
+                if (landFrac[c] >= 1 || (need && !need[c])) continue;
                 for (let k = 0; k < n; k++) Tn[k] = h0[c] + cs[k][0] * h1r[c] + cs[k][1] * h1i[c] + cs[k][2] * h2r[c] + cs[k][3] * h2i[c];
                 let hh = 0;
                 for (let pass = 0; pass < 3; pass++) for (let k = 0; k < n; k++) {
@@ -354,6 +356,8 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
             }
         }
         const pinOn = pinW.some(x => x > 0) || packW.some(x => x > 0);
+        const pinNeed = pinOn ? Uint8Array.from(pinW, (x, c) => x > 0 || packW[c] > 0 ? 1 : 0) : null;
+        const sampleCS = Array.from({ length: NT }, (_, k) => { const th = 2 * Math.PI * k / NT; return [Math.cos(th), Math.sin(th), Math.cos(2 * th), Math.sin(2 * th)]; });
         const pinIce = pinOn ? new Float64Array(NT * G) : null, pinRate = pinOn ? new Float64Array(NT * G) : null;
         const pinBack = pinOn ? new Float64Array(NT * G) : null, pinC = pinOn ? new Float64Array(G) : null;
         const srSeasonPin = pinOn ? new Float64Array(G) : null;
@@ -389,14 +393,15 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
             // (the summer pack's hold, from this round's temperature: none from a fresh start's first guess)
             const pinNow = pinOn && (it > 0 || warm);
             if (pinNow) {
-                thickCycle(pinIce, NT, 0, pinRate);
+                // (each cell's own sea: the regional spread the drawn ice takes changes little here and costs a smoothing a round)
+                thickCycle(pinIce, NT, 0, pinRate, false, pinNeed);
                 for (let c = 0; c < G; c++) {
                     pinC[c] = 0;
                     if (!(pinW[c] > 0)) continue;
                     let most = 0, melt = 0, grow = 0;
                     for (let k = 0; k < NT; k++) {
-                        const th = 2 * Math.PI * k / NT, ice = pinIce[k * G + c];
-                        const T = c0[c] + 2 * (c1r[c] * Math.cos(th) - c1i[c] * Math.sin(th)) + 2 * (c2r[c] * Math.cos(2 * th) - c2i[c] * Math.sin(2 * th));
+                        const [co, sn, co2, sn2] = sampleCS[k], ice = pinIce[k * G + c];
+                        const T = c0[c] + 2 * (c1r[c] * co - c1i[c] * sn) + 2 * (c2r[c] * co2 - c2i[c] * sn2);
                         most = Math.max(most, ice); melt += pinW[c] * ice * Math.max(0, T); grow += Math.max(0, pinRate[k * G + c]);
                     }
                     pinC[c] = pinW[c] * most;
