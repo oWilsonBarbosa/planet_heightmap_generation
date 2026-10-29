@@ -12,9 +12,10 @@ como verificá-las e o que ficou em aberto. Os detalhes de cada mudança estão 
   - Nada foi mesclado na `main` do fork e nenhum pull request foi aberto.
 - **Repositório irmão:** `oWilsonBarbosa/0r063N`, mesmo branch.
   - Contém o conjunto de dados do planeta `06cy8w6z6a89kow6psje93` (semente 10673275, 2.560.001 regiões), gerado por
-    este fork no commit `170b560` (2026-10-29): a integração com o `main` do original (`7026cc6`, com o clima polar
-    do PR #74 dele), a viagem dos rios pela rede final a 45 km/dia, as saídas das bacias fechadas e as correções do
-    ensaio de drenagem. O conjunto anterior, de `4e7c1b0`, fica no histórico de lá.
+    este fork no commit `86b28ec` (2026-10-29): a integração com o `main` do original (`7026cc6`, com o clima polar
+    do PR #74 dele), a viagem dos rios pela rede final a 45 km/dia, as saídas das bacias fechadas, as correções do
+    ensaio de drenagem, mantos de gelo só em terra e, só nessa exportação, começados só em terra alta (o extremo norte
+    em tundra). Os conjuntos anteriores ficam no histórico de lá.
   - O `HANDOFF.md` de lá descreve os dados, as ferramentas e o mapa de rios publicado.
 - **Para retomar numa nova sessão:**
   - `git fetch origin ccr-85cb1372-invlm5 && git checkout -B <branch da sessão> origin/ccr-85cb1372-invlm5`.
