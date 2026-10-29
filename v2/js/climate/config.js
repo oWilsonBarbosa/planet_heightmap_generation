@@ -53,6 +53,10 @@ export const PARAMS_DEFAULTS = Object.freeze({
     TEMP_SEA_ICE_H0: 0.5,       // m          the sea is covered once its ice is this thick (and holds at most 6× this)
     TEMP_SEA_ICE_SPREAD_KM: 700,// km         the ice follows the sea's temperature averaged within this (a warm current's
                                 //            water spreads well out from its coast; the pack drifts)
+    TEMP_SEA_ICE_PIN: 20,       // W/m²/K     an enclosed polar sea's summer pack holds its air near freezing: its melt takes this
+                                //            much per °C above 0, given back as the sea freezes (0 = off: the pack warms like land) …
+    TEMP_SEA_ICE_PACK_ALBEDO: 0.6, // –       … and stays this share as white as winter's sea ice (TEMP_ALBEDO_ICE; melt ponds
+                                //            darken it; 0 = the month's cold alone, dark once above freezing)
     TEMP_SNOW_MELT_MM: 90,      // mm/°C      snow on the ground melts this much water a month per °C above freezing, its
                                 //            latent heat taken from the air (spring late where the snow is deep; with the
                                 //            rain stage's rain; 0 = off) …
@@ -244,6 +248,8 @@ export const PARAM_PRIORS = Object.freeze({
     TEMP_SEA_ICE_MELT:  { value: 0.003, min: 0.002, max: 0.006, source: 'summer surface melt ≈ 0.5–1.5 m over a season of a few hundred positive degree-days (Perovich et al. 2003)' },
     TEMP_SEA_ICE_H0:    { value: 0.5, min: 0.3, max: 1, source: 'ice ≈ 0.3–1 m thick closes the sea (consolidated pack vs new ice and leads)' },
     TEMP_SEA_ICE_SPREAD_KM: { value: 700, min: 300, max: 1200, source: 'sea-ice drift ≈ 5–10 km/day — a few hundred to a thousand km over a season (IABP buoys)' },
+    TEMP_SEA_ICE_PIN:   { value: 20, min: 10, max: 40, source: 'over melting sea ice the surface air stays within ≈ 1 °C of freezing all summer (Rigor et al. 2000; SHEBA, Persson et al. 2002): the surface\'s heat exchange with the air, ≈ 15–30 W m⁻² K⁻¹ (turbulent ≈ 10, longwave ≈ 5), goes into melt' },
+    TEMP_SEA_ICE_PACK_ALBEDO: { value: 0.6, min: 0.4, max: 1, source: 'summer sea ice under melt ponds reflects ≈ 0.5–0.6 against ≈ 0.8 for dry snow on ice (Perovich et al. 2002, SHEBA): ≈ 0.5–0.75 of the winter brightening' },
     TEMP_POLAR_SUMMER_DAMP: { value: 0.5, min: 0.2, max: 0.7, source: 'Arctic summers: the surface stays near 0 °C while snow and sea ice melt, and the July 10 °C isotherm (the tree line) lies near 65–72°N on every continent; land poleward of 75° is tundra or ice everywhere on Earth (Beck et al. 2023). No direct value — set so the model\'s 66–80°N summers match, winters untouched' },
     TEMP_SNOW_MELT_MM:  { value: 90, min: 45, max: 150, source: 'degree-day factors for snow ≈ 1.5–5 mm/°C/day (Hock 2003; Braithwaite 2008): ≈ 45–150 mm/°C a month; the latent heat of fusion 334 kJ/kg' },
     TEMP_SNOW_COVER_MM: { value: 30, min: 10, max: 80, source: 'snow depletion curves: open ground fully covered from ≈ 10–40 mm of snow water, patchy below; forests and rough ground need more (Liston 2004; Niu & Yang 2007)' },
