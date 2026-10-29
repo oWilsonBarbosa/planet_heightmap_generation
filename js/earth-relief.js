@@ -24,9 +24,15 @@ export const EARTH_SEA_DEPTH_KM = [0, 0.008, 0.016, 0.023, 0.031, 0.039, 0.047, 
  * bounded. Raised to Earth's heights, planet 06cy8w6z6a89kow6psje93's broad coastal ranges in moist trade winds drew up
  * to 16 m a year out of 1° cells (20 m a region; 0.06 % of its land above 10 m) — Earth's wettest 1° cells get ≈ 7.5 m,
  * its wettest stations ≈ 11.9 m. Bounded: at most 12.8 m a region, 0.018 % of the land above 10 m. Earth's own climate
- * is the same with the bound as without (Köppen against Kottek and against Beck, the stages' guardrails).
+ * is the same with the bound as without (Köppen against Kottek and against Beck, the stages' guardrails). And ice sheets
+ * started only on land 0.6 km high or more (TEMP_ICE_START_KM): the climate starts every cold land under ice and keeps the
+ * sheets that hold themselves, and on the same planet its lowland at 70–80° N, beside a polar sea frozen all year, kept
+ * them — ice caps on half to most of it, summers 6–10 °C colder than Earth's at those latitudes, whose Arctic lowland is
+ * tundra. Started on high land only, it is tundra (warmest month 6.9 and 3.8 °C at 70–75 and 75–80° N; Earth's simulated
+ * 8.8 and 3.4, observed 8.7 and 2.9); Earth's own climate all but the same (Köppen against Beck 47.9 → 48.0 % exact;
+ * docs/ARCTIC_20261029.md).
  */
-export const EARTH_RELIEF_CLIMATE = Object.freeze({ RAIN_SUPPLY_START_MM: 5000, RAIN_SUPPLY_MAX_MM: 7500 });
+export const EARTH_RELIEF_CLIMATE = Object.freeze({ RAIN_SUPPLY_START_MM: 5000, RAIN_SUPPLY_MAX_MM: 7500, TEMP_ICE_START_KM: 0.6 });
 
 /** The lowest land, so that land stays above the sea (km). */
 const LAND_FLOOR_KM = 1e-4;

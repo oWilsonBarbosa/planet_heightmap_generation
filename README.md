@@ -295,7 +295,8 @@ js/
   earth-relief.js       Earth-like heights for a V1 planet — its elevation mapped, every region's order kept, onto Earth's
                         hypsometry (ETOPO 2022: the land without Antarctica, the sea floor), where the generator's own height
                         curve leaves half the land below ~30 m and the sea 2.3 km deep; for running the climate and
-                        water-new.js on Earth's heights (the climate with the air's supply of rain bounded: EARTH_RELIEF_CLIMATE).
+                        water-new.js on Earth's heights (the climate with the air's supply of rain bounded and ice sheets started
+                        only on high land, so the Arctic lowland is tundra as on Earth: EARTH_RELIEF_CLIMATE).
                         Not run by the pages yet: for headless exports (Node)
   climate-layers.js     The climate's Inspect layers — colours, legends, hover lines, arrows, the season picker
   terrain-palette.js    The Terrain view's Colours (Generate, Import): Classic or one of Evolution's palettes, by height in km

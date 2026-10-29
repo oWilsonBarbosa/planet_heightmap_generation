@@ -265,7 +265,8 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
        congelado e na costa ao lado. Corrigido em `temperature.js`, com `CIRC_HADLEY_SCALE` 1,44 → 1,47;
      - o resto é histerese: o modelo começa com gelo acima de ≈ 62° e mantém os mantos que se sustentam; ao lado de um
        mar congelado, a terra baixa mantém. Começar com gelo só em terra alta resolveria o 0r063N, mas tira o gelo de
-       continentes polares como a Antártida (planeta de teste evo-101). Decisão pendente.
+       continentes polares como a Antártida (planeta de teste evo-101). **Decidido:** só na exportação com alturas da
+       Terra (`TEMP_ICE_START_KM` 0,6 em `EARTH_RELIEF_CLIMATE`); um critério geral fica em aberto.
 
 ## Regras de trabalho
 

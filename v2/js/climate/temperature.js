@@ -208,7 +208,8 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
             // never find the icy one (polar land snowy ~60 % of the year stays bare, under the sheet's 70 %); so a fresh
             // start begins with ice on land the first guess (by latitude alone) makes colder than TEMP_ICE_START_C, and
             // the rounds keep the sheets that hold themselves (developer: the poles "frequently not icey … feels super wrong")
-            for (let c = 0; c < G; c++) if (landFrac[c] > 0 && c0[c] < P.TEMP_ICE_START_C) { snowYear[c] = 1; perennial[c] = 1; }
+            // — on land at least TEMP_ICE_START_KM high, if set (a planet on Earth's heights: its Arctic lowland tundra)
+            for (let c = 0; c < G; c++) if (landFrac[c] > 0 && c0[c] < P.TEMP_ICE_START_C && landKm[c] >= P.TEMP_ICE_START_KM) { snowYear[c] = 1; perennial[c] = 1; }
         }
         // (the snow's latent heat at each sample time, W/m², from the temperature so far: three years from bare ground,
         // the land's surface temperature as the snow sees it; a pack that does not melt each year — an ice sheet's start

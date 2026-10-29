@@ -38,6 +38,9 @@ export const PARAMS_DEFAULTS = Object.freeze({
     TEMP_ICE_START_C: -30,      // °C         a fresh start begins with ice sheets on land the first guess (sunlight by
                                 //            latitude, no heat carried) makes colder than this (~60° and poleward on an
                                 //            Earth-like planet): sheets that hold themselves stay; −Infinity = bare start
+    TEMP_ICE_START_KM: 0,       // km         … and at least this high (its mean on the grid): 0 = any such land. A sheet
+                                //            started on lowland beside a sea frozen all year holds itself where Earth's
+                                //            coasts are tundra; js/earth-relief.js EARTH_RELIEF_CLIMATE sets 0.6
     TEMP_ICE_DOME_KM: 1.5,      // km         an ice sheet's surface stands at least this high, whatever its bedrock (its
                                 //            own height keeps it cold); 0 = the bedrock's height
     TEMP_ICE_FORM: [0.8, 1],    // –          an ice sheet grows where its ground is snowy this share of the year (none
@@ -243,6 +246,7 @@ export const PARAM_PRIORS = Object.freeze({
     TEMP_SNOW_COVER_MM: { value: 30, min: 10, max: 80, source: 'snow depletion curves: open ground fully covered from ≈ 10–40 mm of snow water, patchy below; forests and rough ground need more (Liston 2004; Niu & Yang 2007)' },
     TEMP_SNOW_ALBEDO:   { value: 0.45, min: 0.35, max: 0.6, source: 'planetary (top-of-atmosphere) albedo over snow-covered land ≈ 0.35–0.45 over boreal forest, 0.5–0.65 over open land, against ≈ 0.25–0.35 snow-free (CERES, MODIS; Qu & Hall 2007)' },
     TEMP_ICE_START_C:   { value: -30, min: -40, max: -20, source: 'ice-sheet hysteresis: once grown, polar ice sheets persist under climates that would not grow them (e.g. DeConto & Pollard 2003; Abe-Ouchi et al. 2013)' },
+    TEMP_ICE_START_KM:  { value: 0, min: 0, max: 1, source: 'ice sheets start on highlands and plateaus and spread to the lowland (Laurentide: Baffin and Labrador; Fennoscandian: the Scandinavian mountains); 0 starts them on any cold land' },
 
     CIRC_HADLEY_SCALE:  { value: 1.2, min: 0.9, max: 1.5, source: 'Held & Hou 1980 underestimates the observed Hadley edge by ~20 % (e.g. Frierson et al. 2007)' },
     CIRC_HADLEY_SEASONAL: { value: 0.5, min: 0, max: 1, source: 'observed subtropical highs migrate ≈ 10° with the rain belt (NCEP); Held & Hou per month would cancel it; seasonal Hadley cells are not in equilibrium with each month (Lindzen & Hou 1988)' },

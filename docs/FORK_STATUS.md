@@ -92,8 +92,10 @@ O [primeiro ajuste após a correção do percurso](RIVER_RECALIBRATION_20261026.
   defeito: o mar polar congelado virava manto de gelo, com domo de 1,5 km e ar 12 °C frio demais; corrigido em
   `temperature.js`, com `CIRC_HADLEY_SCALE` 1,44 → 1,47 (Terra igual: 47,9 / 86,4 %). O resto é a histerese dos mantos
   de gelo em terra baixa ao lado de um mar congelado.
-- [ ] Decidir os mantos de gelo em terra baixa do 0r063N: manter (como o upstream) ou começar com gelo só em terra alta
-  na exportação; um critério geral precisa preservar continentes polares como a Antártida.
+- [x] Mantos de gelo em terra baixa do 0r063N: decidido em 29/10 começar com gelo só em terra a partir de 0,6 km na
+  exportação com alturas da Terra (`TEMP_ICE_START_KM` em `EARTH_RELIEF_CLIMATE`); as páginas não mudam.
+- [ ] Um critério geral para os mantos de gelo iniciais que separe um continente polar (com gelo, como a Antártida) de
+  uma costa ao lado de um mar polar congelado (tundra).
 - [ ] Retomar a investigação física sobre a referência histórica preservada. Os testes desta integração não resolvem retroativamente problemas de drenagem de arquivos já salvos.
 
 Uma seed não identifica sozinha um resultado: registrar modo, parâmetros, época, resolução e commit. O estudo Evolution baseado em `47edc28` e os conjuntos Generate antigos são referências distintas. Relatórios, mapas e matrizes da pesquisa permanecem fora do código distribuído; o catálogo é mantido separadamente.
