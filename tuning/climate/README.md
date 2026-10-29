@@ -152,6 +152,9 @@ node tuning/climate/diag-polar.mjs [--planets …|none] [--climate <snapshot>]  
                                                 #   continental (D)? Earth's poleward of 50° vs Beck by latitude and distance
                                                 #   from the sea, exact and near match, Arctic stations, the polar seas' summer
                                                 #   and sea ice vs OISST, and the generated planets' polar lowlands
+node tuning/climate/diag-sea-ice.mjs [--set …]   # the polar seas' temperature and ice vs OISST (Arctic, Nordic seas,
+                                                #   Southern Ocean; March and September) and the land's monthly bias at
+                                                #   50–80° N vs ERA5, with a few Arctic stations — ~10 s
 node tuning/climate/diag-detail.mjs             # Phase 9: how much detail the Köppen map has (class edges vs Beck), Tibet,
                                                 #   named regions; CORE='{"texture":null}' to try core options
 node tuning/climate/diag-v1-detail.mjs          # the same detail measure for V1's climate

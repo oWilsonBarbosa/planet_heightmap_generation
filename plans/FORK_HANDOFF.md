@@ -102,6 +102,18 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
         inverno seco);
       - albedo 0,48–0,55 com a neve acumulada: verões frios demais a 60–70° N;
       - só o calor latente: quase nenhum efeito na primavera.
+16. **`869f9b0`, `46c7ae2` (2026-10-29): o gelo de verão de um mar polar fechado** (`temperature.js`;
+    `TEMP_SEA_ICE_PIN` 20 W/m²/K, `TEMP_SEA_ICE_PACK_ALBEDO` 0,6; `docs/ARCTIC_SEA_ICE_20261029.md`).
+    - **Problema:** o gelo marinho do balanço de energia saía só do frio de cada mês; o Ártico escurecia acima de 0 °C,
+      esquentava a 7 °C em setembro e perdia todo o gelo (2 % a ≥ 80° N, contra 83 %), e o outono ficava 4–7 °C quente.
+    - **Correção:** onde o mar polar é cercado de terra (`enclosedPolarSea`), o gelo que dura o verão segura o ar perto de
+      0 °C (o calor do derretimento volta quando o mar congela; a média do ano não muda) e continua claro.
+    - **Resultado na Terra:** gelo de setembro a ≥ 80° N 0,79 (OISST 0,83); outubro–dezembro a 70–80° N 2–3 °C menos
+      quentes; Köppen 48,7/86,5 → 49,3/86,6 %; Kottek 0,7269 → 0,7298; temperatura das terras 3,60 → 3,53 °C; planetas
+      gerados +0,12 ponto de aridez.
+    - **Custo:** ≈ 0,2 s num clima de 4,7 s; a Europa perde 2,5 pontos exatos (verões secos demais na Escandinávia e na
+      Irlanda); os rios com o clima simulado, nota −0,173 → −0,211 (o México e o Sahel mais secos), o pico dos rios
+      frios no mês certo 78 → 88 %.
 
 ### Relevo
 
@@ -185,16 +197,16 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
 
 ## Números de referência atuais (Terra real, 2,56M regiões)
 
-- **Clima:**
-  - Köppen contra Beck: 47,1 % exato, 86,1 % próximo (continentes iguais 44,3 / 85,7 %);
-  - Kottek: 0,7196;
-  - erro da temperatura das terras 3,72 °C; da chuva (log) 0,72 por continente (`coupled-check`), 0,558 nas terras
-    (`diag-rain-bias`).
+- **Clima** (`46c7ae2`, Terra a 160K):
+  - Köppen contra Beck: 49,3 % exato, 86,6 % próximo (continentes iguais 45,1 / 85,8 %);
+  - Kottek: 0,7298;
+  - erro da temperatura das terras 3,53 °C; da chuva (log) 0,71 por continente (`coupled-check`);
+  - gelo marinho em setembro a ≥ 80° N 0,79 (OISST 0,83); chuva das terras ao norte de 55° N ×1,36 a de Beck.
 - **Rios, clima observado** (122 estações):
   - nota anual 0,252;
   - escoamento dentro de ×2 em 84 % (×0,91);
   - correlação 0,90; pico ±1 mês 88 %.
-- **Rios, clima simulado** (125 estações): nota anual −0,163; dentro de ×2 em 53 %; correlação 0,70.
+- **Rios, clima simulado** (116 estações, `46c7ae2`): nota anual −0,211; dentro de ×2 em 55 %; correlação 0,67.
 - **Estação de cheia** (pico ≥ 2,5× a média), simulada contra medida:
   - clima observado: 36 contra 39 % das estações; nos climas frios (zona D), 24 contra 51 %;
   - clima simulado: 34 contra 37 %; frios 20 contra 51 %, temperados 42 contra 8 %, secos 50 contra 20 %.
@@ -268,6 +280,9 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
        mar congelado, a terra baixa mantém. Começar com gelo só em terra alta resolveria o 0r063N, mas tira o gelo de
        continentes polares como a Antártida (planeta de teste evo-101). **Decidido:** só na exportação com alturas da
        Terra (`TEMP_ICE_START_KM` 0,6 em `EARTH_RELIEF_CLIMATE`); um critério geral fica em aberto.
+10. **O extremo norte fora do verão** (2026-10-29, item 16): a primavera a 70–80° N segue 5–7 °C quente (o estágio de
+    chuva toma a água da coluna pelo ar junto ao chão; uma inversão de primavera sobre a neve consertaria a temperatura,
+    mas sem isso custa 1 ponto de Köppen), e os mares nórdicos congelam no inverno (Tromsø −21 °C em janeiro, real −6).
 
 ## Regras de trabalho
 

@@ -78,6 +78,9 @@ O [primeiro ajuste após a correção do percurso](RIVER_RECALIBRATION_20261026.
   Segunda rodada, no transporte: nenhuma mudança adotada — cortar a mistura das tempestades perto do polo seca o inverno
   (Sibéria central Dfc → Dwc) ou os planetas gerados. A causa mais funda é a temperatura: terras a 70–90° N 4–8 °C quentes
   demais de outubro a abril, e o mar Ártico sem gelo em setembro (área 0,1 contra 5,0 milhões de km²).
+  Corrigido em parte ([relatório](ARCTIC_SEA_ICE_20261029.md)): o gelo de verão de um mar polar fechado fica claro e
+  segura o ar perto de 0 °C — setembro a ≥ 80° N 0,79 (real 0,83), outono 2–3 °C menos quente, Köppen 48,7 → 49,3 %.
+  Faltam a primavera (5–7 °C quente a 70–80° N) e os mares nórdicos congelados no inverno.
 - [ ] Analisar as perdas em grupos climáticos e nas regiões identificadas; corrigir ou justificar os compromissos antes de declarar a candidata pronta.
 - [x] Investigar os casos de vazão zero, o RMS infinito e as divergências de saída das bacias. Os zeros eram saídas de
   bacias fechadas (regras do Generate) com a área da bacia inteira e nenhuma água; corrigidas em `finish-hydro.js`. Com
