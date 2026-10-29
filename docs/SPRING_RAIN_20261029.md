@@ -78,11 +78,67 @@ a chuva a mais; a evaporação que ele mesmo usa em terra fria (Budyko com PET d
   gradiente médio do ano a 50–60° N é forte.
 - `RAIN_EDDY_LENGTH_KM` 700: a primavera melhora, mas o inverno seca (e em outra rodada custou 2 pontos de Köppen).
 
+## O transporte das tempestades (segunda rodada)
+
+Base: `1eeb1c3`. Terras ao norte de 60° N (sem a Groenlândia), Terra simulada (160K) ÷ observada: ×1,49 no ano; a 70–80° N,
+×2,34, de 0,4 em janeiro a 5,6 em junho. Em julho, a 70–80° N, a chuva é de 152 mm (41 observados): a evaporação local dá
+83 mm (a real fica perto de 45; a potencial do modelo, 104 mm, vem de um saldo de radiação de ~174 W/m² contra
+~100–130 medidos), e o transporte, ~70 mm.
+
+**Partes do transporte.** Só a mistura pelas tempestades (K = `RAIN_EDDY_DIFF` + σ·L²) pesa. O vento que carrega a coluna
+(`RAIN_WIND_ROT` 0,6), a parte divergente (`RAIN_WIND_DIV_*`) e a mistura de fundo (`RAIN_EDDY_DIFF` 2 × 10⁵) mudam a
+chuva do norte em 1 a 3 %. K chega a 9–10 × 10⁶ m²/s em março–maio a 60–70° N, como no inverno das médias latitudes.
+
+**O gradiente de temperatura não é o culpado.** O gradiente zonal da Terra simulada a 60–70° N em maio é igual ao do ERA5
+ou mais fraco (6,4–7,4 contra 8,2–9,5 K por 10°). O excesso vem de a mistura crescer com o gradiente da superfície, que no
+Ártico é raso, no mesmo L das médias latitudes.
+
+| Variante (Terra, 160K) | Norte de 60° / 70–80° N | Köppen exato / próximo | Europa / Ásia, exato | `evaluate` |
+|---|---:|---:|---:|---:|
+| base `1eeb1c3` | ×1,49 / ×2,34 | 48,7 / 86,5 % | 36,7 / 33,0 % | 0,7269 |
+| L ∝ 1/f poleward de 45° (raio de deformação) | ×1,35 / ×1,86 | 48,4 / — | 41,3 / 30,9 % | 0,7220 |
+| … poleward de 55° | ×1,48 / ×2,13 | 48,7 / — | 38,6 / 32,5 % | 0,7261 |
+| sol através de mais ar (τ0 = 0,75 por massa de ar) | ×1,41 / ×2,19 | 48,5 / — | 35,5 / — | 0,7263 |
+| L ∝ 1/f de 45° + τ0 = 0,7 | ×1,25 / ×1,70 | 48,3 / 86,4 % | 39,8 / 31,1 % | 0,7227 |
+| `RAIN_EADY_SMOOTH_DEG` 12 / 16 | ×1,49 / ×2,29; ×1,49 / ×2,22 | 48,2; 48,0 % | 36,6; 36,9 % | — |
+| ajuste com o termo de chuva fria (abaixo) | ×1,43 / ×2,22 | 48,8 / 86,6 % | 37,0 / 32,9 % | 0,7276 |
+| só `RAIN_EDDY_DIFF` 4,25 × 10⁵ | ×1,47 / ×2,30 | 48,7 / 86,6 % | 36,1 / 33,1 % | 0,7271 |
+
+- **Tempestades menores perto do polo** cortam a chuva da primavera, mas secam o inverno: a Sibéria central (65° N,
+  100° E) passa de Dfc para Dwc (242 células, a maior perda da Ásia). O inverno das terras a 70–80° N já é seco demais.
+- **Menos sol no chão nas altas latitudes** corta a evaporação do verão, mas também a da Europa no inverno e na
+  primavera (a Europa perde 1,2 pontos sozinha).
+- **O ajuste** (`coupled-check --tune` com `COLD_RAIN_WEIGHT=0.05`, os dois mecanismos acima como parâmetros, L,
+  `RAIN_EDDY_DIFF` e as seis chaves de sempre) quase não sai do lugar: todo passo que cortava mais o transporte
+  (`RAIN_EDDY_LENGTH_KM`, `RAIN_EDDY_DIFF` −) foi vetado por secar os planetas gerados, e o que passou (L ∝ 1/f com
+  expoente 0,125, `RAIN_EDDY_DIFF` 4,25 × 10⁵, `TEMP_INVERSION_C` 8,75) muda a chuva do norte em 4 %. Não adotado: o ganho
+  é pequeno, e `TEMP_INVERSION_C` menor aquece o inverno ártico, que já é quente demais (abaixo).
+
+## A causa mais funda: o Ártico quente fora do verão
+
+A temperatura das terras a 70–90° N (Terra simulada − ERA5, sem a Groenlândia) é boa no verão e quente demais no resto:
+
+| °C | Jan | Mar | Abr | Mai | Jun | Jul | Set | Out | Nov | Dez |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 60–70° N | +0,6 | +3,5 | +1,4 | +0,2 | −1,3 | −1,1 | +2,7 | +5,0 | +3,6 | +1,8 |
+| 70–80° N | +3,9 | +5,4 | +6,2 | +4,0 | +1,0 | −0,1 | +3,8 | +7,5 | +6,8 | +5,3 |
+
+Nas estações (`diag-polar.mjs`), abril sai 8–13 °C quente demais em volta da baía de Hudson e no arquipélago canadense
+(Cambridge Bay −7,4 contra −20,0; Baker Lake −3,9 contra −16,5; Iqaluit −3,6 contra −13,5), e outubro, 5–8 °C (Barrow
+−0,3 contra −7,0). O mar Ártico fica coberto de gelo até julho (100 % a ≥ 75° N, contra 74 % observado) e perde tudo em
+setembro (1 % contra 59 %; área de 0,1 contra 5,0 milhões de km² no OISST): o balanço de energia tira o albedo do gelo marinho do frio de
+cada mês (`iceRamp`), então o mar aberto de agosto esquenta a 7–9 °C e só volta a congelar tarde.
+
+O ar quente da primavera cabe mais água (+4–6 °C em março–maio a 70–80° N é +30–50 % de coluna saturada) e chove mais. O
+outono quente enfraquece o gradiente em que as tempestades crescem (a 70° N em novembro, 1,8 K por 10° contra 6,6 no
+ERA5), e o inverno fica seco: a 70–80° N, maio–julho ×4–6 e outubro–fevereiro ×0,4–0,8. Corrigir isso é no
+estágio de temperatura (o gelo marinho que dura o verão e prende a superfície em 0 °C), não no transporte.
+
 ## O que falta
 
-O resto do excesso, em maio–julho a 70–80° N (×4–6), é o transporte das tempestades e a evaporação do verão. Precisa de
-uma taxa de crescimento das tempestades que não venha só do gradiente da superfície, sem tirar a chuva de inverno das
-médias latitudes, e de rever a evaporação potencial nas altas latitudes (nuvens baixas do verão ártico).
+- O Ártico quente de outubro a abril e o gelo marinho de setembro, no balanço de energia (`temperature.js`).
+- Depois, rever a mistura das tempestades nas altas latitudes (com o inverno menos seco, o L ∝ 1/f pode passar).
+- A evaporação que os rios usam em terra fria (vazão da zona D ×0,81).
 
 ## Reprodução
 
@@ -94,4 +150,7 @@ node tuning/climate/diag-rain-bias.mjs
 node tuning/climate/planets-dry.mjs
 node tuning/climate/coupled-check.mjs --quick --set RAIN_FROZEN_EVAP=1      # sem a correção
 node tuning/water/earth-rivers.mjs --n 2560000 --climate sim
+node tuning/climate/diag-polar.mjs --planets none                          # o Ártico: estações, gelo marinho
+COLD_RAIN_WEIGHT=0.05 TUNE_KEYS=RAIN_EDDY_LENGTH_KM,RAIN_EDDY_DIFF,RAIN_COLUMN_LOCAL,RAIN_STABILITY,RAIN_STORM_RH,\
+  RAIN_WIND_DIV_MOIST,RAIN_SOIL_MM,TEMP_INVERSION_C node tuning/climate/coupled-check.mjs --tune
 ```

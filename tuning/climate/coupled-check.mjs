@@ -10,8 +10,9 @@
  *   node tuning/climate/coupled-check.mjs --set KEY=value,…
  *
  * Köppen is scored per terrain cell against Beck's 0.1° map, per continent (each weighted equally); the tune also
- * counts the recall of the rarer regimes (Cs, Cw, Am, Dw; REGIME_WEIGHT). Guardrails, on the 1° grid: land temperature
- * per continent (Beck), rain per continent (Beck) and ocean basin (GPCP), sea temperature (OISST), and the
+ * counts the recall of the rarer regimes (Cs, Cw, Am, Dw; REGIME_WEIGHT) and, if asked, the cold land's rain
+ * (COLD_RAIN_WEIGHT; Köppen barely sees it — tundra and taiga stay so however wet). Guardrails, on the 1° grid: land
+ * temperature per continent (Beck), rain per continent (Beck) and ocean basin (GPCP), sea temperature (OISST), and the
  * circulation's pressure pattern and wind direction (NCEP). Earth is a check, not the target: the tune may move a
  * setting only within its literature range. Also printed: the costliest confusions, and the Mediterranean-climate
  * regions (what real Cs becomes, rain by season).
@@ -91,6 +92,14 @@ function logErr(model, ref, mask) {
     return Math.sqrt(se / sw);
 }
 const mean = (o) => { const v = Object.values(o); return v.reduce((a, b) => a + b, 0) / v.length; };
+// the cold land's rain (north of 55° N, Greenland aside), against Beck's: the year's ratio and the monthly log error
+const coldMask = new Uint8Array(G);
+for (let c = 0; c < G; c++) coldMask[c] = obsLand[c] && surface.landFrac[c] >= 0.5 && cellLat(c) >= 55 && continentOf(cellLat(c), cellLon(c)) !== 'Greenland' ? 1 : 0;
+function coldRain(P) {
+    let s = 0, o = 0;
+    for (let c = 0; c < G; c++) { if (!coldMask[c]) continue; for (let m = 0; m < 12; m++) { const v = obs.precip[m * G + c]; if (v === v) { s += W[c] * P[m * G + c]; o += W[c] * v; } } }
+    return { err: logErr(P, obs.precip, coldMask), ratio: s / o };
+}
 
 /** The whole climate on an Earth mesh → Köppen per continent and the stage guardrails. */
 function evaluate(E = E160, opts = {}) {
@@ -112,6 +121,7 @@ function evaluate(E = E160, opts = {}) {
         temperature: Object.fromEntries(TUNED_CONTINENTS.map(k => [k, rmse(T.monthly, obs.t2m, landMask[k])])),
         rainLand: Object.fromEntries(TUNED_CONTINENTS.map(k => [k, logErr(P, obs.precip, landMask[k])])),
         rainSea: Object.fromEntries(TUNED_BASINS.map(k => [k, logErr(P, obs.precipAll, seaMask[k])])),
+        cold: coldRain(P),
         sst: rmse(T.monthlySL, obs.sst, sstMask),
         ...circulationScore(res.stages.circulation),
     };
@@ -146,6 +156,7 @@ function circulationScore(C) {
 // ── The final Köppen-level tune: a few coupling knobs, within their literature ranges ──
 const TUNED = (process.env.TUNE_KEYS ?? 'RAIN_COLUMN_LOCAL,RAIN_STABILITY,RAIN_STORM_RH,RAIN_WIND_DIV_MOIST,RAIN_SOIL_MM,TEMP_INVERSION_C').split(',');
 const REGIME_WEIGHT = +(process.env.REGIME_WEIGHT ?? 0.25);
+const COLD_RAIN_WEIGHT = +(process.env.COLD_RAIN_WEIGHT ?? 0);       // the cold land's rain error in the objective too
 const PRIOR_WEIGHT = 0.02, WORSEN_NEAR = 0.01, GUARD ={ temperature: 0.15, rain: 0.04, sst: 0.15, pressure: 0.3, wind45: 0.02 };
 // Generated planets must not dry out: fitting Earth alone once dried the worlds the app makes. Each planet's arid share
 // (ice-free land) may rise at most PLANET_ARID and their mean at most PLANET_ARID_MEAN, and the planets' mean land rain
@@ -166,14 +177,14 @@ if (TUNE) {
     // the rarer regimes count too (Cs, Cw, Am, Dw — as V1's tuner counted macro-F1): big classes must not drown them
     const regimeMean = (e) => ['Cs (Mediterranean)', 'Cw (dry-winter temperate)', 'Am (tropical monsoon)', 'Dw (dry-winter continental)'].reduce((s, k) => s + (e.regimes[k].recall || 0), 0) / 4;
     // mostly the near match (a climate like the real one is what reads as right), the exact match second
-    const ev = (p) => { setParams(p); const e = evaluate(); return { e, total: -2 * e.meanContNear - e.meanCont - REGIME_WEIGHT * regimeMean(e) + prior(p) }; };
+    const ev = (p) => { setParams(p); const e = evaluate(); return { e, total: -2 * e.meanContNear - e.meanCont - REGIME_WEIGHT * regimeMean(e) + COLD_RAIN_WEIGHT * e.guard.cold.err + prior(p) }; };
     let bestE = ev(best);
     const start = { ...bestE.e.perContNear }, g0 = guardSummary(bestE.e.guard);
     const okGuard = (e) => { const g = guardSummary(e.guard); return g.temperature <= g0.temperature + GUARD.temperature && g.rain <= g0.rain + GUARD.rain && g.sst <= g0.sst + GUARD.sst
         && g.pressure <= g0.pressure + GUARD.pressure && g.wind45 >= g0.wind45 - GUARD.wind45; };
     console.log(`Köppen-level tune of ${TUNED.join(', ')} (near match, continents equal; none > ${100 * WORSEN_NEAR} pt worse; stage guardrails; `
         + `${genPlanets.length} generated planets: none > ${100 * PLANET_ARID} pt more arid, their mean > ${100 * PLANET_ARID_MEAN} pt, rain down < ${100 * PLANET_RAIN} %).`);
-    const scoreLine = (e) => `Köppen ${pc(e.exact)} exact / ${pc(e.near)} near, continents ${pc(e.meanCont)} / ${pc(e.meanContNear)}`;
+    const scoreLine = (e) => `Köppen ${pc(e.exact)} exact / ${pc(e.near)} near, continents ${pc(e.meanCont)} / ${pc(e.meanContNear)}, cold land's rain ×${f2(e.guard.cold.ratio)}`;
     console.log(`  start: ${scoreLine(bestE.e)}; ${planetLine(dry0)}`);
     let step = 0.25;
     for (let round = 0; round < 4; round++) {
@@ -212,6 +223,7 @@ console.log(`\nCoupled climate on Earth, 160K (${main.res.timing.map(t => `${t.s
 console.log(`  Köppen vs Beck: ${pc(main.exact)} of land exact, ${pc(main.near)} near match (major group ${pc(main.major)}; continents equal ${pc(main.meanCont)} / ${pc(main.meanContNear)}) — without clouds from the rain ${pc(noClouds.exact)} (${pc(noClouds.meanCont)}); V1 38 %`);
 console.log('  per continent, exact / near: ' + TUNED_CONTINENTS.map(k => `${k} ${pc(main.perCont[k])} / ${pc(main.perContNear[k])}`).join(', '));
 console.log('  regimes (recall, area new ÷ real): ' + Object.entries(main.regimes).map(([k, r]) => `${k.split(' ')[0]} ${pc(r.recall)} ×${f2(r.areaRatio)}`).join(', '));
+console.log(`  cold land's rain (≥ 55° N, Greenland aside): ×${f2(main.guard.cold.ratio)} of Beck's, monthly log error ${f2(main.guard.cold.err)}`);
 console.log(`  guardrails: land temperature ${f2(g.temperature)} °C (${f2(gn.temperature)} without clouds), rain ${f2(g.rain)} (${f2(gn.rain)}), sea temperature ${f2(g.sst)} °C (${f2(gn.sst)}), pressure ${f2(g.pressure)} hPa, wind within 45° ${pc(g.wind45)}`);
 const big = Object.entries(main.cmp.perClass).filter(([, p]) => p.truthArea > 0.02).sort((a, b) => b[1].truthArea - a[1].truthArea);
 console.log('  largest classes (real share → new share, recall): ' + big.map(([k, p]) => `${k} ${(100 * p.truthArea).toFixed(0)}→${(100 * p.simArea).toFixed(0)} % (${(100 * p.recall).toFixed(0)})`).join(', '));

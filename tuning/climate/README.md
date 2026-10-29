@@ -133,7 +133,9 @@ node tuning/climate/coupled-check.mjs [--tune] [--quick]  # Phase 6: every stage
                                                 #   and seasonality), with each stage's score as a guardrail; drift at
                                                 #   640K/2.5M; test planets; --tune: the final Köppen-level tune on the
                                                 #   near match (TUNE_KEYS=… to choose), vetoing any step that dries the
-                                                #   generated planets (GEN_KEYS=… to choose them)
+                                                #   generated planets (GEN_KEYS=… to choose them); also the cold land's
+                                                #   rain (≥ 55° N) against Beck's, which Köppen barely sees
+                                                #   (COLD_RAIN_WEIGHT=… counts it in the tune)
 node tuning/climate/planets-dry.mjs [--set …] [--climate <snapshot>]  # the generated planets' arid share and rain vs Earth
                                                 #   observed and vs what their land's latitudes predict; --screen N
                                                 #   ranks Generate seeds by how Earth-like their land is
