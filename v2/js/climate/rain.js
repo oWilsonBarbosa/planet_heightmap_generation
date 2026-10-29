@@ -7,8 +7,9 @@
 //  • Evaporation: from the sea by the bulk formula — faster where the water is warm (Clausius–Clapeyron) and the wind
 //    strong (plus the gusts and storms the monthly means leave out), none under sea ice. From land at the same
 //    potential rate, limited by the water the ground holds (Turc–Pike: water-limited where it is dry, energy-limited
-//    where it is wet) — the month's rain, the snow melting and the soil's store (a small bucket through the year) — so
-//    rain that falls on land is partly returned to the air (recycling), even in a dry summer after a snowy winter.
+//    where it is wet) — the month's rain, the snow melting (what of it soaks in: ground still frozen beneath sheds much of
+//    it as the spring flood) and the soil's store (a small bucket through the year) — so rain that falls on land is
+//    partly returned to the air (recycling), even in a dry summer after a snowy winter.
 //  • Transport: the column moves with the wind above the surface friction layer (the rotational part of the wind);
 //    only a layer near the ground converges into the rain belt and the lows and spreads out of the highs (the divergent
 //    part) — shallow under dry air, deep where the column is moist and convecting. Weather systems mix the water
@@ -82,7 +83,9 @@ export function saturatedColumn(T, vapourHeightKm) {
  * speed √(U² + (s·σL)²), σ the Eady rate, L the storms' size. factor = e^{β·clamp(w / 0.1 m/s, −2, 2) + κ·rise − λ·drop}
  * (rise and drop in km, each saturating at the vapour scale height).
  * Rain is moved, not made: the factor is normalised over all within RAIN_OROG_SPREAD_KM (sea too), weighted by the rain —
- * windward slopes take it from the lee, so whole regions behind a range are dry.
+ * windward slopes take it from the lee, so whole regions behind a range are dry. That bounds the region's rain, not its
+ * wettest cell's: a steep windward cell amid sea and lowland (whose factor is ≈ 1) would take many times the rain it
+ * had, so no cell takes more than RAIN_OROG_MULT_MAX times it.
  */
 function orographicRain(ctx, core, g, ratio, uA, vA, shareCoarse, eadyK, Pout, K, tA) {
     const P_ = PARAMS;
@@ -169,7 +172,7 @@ function orographicRain(ctx, core, g, ratio, uA, vA, shareCoarse, eadyK, Pout, K
                 const c = j * w + i;
                 const a = Math.max(0, j - nr), b = Math.min(h - 1, j + nr);
                 const sb = preB[b + 1] - preB[a];
-                if (sb > 0) Pout[off + c] *= f[c] * sb / (pre[b + 1] - pre[a]);
+                if (sb > 0) Pout[off + c] *= Math.min(P_.RAIN_OROG_MULT_MAX, f[c] * sb / (pre[b + 1] - pre[a]));
             }
         }
     }
@@ -212,6 +215,20 @@ export function columnWaterRain() {
         const share = new Float64Array(G);
         for (let c = 0; c < G; c++) share[c] = winds.surfaceShareLand != null ? winds.surfaceShare + (winds.surfaceShareLand - winds.surfaceShare) * land[c]
             : winds.surfaceShare ?? 0.75 - 0.3 * land[c];
+        // The water the column holds over an ice sheet: its surface is colder per km of height (TEMP_ICE_LAPSE) than the
+        // free air above it — the extra cold is the near-surface inversion, which holds little of the column's water. So
+        // the column's temperature for its saturation is given back the surface's cooling beyond RAIN_COLUMN_LAPSE_MAX
+        // per km (the ice dome's height kept); else a cold high cell would hold less than the water that is carried up to
+        // it (β, below), sit near saturation and rain out what the winds and storms bring from the land around it.
+        const iceWarm = (() => {
+            const lap = temperature.lapse, dome = temperature.domeKm, href = ctx.surface.meanLandKm;
+            const warm = new Float32Array(core.size);
+            if (lap) for (let c = 0; c < core.size; c++) {
+                const h0 = href[c] === href[c] ? Math.max(0, href[c]) : 0, hr = Math.max(h0, dome ? dome[c] : 0);
+                warm[c] = Math.max(0, lap[c] - P_.RAIN_COLUMN_LAPSE_MAX) * hr;
+            }
+            return co(warm);
+        })();
 
         const solver = new HelmholtzSolver(g, 0, 0, { conservative: true });
         // Rising ground blocks the water. The solve is for the sea-level-equivalent column W* (the column over ground
@@ -282,7 +299,7 @@ export function columnWaterRain() {
             // the moisture (K = K_min + σ·L²) and gust over the sea (speed σ·L).
             const Tz = new Float64Array(h), Tzs = new Float64Array(h), eady = new Float64Array(h);
             for (let j = 0; j < h; j++) { let t = 0; for (let i = 0; i < w; i++) t += Tsl[j * w + i]; Tz[j] = t / w; }
-            const sm = Math.max(1, Math.round(8 / g.step));                          // baroclinic zones are broad (≈ ±8°)
+            const sm = Math.max(1, Math.round(P_.RAIN_EADY_SMOOTH_DEG / g.step));     // baroclinic zones are broad
             for (let j = 0; j < h; j++) { let t = 0, n = 0; for (let d = -sm; d <= sm; d++) { const jj = j + d; if (jj >= 0 && jj < h) { t += Tz[jj]; n++; } } Tzs[j] = t / n; }
             for (let j = 0; j < h; j++) {
                 const jn = Math.max(0, j - 1), js = Math.min(h - 1, j + 1);
@@ -389,8 +406,9 @@ export function columnWaterRain() {
                     p.lift[c] = stable * over * P_.RAIN_OROGRAPHIC * boost * Math.max(0, p.gu[c] * dhdx + p.gv[c] * dhdy) / Hv;
                     // saturated column (mm) and evaporation (kg m⁻² s⁻¹): the sea's, and the land's potential rate
                     // the column's temperature follows the surface only in part — the troposphere above a hot or frozen
-                    // surface stays nearer its latitude's temperature — and that sets how much water it holds
-                    p.Ws[c] = saturatedColumn(Tair[c] + (1 - P_.RAIN_COLUMN_LOCAL) * (Tzs[j] - Tsl[c]), P_.RAIN_VAPOUR_HEIGHT_KM);
+                    // surface stays nearer its latitude's temperature — and that sets how much water it holds (over an ice
+                    // sheet, as cold as its free air: iceWarm)
+                    p.Ws[c] = saturatedColumn(Tair[c] + iceWarm[c] + (1 - P_.RAIN_COLUMN_LOCAL) * (Tzs[j] - Tsl[c]), P_.RAIN_VAPOUR_HEIGHT_KM);
                     p.snow[c] = Math.min(1, Math.max(0, (2 - Tair[c]) / 4));            // share of the rain falling as snow
                     p.Tair[c] = Tair[c];
                     const bulk = RHO_AIR * P_.RAIN_EVAP_COEFF * Math.sqrt(u[c] * u[c] + v[c] * v[c] + gust2) * (1 - P_.RAIN_SURFACE_RH);
@@ -543,8 +561,11 @@ export function columnWaterRain() {
                     snow += Pm * p.snow[c] * dtM;
                     const melt = T > 0 ? Math.min(snow, MELT_MM_PER_C_MONTH * T * dtM) : 0;
                     snow -= melt;
-                    const input = Pm * (1 - p.snow[c]) + melt / dtM;                       // mm/month
-                    if (turn === 1) { ground[k].melt[c] = melt / dtM / SEC; ground[k].soil[c] = S / dtM / SEC; }
+                    // (of the snow melting, the ground takes in RAIN_MELT_SOAK — still frozen beneath, it sheds the rest as
+                    // the spring flood)
+                    const soak = P_.RAIN_MELT_SOAK * melt;
+                    const input = Pm * (1 - p.snow[c]) + soak / dtM;                       // mm/month
+                    if (turn === 1) { ground[k].melt[c] = soak / dtM / SEC; ground[k].soil[c] = S / dtM / SEC; }
                     const et = turcPike(input + S / dtM, Ep);
                     S = Math.min(Smax, Math.max(0, S + (input - et) * dtM));
                 }
@@ -603,6 +624,22 @@ export function columnWaterRain() {
                         Pout[k * core.size + c] += lf[c] * P_.RAIN_FRONT_MM * wf * Math.exp(-Math.max(0, sl[c] - row) / P_.RAIN_FRONT_HIGH_HPA) * Math.min(1, orographicK[k * core.size + c]);
                     }
                 }
+            }
+        }
+        // The air brings only so much water: a 1° cell's year of rain above RAIN_SUPPLY_START_MM is drawn toward
+        // RAIN_SUPPLY_MAX_MM (tanh; every month by the same factor, its seasons kept), where that is set. Earth's wettest 1°
+        // cells get ≈ 7.5 m a year, and the climate gives them that, bound or none; a broad coastal range in moist trade
+        // winds, on a planet raised to Earth's heights (js/earth-relief.js), drew 16 m out of the same air. Off for the
+        // pages: the Evolution's terrain is carved by its rain, and answers any change in it
+        if (P_.RAIN_SUPPLY_MAX_MM > P_.RAIN_SUPPLY_START_MM) {
+            const a = P_.RAIN_SUPPLY_START_MM, span = P_.RAIN_SUPPLY_MAX_MM - a;
+            for (let c = 0; c < core.size; c++) {
+                let year = 0;
+                for (let k = 0; k < K; k++) year += Pout[k * core.size + c];
+                year *= 12 / K;                                           // (the anchors are evenly spaced through the year)
+                if (!(year > a)) continue;
+                const f = (a + span * Math.tanh((year - a) / span)) / year;
+                for (let k = 0; k < K; k++) Pout[k * core.size + c] *= f;
             }
         }
         const out = { P: Pout, W: Wout, E: Eout, r: Rout, orographic, orographicK, eady: eadyOut, balance: results.map(r => r.balance), cycles, newton,

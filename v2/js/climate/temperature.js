@@ -1,9 +1,11 @@
 // Temperature stage: a seasonal energy-balance model on the climate grid. DOM-free.
 //
-//   C·∂T/∂t = S·(1 − α) − (A + B·T) + D·∇²T − γ·(u·∇)T
+//   C·∂T/∂t = S·(1 − α) − (A + B·T) + D·∇²T − γ·(u·∇)T + L·(s − m)
 //
 //   S       sunlight (insolation.js; any axial tilt)
-//   α       albedo: a base value rising toward the poles, and snow / sea ice where it is cold (smooth ramp)
+//   α       albedo: a base value rising toward the poles, and snow / sea ice where it is cold (smooth ramp; on land, with
+//           the rain stage's rain, the snow the winter piles up, while it lasts)
+//   L·(s−m) the snow's latent heat: given to the air as it falls (s), taken from it as it melts on the ground (m)
 //   A + B·T heat radiated to space
 //   C       heat stored per degree: small over land, a mixed-layer ocean at sea — the source of continental
 //           seasons, maritime mildness and the seasonal lag. Frozen sea stores little (ice insulates it).
@@ -28,6 +30,7 @@ import { FastNoise } from '../core/fast-noise.js';
 const SECONDS_PER_YEAR = 3.156e7;
 const OMEGA = 2 * Math.PI / SECONDS_PER_YEAR;
 const AIR_COLUMN_HEAT_CAP = 1.0e7;          // J/m²/K — the atmosphere's heat capacity per unit area
+const LATENT_FUSION = 3.34e5;               // J/kg — the heat that melts a kilogram of snow (a mm of water on a m²)
 const SEAWATER_HEAT_CAP = 1025 * 3990;      // J/m³/K
 const R_PLANET = 6.371e6;
 const NT = 12;                              // samples per year for what is evaluated in time (≥ 5 for 2 harmonics)
@@ -55,7 +58,8 @@ const WEAK_SUN = SOLAR_CONSTANT / 8;        // W/m² — half the planet's mean 
 /**
  * The temperature stage. Options: { tiltDeg = 23.44 }.
  * Returns stage(ctx, winds, init?) → { T (K anchors × G, °C at reference height), monthly (12 × G, same), monthlySL
- * (12 × G, sea level), iceFrac (G, share of the year a cell is snow- or ice-covered), state, timing }.
+ * (12 × G, sea level), iceFrac (G, share of the year a cell is snow- or ice-covered), domeKm (G, km an ice sheet's
+ * surface stands at least), lapse (G, °C/km the surface is colder per km of its reference height), state, timing }.
  * init: a previous run's `state` (same settings) to start from — used when temperature and winds are iterated
  * together; it then needs fewer outer iterations. qflux: the ocean's heating of the sea surface (W/m², core grid).
  * rain: monthly rain (12 × G, mm/month, core grid) from the rain stage, or null — then clouds shade rainy land and
@@ -101,11 +105,13 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
         // rainy tropics (tropicsWeight about that month's belts) the extra brightness is × (1 − TEMP_CLOUD_LW_CANCEL):
         // deep convective clouds trap about as much heat as they reflect (Kiehl 1994) — at full strength the rainforests
         // of Sumatra, Borneo and the Amazon came out cold and the energy balance spread it over the seas around them.
-        let cloudT = null;
+        let cloudT = null, Pm = null;
+        if (rain) {
+            Pm = new Float64Array(12 * G);
+            for (let m = 0; m < 12; m++) Pm.set(coarsen(core, g, ratio, rain.subarray(m * core.size, (m + 1) * core.size)), m * G);
+        }
         if (rain && P.TEMP_CLOUD_ALBEDO > 0) {
             cloudT = new Float64Array(NT * G);
-            const Pm = new Float64Array(12 * G);
-            for (let m = 0; m < 12; m++) Pm.set(coarsen(core, g, ratio, rain.subarray(m * core.size, (m + 1) * core.size)), m * G);
             for (let k = 0; k < NT; k++) {
                 const pos = 12 * k / NT - 0.5, m0 = Math.floor(pos), f = pos - m0, a = ((m0 % 12) + 12) % 12, b = (a + 1) % 12;
                 let sum = 0, wsum = 0;
@@ -126,6 +132,24 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
                     }
                 }
             }
+        }
+
+        // The snow on the ground through the year (with the rain stage's rain): what falls below freezing piles up and
+        // melts by TEMP_SNOW_MELT_MM a month per °C above it, and melting takes its heat from the air — the latent heat
+        // of fusion, ≈ 25 W/m² for 200 mm of water melting in a month — so the air over melting snow stays near freezing
+        // and spring comes late where the winter's snow is deep (without it the land warmed with the sun alone, cold land
+        // ran 4–7 °C warm from February to May, and its rivers' spring floods came early). The snow gives the heat back
+        // as it forms, in the clouds above: the column's year balances. Each sample time's rain, between the mid-month
+        // values either side; snow below −1 °C, rain above +1 °C.
+        // And the ground is as white as that snow covers it (1 − e^{−water/TEMP_SNOW_COVER_MM}): where it lies, while it
+        // lasts — the cold month alone covered dry cold land (Mongolia, northern China) as fully as Siberia, and bared
+        // the snow-deep north in April, a month or two before it melted.
+        const snowOn = !!rain && P.TEMP_SNOW_MELT_MM > 0;
+        const Pk = snowOn ? new Float64Array(NT * G) : null, latK = snowOn ? new Float64Array(NT * G) : null;
+        const coverK = snowOn && P.TEMP_SNOW_COVER_MM > 0 ? new Float64Array(NT * G) : null;
+        if (snowOn) for (let k = 0; k < NT; k++) {
+            const pos = 12 * k / NT - 0.5, m0 = Math.floor(pos), f = pos - m0, a = ((m0 % 12) + 12) % 12, b = (a + 1) % 12;
+            for (let c = 0; c < G; c++) Pk[k * G + c] = Math.max(0, (1 - f) * Pm[a * G + c] + f * Pm[b * G + c]) * 12 / NT;
         }
 
         // Sunlight and base albedo per row
@@ -186,6 +210,33 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
             // the rounds keep the sheets that hold themselves (developer: the poles "frequently not icey … feels super wrong")
             for (let c = 0; c < G; c++) if (landFrac[c] > 0 && c0[c] < P.TEMP_ICE_START_C) { snowYear[c] = 1; perennial[c] = 1; }
         }
+        // (the snow's latent heat at each sample time, W/m², from the temperature so far: three years from bare ground,
+        // the land's surface temperature as the snow sees it; a pack that does not melt each year — an ice sheet's start
+        // — gives back only the heat its melt takes)
+        const snowBudget = () => {
+            const ts = new Float64Array(NT), fall = new Float64Array(NT), melt = new Float64Array(NT);
+            const cs = Array.from({ length: NT }, (_, k) => { const th = 2 * Math.PI * k / NT; return [Math.cos(th), Math.sin(th), Math.cos(2 * th), Math.sin(2 * th)]; });
+            for (let c = 0; c < G; c++) {
+                if (!(landFrac[c] > 0) || perennial[c] >= 1) { for (let k = 0; k < NT; k++) { latK[k * G + c] = 0; if (coverK) coverK[k * G + c] = 1; } continue; }
+                for (let k = 0; k < NT; k++) {
+                    const [co, sn, co2, sn2] = cs[k];
+                    ts[k] = c0[c] + 2 * (c1r[c] * co - c1i[c] * sn) + 2 * (c2r[c] * co2 - c2i[c] * sn2) - lapseEff[c] * surfKm[c];
+                }
+                let pack = 0, fallYear = 0, meltYear = 0;
+                for (let pass = 0; pass < 3; pass++) for (let k = 0; k < NT; k++) {
+                    const T = ts[k], f = Pk[k * G + c] * (T <= -1 ? 1 : T >= 1 ? 0 : (1 - T) / 2), before = pack;
+                    pack += f;
+                    const m = T > 0 ? Math.min(pack, P.TEMP_SNOW_MELT_MM * T * 12 / NT) : 0;
+                    pack -= m;
+                    if (pass === 2) {
+                        fall[k] = f; melt[k] = m; fallYear += f; meltYear += m;
+                        if (coverK) coverK[k * G + c] = 1 - Math.exp(-0.5 * (before + pack) / P.TEMP_SNOW_COVER_MM);
+                    }
+                }
+                const back = fallYear > 0 ? Math.min(1, meltYear / fallYear) : 0;
+                for (let k = 0; k < NT; k++) latK[k * G + c] = landFrac[c] * LATENT_FUSION * (back * fall[k] - melt[k]) / (SECONDS_PER_YEAR / NT);
+            }
+        };
         const outer = warm ? OUTER_WARM : OUTER;
         // heat the ocean's currents bring to (or take from) the sea's surface layer, W/m² (ocean.js)
         const qEbm = qflux ? coarsen(core, g, ratio, qflux) : null;
@@ -272,11 +323,15 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
             tp = performance.now();
             F0.fill(0); F1r.fill(0); F1i.fill(0); F2r.fill(0); F2i.fill(0); iceYear.fill(0); seaIceYear.fill(0);
             snowYearPrev.set(snowYear); snowYear.fill(0);
+            // (ice sheets on land only: a frozen sea's ice is sea ice, a few metres at sea level — taken for a sheet, a
+            // polar sea frozen most of the year stood as a TEMP_ICE_DOME_KM dome, its air ~12 °C too cold in summer and
+            // the coasts that read it too)
             for (let c = 0; c < G; c++) {
-                perennial[c] = Math.max(iceSheet(snowYearPrev[c]), perennial[c] * keepSheet(snowYearPrev[c]));
+                perennial[c] = landFrac[c] > 0 ? Math.max(iceSheet(snowYearPrev[c]), perennial[c] * keepSheet(snowYearPrev[c])) : 0;
                 lapseEff[c] = P.TEMP_PLATEAU_LAPSE + (P.TEMP_ICE_LAPSE - P.TEMP_PLATEAU_LAPSE) * perennial[c];
                 surfKm[c] = Math.max(landKm[c], P.TEMP_ICE_DOME_KM * perennial[c]);
             }
+            if (snowOn) snowBudget();
             for (let k = 0; k < NT; k++) {
                 const th = 2 * Math.PI * k / NT, co = Math.cos(th), sn = Math.sin(th), co2 = Math.cos(2 * th), sn2 = Math.sin(2 * th);
                 for (let c = 0; c < G; c++) Tk[c] = c0[c] + 2 * (c1r[c] * co - c1i[c] * sn) + 2 * (c2r[c] * co2 - c2i[c] * sn2);
@@ -286,11 +341,13 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
                     for (let i = 0; i < w; i++) {
                         const c = j * w + i, T = Tk[c], f = landFrac[c];
                         const sL = iceRamp(T - lapseEff[c] * surfKm[c]), sO = iceRamp(T);
-                        // snow on land: patchy seasonal snow reflects little; snow that survives the summer — an ice
+                        // snow on land: seasonal snow the cold alone stands for reflects little (it counts dry frozen
+                        // ground as snowy); the snow budget's, as snow does; snow that survives the summer — an ice
                         // sheet — like sea ice, and all year: a sheet stays white through its summer melt (by the month's
                         // own snow alone, a sheet went dark the first month above freezing and melted away)
-                        const albSnow = P.TEMP_ALBEDO_SNOW + (P.TEMP_ALBEDO_ICE - P.TEMP_ALBEDO_SNOW) * perennial[c];
-                        const sLa = Math.max(sL, perennial[c]);
+                        const aS = coverK ? P.TEMP_SNOW_ALBEDO : P.TEMP_ALBEDO_SNOW;
+                        const albSnow = aS + (P.TEMP_ALBEDO_ICE - aS) * perennial[c];
+                        const sLa = Math.max(coverK ? coverK[k * G + c] : sL, perennial[c]);
                         const abc = ab + albVary[c];
                         let alb = abc + f * sLa * (albSnow - abc) + (1 - f) * sO * (P.TEMP_ALBEDO_ICE - abc);
                         if (cloudT) alb += f * (1 - sLa) * cloudT[k * G + c];          // clouds over snow-free land
@@ -306,6 +363,7 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
                             gF -= gamma * (du * gx * sx + dv * gy * sy);
                         }
                         if (qAt) gF += qAt[k * G + c] * (1 - f);
+                        if (latK) gF += latK[k * G + c];
                         F0[c] += gF; F1r[c] += gF * co; F1i[c] -= gF * sn; F2r[c] += gF * co2; F2i[c] -= gF * sn2;
                         iceYear[c] += (f * sL + (1 - f) * sO) / NT;
                         seaIceYear[c] += sO / NT;
@@ -541,7 +599,7 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
         // surface air temperature at each grid cell's reference height
         const href = ctx.surface.meanLandKm;
         const domeG = new Float64Array(G);
-        for (let c = 0; c < G; c++) { const p = perennial[c] = Math.max(iceSheet(snowYear[c]), perennial[c] * keepSheet(snowYear[c])); lapseEff[c] = P.TEMP_PLATEAU_LAPSE + (P.TEMP_ICE_LAPSE - P.TEMP_PLATEAU_LAPSE) * p; domeG[c] = P.TEMP_ICE_DOME_KM * p; }
+        for (let c = 0; c < G; c++) { const p = perennial[c] = landFrac[c] > 0 ? Math.max(iceSheet(snowYear[c]), perennial[c] * keepSheet(snowYear[c])) : 0; lapseEff[c] = P.TEMP_PLATEAU_LAPSE + (P.TEMP_ICE_LAPSE - P.TEMP_PLATEAU_LAPSE) * p; domeG[c] = P.TEMP_ICE_DOME_KM * p; }
         const lapseCore = new Float32Array(core.size), domeCore = new Float32Array(core.size);
         refine(g, core, ratio, lapseEff, lapseCore, 0);
         refine(g, core, ratio, domeG, domeCore, 0);
@@ -651,7 +709,7 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
             return (drawn = { seaSL, seaIceOpen, domeDraw });
         };
         const state = { step: g.step, c0, c1r, c1i, c2r, c2i, snowYear, perennial };
-        const out = { T, monthly, monthlySL, iceFrac: iceCore, domeKm: domeCore, inversion, state, solverStats: stats, profile: prof, ms: performance.now() - t0, source: 'energy balance' };
+        const out = { T, monthly, monthlySL, iceFrac: iceCore, domeKm: domeCore, lapse: lapseCore, inversion, state, solverStats: stats, profile: prof, ms: performance.now() - t0, source: 'energy balance' };
         return Object.defineProperties(out, {
             seaIce: { get: seaIceOf, enumerable: true },
             seaIceOpen: { get: () => drawnOf().seaIceOpen, enumerable: true },

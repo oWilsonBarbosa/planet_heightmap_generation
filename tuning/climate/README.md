@@ -157,9 +157,15 @@ node tuning/climate/diag-equator.mjs [--lon 20] # Phase 10: temperature row by r
 node tuning/climate/diag-tropics.mjs            # Phase 10: tropical land Jan / Jul / swing in 2° bands; rain and arid share per continent
 node tuning/climate/diag-wet-map.mjs --region na  # Phase 10: text map of rain new ÷ Beck (na, eu, as, sa, af, au)
 node tuning/climate/diag-orography.mjs          # Phase 10: windward vs lee rain for twelve ranges, new vs Beck
+node tuning/climate/diag-rain-bias.mjs [--set …] # the coupled climate's rain vs Beck / GPCP: by height, by observed
+                                                #   temperature and season, cold interiors, windward / lee pairs and
+                                                #   their contrast, the storm tracks at sea
 node tuning/climate/diag-regions.mjs [--set europe|west|islands]  # named regions: Köppen mix, coldest / warmest month,
                                                 #   summer / winter rain, new vs Beck (--params KEY=value,… to try settings)
 node tuning/climate/diag-seasons.mjs            # Phase 11: warmest / coldest month and swing for interiors and coasts, new vs Beck
+node tuning/climate/diag-spring.mjs [--set …]   # the spring of cold land (Beck's D and E): temperature and rain month by
+                                                #   month, new vs Beck, and the snow the winter piles up and when it melts
+                                                #   (the rivers' snow model), by latitude band and named boxes
 node tuning/climate/diag-blotch.mjs [--planet earth|evolution] [--parts]  # how blotchy the Köppen map is (class edges,
                                                 #   specks, patches); --parts: each source of detail off in turn
 node tuning/climate/render-evolution-koppen.mjs [--crop lon0,lon1,lat0,lat1]  # an Evolution world's Köppen map as a PNG
@@ -212,7 +218,7 @@ Files: `fetch-references.mjs`, `regrid-references.mjs`, `inspect-references.mjs`
 `season-test.mjs`, `stage-audit.mjs`, `hash-earth.mjs`, `skeleton-check.mjs`, `temperature-check.mjs`, `planets-dry.mjs`,
 `render-koppen-maps.mjs`, `probe-planets.mjs`, `lib/gen-planets.mjs` (the generated planets, terrain cached in
 `tuning/results/climate/cache/`),
-`diag-temperature.mjs`, `test-solver.mjs`, `circulation-check.mjs`, `ocean-check.mjs`, `rain-check.mjs`, `diag-rain.mjs`, `diag-planet-rain.mjs`, `coupled-check.mjs`,
+`diag-temperature.mjs`, `test-solver.mjs`, `circulation-check.mjs`, `ocean-check.mjs`, `rain-check.mjs`, `diag-rain.mjs`, `diag-rain-bias.mjs`, `diag-planet-rain.mjs`, `coupled-check.mjs`,
 `profile-climate.mjs`, `hash-climate.mjs`; `lib/continents.mjs` (continent-aware scoring),
 `lib/regions.mjs` (continents + ocean basins), `lib/nc-read.mjs` (netCDF reader), `lib/unzip.mjs`
 (dependency-free zip entry extraction), `lib/ref.mjs` (reference loader), `lib/compare.mjs` (area-weighted class

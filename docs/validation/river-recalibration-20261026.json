@@ -1,0 +1,1626 @@
+{
+  "date": "2026-10-26",
+  "baseCommit": "f6fe5726ebae8b6ff0f6ffc8e7a4125b0f809953",
+  "changedConstant": {
+    "name": "riverSpeedKmDay",
+    "before": 40,
+    "after": 45
+  },
+  "unchangedConstants": {
+    "baseflowShare": 0.7,
+    "baseflowMonths": 3,
+    "snowMeltMmPerC": 90,
+    "monthEvapShare": 0.8,
+    "lakeRegulation": 0.6,
+    "lakeRegulationDry": 0,
+    "floodRatio": 2.5
+  },
+  "protocol": {
+    "baseCommit": "f6fe5726ebae8b6ff0f6ffc8e7a4125b0f809953",
+    "phase": "river seasonality; climate code unchanged initially",
+    "train": "eligible gaugeIndex % 4 != 0",
+    "validation": "eligible gaugeIndex % 4 == 0; not used to rank the screening candidates",
+    "screenResolution": 640000,
+    "confirmResolution": 2560000,
+    "screenSpeedsKmDay": [
+      25,
+      40,
+      50,
+      60,
+      80,
+      100
+    ],
+    "baseline": {
+      "riverSpeedKmDay": 40,
+      "baseflowShare": 0.7,
+      "baseflowMonths": 3
+    },
+    "selection": "mean of observed/simulated training year scores; same matched gauges per climate; keep original zero-flow penalties",
+    "fullSampleGuards": {
+      "yearScore": "no lower on observed or simulated climate at confirmation",
+      "peakWithinMonth": "no more than one gauge worse per climate",
+      "greatBasinAbsMeanPhase": "no worse than baseline plus one discrete month/great-gauge-count",
+      "coldMedianCorrelation": "at most 0.01 worse",
+      "coldPeakWithinMonth": "at most one cold gauge worse",
+      "coldFloodFractionError": "at most one cold gauge worse"
+    },
+    "notes": [
+      "These are operational acceptance criteria, not a claim of physical validation.",
+      "Validation split is fixed before looking at search results.",
+      "Unchanged annual flows, geometry, matching, zero counts and data source are required.",
+      "If speed alone is insufficient, screen baseflow fractions 0.6,0.65,0.7,0.75 and storage times 2,2.5,3,3.5 months around the promising speeds; report that extension.",
+      "Holdout at a new terrain resolution is not an independent observed time period."
+    ],
+    "storageScreen": {
+      "reason": "No non-baseline speed-only candidate passed all training guards for both climates.",
+      "speedsKmDay": [
+        40,
+        50,
+        60,
+        80
+      ],
+      "baseflowShares": [
+        0.6,
+        0.65,
+        0.7
+      ],
+      "baseflowMonths": [
+        2.5,
+        3
+      ]
+    },
+    "speedRefinement": {
+      "reason": "Lower baseflow or shorter storage did not give a joint accepted improvement. Refine the two promising speed intervals before changing more defaults.",
+      "speedsKmDay": [
+        40,
+        42.5,
+        45,
+        55,
+        65,
+        70,
+        75,
+        90
+      ]
+    },
+    "selectedForConfirmation": {
+      "riverSpeedKmDay": 45,
+      "baseflowShare": 0.7,
+      "baseflowMonths": 3,
+      "reason": "Only non-baseline screened profile passing all training guards for both climates; no groundwater change needed."
+    }
+  },
+  "screening": {
+    "uniqueProfiles": 33,
+    "executionsIncludingRepeatsAndBothClimates": 76,
+    "trainingScoreMeanBefore": 0.060522916,
+    "trainingScoreMeanAfter": 0.06373924575
+  },
+  "acceptance": [
+    {
+      "res": "640k",
+      "climate": "observed climate",
+      "guards": {
+        "score": true,
+        "peak": true,
+        "greatPhase": true,
+        "coldCorrelation": true,
+        "coldPeak": true,
+        "coldFlood": true,
+        "coverage": true
+      },
+      "passed": true
+    },
+    {
+      "res": "640k",
+      "climate": "simulated climate",
+      "guards": {
+        "score": true,
+        "peak": true,
+        "greatPhase": true,
+        "coldCorrelation": true,
+        "coldPeak": true,
+        "coldFlood": true,
+        "coverage": true
+      },
+      "passed": true
+    },
+    {
+      "res": "2560k",
+      "climate": "observed climate",
+      "guards": {
+        "score": true,
+        "peak": true,
+        "greatPhase": true,
+        "coldCorrelation": true,
+        "coldPeak": true,
+        "coldFlood": true,
+        "coverage": true
+      },
+      "passed": true
+    },
+    {
+      "res": "2560k",
+      "climate": "simulated climate",
+      "guards": {
+        "score": true,
+        "peak": true,
+        "greatPhase": true,
+        "coldCorrelation": true,
+        "coldPeak": true,
+        "coldFlood": true,
+        "coverage": true
+      },
+      "passed": true
+    }
+  ],
+  "paired": {
+    "640k": {
+      "regions": 640001,
+      "runs": [
+        {
+          "climate": "observed climate",
+          "annualAndMatchingUnchanged": true,
+          "groups": {
+            "all": {
+              "before": {
+                "matched": 123,
+                "annual": {
+                  "n": 123,
+                  "invalid": 0,
+                  "zero": 2,
+                  "medianRatio": 0.9085591888318353,
+                  "withinFactorTwo": 0.7886178861788617,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 119,
+                  "unavailable": 4,
+                  "statuses": {
+                    "scored": 119,
+                    "zero-annual-flow": 2,
+                    "no-river-series": 2
+                  },
+                  "scoreN": 121,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 2,
+                  "score": 0.24603480697096689,
+                  "correlation": 0.8916065259901823,
+                  "peakN": 119,
+                  "peakWithinMonth": 0.8739495798319328,
+                  "range": 0.9010361341902591,
+                  "peakRatio": 0.8991479249656632,
+                  "low": 0.8708428608503668,
+                  "flood": 0.3277310924369748,
+                  "floodMeasured": 0.36134453781512604,
+                  "phaseN": 119,
+                  "early": 0.18487394957983194,
+                  "greatN": 14,
+                  "greatEarly": -0.35714285714285715
+                }
+              },
+              "after": {
+                "matched": 123,
+                "annual": {
+                  "n": 123,
+                  "invalid": 0,
+                  "zero": 2,
+                  "medianRatio": 0.9085591888318353,
+                  "withinFactorTwo": 0.7886178861788617,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 119,
+                  "unavailable": 4,
+                  "statuses": {
+                    "scored": 119,
+                    "zero-annual-flow": 2,
+                    "no-river-series": 2
+                  },
+                  "scoreN": 121,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 2,
+                  "score": 0.2471366113680124,
+                  "correlation": 0.8918168191450208,
+                  "peakN": 119,
+                  "peakWithinMonth": 0.865546218487395,
+                  "range": 0.904326277004304,
+                  "peakRatio": 0.9002101412841614,
+                  "low": 0.8683613612013809,
+                  "flood": 0.31932773109243695,
+                  "floodMeasured": 0.36134453781512604,
+                  "phaseN": 119,
+                  "early": 0.23529411764705882,
+                  "greatN": 14,
+                  "greatEarly": -0.2857142857142857
+                }
+              }
+            },
+            "validation": {
+              "before": {
+                "matched": 31,
+                "annual": {
+                  "n": 31,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.9346704582178343,
+                  "withinFactorTwo": 0.7741935483870968,
+                  "rmsFactor": 1.780746471224063
+                },
+                "seasonal": {
+                  "n": 29,
+                  "unavailable": 2,
+                  "statuses": {
+                    "scored": 29,
+                    "no-river-series": 2
+                  },
+                  "scoreN": 29,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.3290250723371235,
+                  "correlation": 0.8467816738419391,
+                  "peakN": 29,
+                  "peakWithinMonth": 0.8620689655172413,
+                  "range": 0.8970385834825226,
+                  "peakRatio": 0.9070729415024416,
+                  "low": 0.875830400544374,
+                  "flood": 0.27586206896551724,
+                  "floodMeasured": 0.3793103448275862,
+                  "phaseN": 29,
+                  "early": 0.3103448275862069,
+                  "greatN": 5,
+                  "greatEarly": 0
+                }
+              },
+              "after": {
+                "matched": 31,
+                "annual": {
+                  "n": 31,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.9346704582178343,
+                  "withinFactorTwo": 0.7741935483870968,
+                  "rmsFactor": 1.780746471224063
+                },
+                "seasonal": {
+                  "n": 29,
+                  "unavailable": 2,
+                  "statuses": {
+                    "scored": 29,
+                    "no-river-series": 2
+                  },
+                  "scoreN": 29,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.3290250723371235,
+                  "correlation": 0.8428181195298143,
+                  "peakN": 29,
+                  "peakWithinMonth": 0.8620689655172413,
+                  "range": 0.9032020813166085,
+                  "peakRatio": 0.910229427724249,
+                  "low": 0.875830400544374,
+                  "flood": 0.27586206896551724,
+                  "floodMeasured": 0.3793103448275862,
+                  "phaseN": 29,
+                  "early": 0.3448275862068966,
+                  "greatN": 5,
+                  "greatEarly": 0
+                }
+              }
+            },
+            "cold": {
+              "before": {
+                "matched": 37,
+                "annual": {
+                  "n": 37,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.8013997538434204,
+                  "withinFactorTwo": 0.9459459459459459,
+                  "rmsFactor": 1.4411107139601917
+                },
+                "seasonal": {
+                  "n": 37,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 37
+                  },
+                  "scoreN": 37,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.2965815764267179,
+                  "correlation": 0.8841769834044725,
+                  "peakN": 37,
+                  "peakWithinMonth": 0.918918918918919,
+                  "range": 0.858669628425713,
+                  "peakRatio": 0.8663927516764961,
+                  "low": 0.8254858113667798,
+                  "flood": 0.10810810810810811,
+                  "floodMeasured": 0.4594594594594595,
+                  "phaseN": 37,
+                  "early": -0.05405405405405406,
+                  "greatN": 4,
+                  "greatEarly": -0.25
+                }
+              },
+              "after": {
+                "matched": 37,
+                "annual": {
+                  "n": 37,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.8013997538434204,
+                  "withinFactorTwo": 0.9459459459459459,
+                  "rmsFactor": 1.4411107139601917
+                },
+                "seasonal": {
+                  "n": 37,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 37
+                  },
+                  "scoreN": 37,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.29119995174995267,
+                  "correlation": 0.8770277906178581,
+                  "peakN": 37,
+                  "peakWithinMonth": 0.918918918918919,
+                  "range": 0.8629142982788134,
+                  "peakRatio": 0.8741007635653818,
+                  "low": 0.8170181932402981,
+                  "flood": 0.10810810810810811,
+                  "floodMeasured": 0.4594594594594595,
+                  "phaseN": 37,
+                  "early": -0.05405405405405406,
+                  "greatN": 4,
+                  "greatEarly": -0.25
+                }
+              }
+            },
+            "great": {
+              "before": {
+                "matched": 14,
+                "annual": {
+                  "n": 14,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.9570572881207794,
+                  "withinFactorTwo": 0.8571428571428571,
+                  "rmsFactor": 2.0661339881881213
+                },
+                "seasonal": {
+                  "n": 14,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 14
+                  },
+                  "scoreN": 14,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.5429192715662832,
+                  "correlation": 0.9349594278480547,
+                  "peakN": 14,
+                  "peakWithinMonth": 0.8571428571428571,
+                  "range": 0.9576730399184793,
+                  "peakRatio": 0.9692258142368517,
+                  "low": 0.9391411294142193,
+                  "flood": 0.14285714285714285,
+                  "floodMeasured": 0.07142857142857142,
+                  "phaseN": 14,
+                  "early": -0.35714285714285715,
+                  "greatN": 14,
+                  "greatEarly": -0.35714285714285715
+                }
+              },
+              "after": {
+                "matched": 14,
+                "annual": {
+                  "n": 14,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.9570572881207794,
+                  "withinFactorTwo": 0.8571428571428571,
+                  "rmsFactor": 2.0661339881881213
+                },
+                "seasonal": {
+                  "n": 14,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 14
+                  },
+                  "scoreN": 14,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.5453506990930292,
+                  "correlation": 0.9309637012768321,
+                  "peakN": 14,
+                  "peakWithinMonth": 0.8571428571428571,
+                  "range": 0.9588009067154215,
+                  "peakRatio": 0.9911932205765872,
+                  "low": 0.9274105841030377,
+                  "flood": 0.14285714285714285,
+                  "floodMeasured": 0.07142857142857142,
+                  "phaseN": 14,
+                  "early": -0.2857142857142857,
+                  "greatN": 14,
+                  "greatEarly": -0.2857142857142857
+                }
+              }
+            }
+          }
+        },
+        {
+          "climate": "simulated climate",
+          "annualAndMatchingUnchanged": true,
+          "groups": {
+            "all": {
+              "before": {
+                "matched": 118,
+                "annual": {
+                  "n": 118,
+                  "invalid": 0,
+                  "zero": 3,
+                  "medianRatio": 0.8307718445121025,
+                  "withinFactorTwo": 0.5084745762711864,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 113,
+                  "unavailable": 5,
+                  "statuses": {
+                    "scored": 113,
+                    "zero-annual-flow": 3,
+                    "no-river-series": 2
+                  },
+                  "scoreN": 116,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 3,
+                  "score": -0.15909661590534208,
+                  "correlation": 0.6678815960350292,
+                  "peakN": 113,
+                  "peakWithinMonth": 0.6017699115044248,
+                  "range": 0.9974005122583224,
+                  "peakRatio": 0.9477729341554357,
+                  "low": 0.739822604317436,
+                  "flood": 0.3008849557522124,
+                  "floodMeasured": 0.35398230088495575,
+                  "phaseN": 113,
+                  "early": 0.02654867256637168,
+                  "greatN": 11,
+                  "greatEarly": -0.45454545454545453
+                }
+              },
+              "after": {
+                "matched": 118,
+                "annual": {
+                  "n": 118,
+                  "invalid": 0,
+                  "zero": 3,
+                  "medianRatio": 0.8307718445121025,
+                  "withinFactorTwo": 0.5084745762711864,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 113,
+                  "unavailable": 5,
+                  "statuses": {
+                    "scored": 113,
+                    "zero-annual-flow": 3,
+                    "no-river-series": 2
+                  },
+                  "scoreN": 116,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 3,
+                  "score": -0.15554936978259898,
+                  "correlation": 0.6711771170445064,
+                  "peakN": 113,
+                  "peakWithinMonth": 0.6194690265486725,
+                  "range": 1.0018769135405312,
+                  "peakRatio": 0.9486836055495892,
+                  "low": 0.7343072727077063,
+                  "flood": 0.30973451327433627,
+                  "floodMeasured": 0.35398230088495575,
+                  "phaseN": 113,
+                  "early": 0.09734513274336283,
+                  "greatN": 11,
+                  "greatEarly": -0.09090909090909091
+                }
+              }
+            },
+            "validation": {
+              "before": {
+                "matched": 29,
+                "annual": {
+                  "n": 29,
+                  "invalid": 0,
+                  "zero": 1,
+                  "medianRatio": 1.0102526550713344,
+                  "withinFactorTwo": 0.41379310344827586,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 27,
+                  "unavailable": 2,
+                  "statuses": {
+                    "scored": 27,
+                    "zero-annual-flow": 1,
+                    "no-river-series": 1
+                  },
+                  "scoreN": 28,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 1,
+                  "score": -0.3027802346577629,
+                  "correlation": 0.568839563090401,
+                  "peakN": 27,
+                  "peakWithinMonth": 0.5185185185185185,
+                  "range": 0.8521409824587208,
+                  "peakRatio": 0.8539875754083674,
+                  "low": 0.7437079437355304,
+                  "flood": 0.2222222222222222,
+                  "floodMeasured": 0.4074074074074074,
+                  "phaseN": 27,
+                  "early": 0.6666666666666666,
+                  "greatN": 4,
+                  "greatEarly": 0.75
+                }
+              },
+              "after": {
+                "matched": 29,
+                "annual": {
+                  "n": 29,
+                  "invalid": 0,
+                  "zero": 1,
+                  "medianRatio": 1.0102526550713344,
+                  "withinFactorTwo": 0.41379310344827586,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 27,
+                  "unavailable": 2,
+                  "statuses": {
+                    "scored": 27,
+                    "zero-annual-flow": 1,
+                    "no-river-series": 1
+                  },
+                  "scoreN": 28,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 1,
+                  "score": -0.3021328747882478,
+                  "correlation": 0.5835988478602102,
+                  "peakN": 27,
+                  "peakWithinMonth": 0.5555555555555556,
+                  "range": 0.8551973990518829,
+                  "peakRatio": 0.8541167884055336,
+                  "low": 0.7441669907008589,
+                  "flood": 0.2222222222222222,
+                  "floodMeasured": 0.4074074074074074,
+                  "phaseN": 27,
+                  "early": 0.7407407407407407,
+                  "greatN": 4,
+                  "greatEarly": 1
+                }
+              }
+            },
+            "cold": {
+              "before": {
+                "matched": 37,
+                "annual": {
+                  "n": 37,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.9510154918096626,
+                  "withinFactorTwo": 0.7837837837837838,
+                  "rmsFactor": 1.9296697199832067
+                },
+                "seasonal": {
+                  "n": 37,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 37
+                  },
+                  "scoreN": 37,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.1933699361867971,
+                  "correlation": 0.7812952779506723,
+                  "peakN": 37,
+                  "peakWithinMonth": 0.7837837837837838,
+                  "range": 0.9104766946118807,
+                  "peakRatio": 0.8574903030896464,
+                  "low": 0.7184087589859303,
+                  "flood": 0.24324324324324326,
+                  "floodMeasured": 0.4594594594594595,
+                  "phaseN": 37,
+                  "early": -0.2702702702702703,
+                  "greatN": 4,
+                  "greatEarly": -0.75
+                }
+              },
+              "after": {
+                "matched": 37,
+                "annual": {
+                  "n": 37,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.9510154918096626,
+                  "withinFactorTwo": 0.7837837837837838,
+                  "rmsFactor": 1.9296697199832067
+                },
+                "seasonal": {
+                  "n": 37,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 37
+                  },
+                  "scoreN": 37,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.1968023609973175,
+                  "correlation": 0.7763648316683491,
+                  "peakN": 37,
+                  "peakWithinMonth": 0.8378378378378378,
+                  "range": 0.9150569643889083,
+                  "peakRatio": 0.8675346793224601,
+                  "low": 0.7113638496827978,
+                  "flood": 0.2702702702702703,
+                  "floodMeasured": 0.4594594594594595,
+                  "phaseN": 37,
+                  "early": -0.21621621621621623,
+                  "greatN": 4,
+                  "greatEarly": -0.5
+                }
+              }
+            },
+            "great": {
+              "before": {
+                "matched": 11,
+                "annual": {
+                  "n": 11,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 1.099542646171246,
+                  "withinFactorTwo": 0.6363636363636364,
+                  "rmsFactor": 2.827244505301907
+                },
+                "seasonal": {
+                  "n": 11,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 11
+                  },
+                  "scoreN": 11,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.24045465283868833,
+                  "correlation": 0.691134397001031,
+                  "peakN": 11,
+                  "peakWithinMonth": 0.45454545454545453,
+                  "range": 1.0842616846262843,
+                  "peakRatio": 0.9776870192326866,
+                  "low": 0.7899756327083819,
+                  "flood": 0,
+                  "floodMeasured": 0.09090909090909091,
+                  "phaseN": 11,
+                  "early": -0.45454545454545453,
+                  "greatN": 11,
+                  "greatEarly": -0.45454545454545453
+                }
+              },
+              "after": {
+                "matched": 11,
+                "annual": {
+                  "n": 11,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 1.099542646171246,
+                  "withinFactorTwo": 0.6363636363636364,
+                  "rmsFactor": 2.827244505301907
+                },
+                "seasonal": {
+                  "n": 11,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 11
+                  },
+                  "scoreN": 11,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.2554212250056559,
+                  "correlation": 0.7053205692438408,
+                  "peakN": 11,
+                  "peakWithinMonth": 0.5454545454545454,
+                  "range": 1.1095064943209008,
+                  "peakRatio": 0.9756269940454715,
+                  "low": 0.7881517284824967,
+                  "flood": 0,
+                  "floodMeasured": 0.09090909090909091,
+                  "phaseN": 11,
+                  "early": -0.09090909090909091,
+                  "greatN": 11,
+                  "greatEarly": -0.09090909090909091
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "2560k": {
+      "regions": 2560001,
+      "runs": [
+        {
+          "climate": "observed climate",
+          "annualAndMatchingUnchanged": true,
+          "groups": {
+            "all": {
+              "before": {
+                "matched": 122,
+                "annual": {
+                  "n": 122,
+                  "invalid": 0,
+                  "zero": 2,
+                  "medianRatio": 0.9138285143479746,
+                  "withinFactorTwo": 0.8360655737704918,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 120,
+                  "unavailable": 2,
+                  "statuses": {
+                    "scored": 120,
+                    "zero-annual-flow": 2
+                  },
+                  "scoreN": 122,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 2,
+                  "score": 0.21791795673184172,
+                  "correlation": 0.894788693213369,
+                  "peakN": 120,
+                  "peakWithinMonth": 0.875,
+                  "range": 0.9309932116179839,
+                  "peakRatio": 0.9227374349913235,
+                  "low": 0.8942533275225046,
+                  "flood": 0.3416666666666667,
+                  "floodMeasured": 0.39166666666666666,
+                  "phaseN": 120,
+                  "early": -0.03333333333333333,
+                  "greatN": 13,
+                  "greatEarly": -0.6923076923076923
+                }
+              },
+              "after": {
+                "matched": 122,
+                "annual": {
+                  "n": 122,
+                  "invalid": 0,
+                  "zero": 2,
+                  "medianRatio": 0.9138285143479746,
+                  "withinFactorTwo": 0.8360655737704918,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 120,
+                  "unavailable": 2,
+                  "statuses": {
+                    "scored": 120,
+                    "zero-annual-flow": 2
+                  },
+                  "scoreN": 122,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 2,
+                  "score": 0.23374381454684712,
+                  "correlation": 0.8915473162688403,
+                  "peakN": 120,
+                  "peakWithinMonth": 0.875,
+                  "range": 0.9355945389701756,
+                  "peakRatio": 0.9206646588923685,
+                  "low": 0.8855620032071372,
+                  "flood": 0.35,
+                  "floodMeasured": 0.39166666666666666,
+                  "phaseN": 120,
+                  "early": 0.025,
+                  "greatN": 13,
+                  "greatEarly": -0.6153846153846154
+                }
+              }
+            },
+            "validation": {
+              "before": {
+                "matched": 35,
+                "annual": {
+                  "n": 35,
+                  "invalid": 0,
+                  "zero": 1,
+                  "medianRatio": 0.9214995709791417,
+                  "withinFactorTwo": 0.8285714285714286,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 34,
+                  "unavailable": 1,
+                  "statuses": {
+                    "scored": 34,
+                    "zero-annual-flow": 1
+                  },
+                  "scoreN": 35,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 1,
+                  "score": 0.10738051323411812,
+                  "correlation": 0.8645402908616296,
+                  "peakN": 34,
+                  "peakWithinMonth": 0.8529411764705882,
+                  "range": 0.9362099944787156,
+                  "peakRatio": 0.9802713278605912,
+                  "low": 0.8554251085419916,
+                  "flood": 0.35294117647058826,
+                  "floodMeasured": 0.38235294117647056,
+                  "phaseN": 34,
+                  "early": -0.08823529411764706,
+                  "greatN": 5,
+                  "greatEarly": -0.2
+                }
+              },
+              "after": {
+                "matched": 35,
+                "annual": {
+                  "n": 35,
+                  "invalid": 0,
+                  "zero": 1,
+                  "medianRatio": 0.9214995709791417,
+                  "withinFactorTwo": 0.8285714285714286,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 34,
+                  "unavailable": 1,
+                  "statuses": {
+                    "scored": 34,
+                    "zero-annual-flow": 1
+                  },
+                  "scoreN": 35,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 1,
+                  "score": 0.1278634665695884,
+                  "correlation": 0.8557710871808027,
+                  "peakN": 34,
+                  "peakWithinMonth": 0.8529411764705882,
+                  "range": 0.9386492193893362,
+                  "peakRatio": 0.9799703622426822,
+                  "low": 0.8534693199148129,
+                  "flood": 0.35294117647058826,
+                  "floodMeasured": 0.38235294117647056,
+                  "phaseN": 34,
+                  "early": 0,
+                  "greatN": 5,
+                  "greatEarly": -0.2
+                }
+              }
+            },
+            "cold": {
+              "before": {
+                "matched": 41,
+                "annual": {
+                  "n": 41,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.8454651881387412,
+                  "withinFactorTwo": 0.9024390243902439,
+                  "rmsFactor": 1.487996829792882
+                },
+                "seasonal": {
+                  "n": 41,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 41
+                  },
+                  "scoreN": 41,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.20835907969841871,
+                  "correlation": 0.8340318639486396,
+                  "peakN": 41,
+                  "peakWithinMonth": 0.975609756097561,
+                  "range": 0.8893479789280666,
+                  "peakRatio": 0.8669512213347641,
+                  "low": 0.8286043409822438,
+                  "flood": 0.1951219512195122,
+                  "floodMeasured": 0.5121951219512195,
+                  "phaseN": 41,
+                  "early": -0.1951219512195122,
+                  "greatN": 6,
+                  "greatEarly": -0.6666666666666666
+                }
+              },
+              "after": {
+                "matched": 41,
+                "annual": {
+                  "n": 41,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.8454651881387412,
+                  "withinFactorTwo": 0.9024390243902439,
+                  "rmsFactor": 1.487996829792882
+                },
+                "seasonal": {
+                  "n": 41,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 41
+                  },
+                  "scoreN": 41,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.21329681004937046,
+                  "correlation": 0.8516077553716874,
+                  "peakN": 41,
+                  "peakWithinMonth": 0.975609756097561,
+                  "range": 0.8904759378805821,
+                  "peakRatio": 0.8701830215320216,
+                  "low": 0.8271396614450333,
+                  "flood": 0.21951219512195122,
+                  "floodMeasured": 0.5121951219512195,
+                  "phaseN": 41,
+                  "early": -0.12195121951219512,
+                  "greatN": 6,
+                  "greatEarly": -0.5
+                }
+              }
+            },
+            "great": {
+              "before": {
+                "matched": 13,
+                "annual": {
+                  "n": 13,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.8659864590128898,
+                  "withinFactorTwo": 0.8461538461538461,
+                  "rmsFactor": 2.18350476681287
+                },
+                "seasonal": {
+                  "n": 13,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 13
+                  },
+                  "scoreN": 13,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.4588425289544428,
+                  "correlation": 0.9045429256550257,
+                  "peakN": 13,
+                  "peakWithinMonth": 0.9230769230769231,
+                  "range": 1.0443516702696902,
+                  "peakRatio": 0.9989127840557609,
+                  "low": 0.8218747687223723,
+                  "flood": 0.15384615384615385,
+                  "floodMeasured": 0.15384615384615385,
+                  "phaseN": 13,
+                  "early": -0.6923076923076923,
+                  "greatN": 13,
+                  "greatEarly": -0.6923076923076923
+                }
+              },
+              "after": {
+                "matched": 13,
+                "annual": {
+                  "n": 13,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.8659864590128898,
+                  "withinFactorTwo": 0.8461538461538461,
+                  "rmsFactor": 2.18350476681287
+                },
+                "seasonal": {
+                  "n": 13,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 13
+                  },
+                  "scoreN": 13,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": 0.4968452679329828,
+                  "correlation": 0.9261100969710596,
+                  "peakN": 13,
+                  "peakWithinMonth": 0.9230769230769231,
+                  "range": 1.0679742221199815,
+                  "peakRatio": 1.0228531687677722,
+                  "low": 0.7709162230245508,
+                  "flood": 0.15384615384615385,
+                  "floodMeasured": 0.15384615384615385,
+                  "phaseN": 13,
+                  "early": -0.6153846153846154,
+                  "greatN": 13,
+                  "greatEarly": -0.6153846153846154
+                }
+              }
+            }
+          }
+        },
+        {
+          "climate": "simulated climate",
+          "annualAndMatchingUnchanged": true,
+          "groups": {
+            "all": {
+              "before": {
+                "matched": 125,
+                "annual": {
+                  "n": 125,
+                  "invalid": 0,
+                  "zero": 7,
+                  "medianRatio": 0.8424249587986621,
+                  "withinFactorTwo": 0.552,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 117,
+                  "unavailable": 8,
+                  "statuses": {
+                    "scored": 117,
+                    "zero-annual-flow": 7,
+                    "no-river-series": 1
+                  },
+                  "scoreN": 124,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 7,
+                  "score": -0.262769684258842,
+                  "correlation": 0.694912898186322,
+                  "peakN": 117,
+                  "peakWithinMonth": 0.6324786324786325,
+                  "range": 0.9932002764331197,
+                  "peakRatio": 0.976334918989749,
+                  "low": 0.7327812244581585,
+                  "flood": 0.36752136752136755,
+                  "floodMeasured": 0.36752136752136755,
+                  "phaseN": 117,
+                  "early": -0.2564102564102564,
+                  "greatN": 13,
+                  "greatEarly": -0.46153846153846156
+                }
+              },
+              "after": {
+                "matched": 125,
+                "annual": {
+                  "n": 125,
+                  "invalid": 0,
+                  "zero": 7,
+                  "medianRatio": 0.8424249587986621,
+                  "withinFactorTwo": 0.552,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 117,
+                  "unavailable": 8,
+                  "statuses": {
+                    "scored": 117,
+                    "zero-annual-flow": 7,
+                    "no-river-series": 1
+                  },
+                  "scoreN": 124,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 7,
+                  "score": -0.19281142196929313,
+                  "correlation": 0.6898235454563851,
+                  "peakN": 117,
+                  "peakWithinMonth": 0.6410256410256411,
+                  "range": 1.0000698700608306,
+                  "peakRatio": 0.9875070885274307,
+                  "low": 0.7268686800763702,
+                  "flood": 0.36752136752136755,
+                  "floodMeasured": 0.36752136752136755,
+                  "phaseN": 117,
+                  "early": -0.1794871794871795,
+                  "greatN": 13,
+                  "greatEarly": -0.3076923076923077
+                }
+              }
+            },
+            "validation": {
+              "before": {
+                "matched": 36,
+                "annual": {
+                  "n": 36,
+                  "invalid": 0,
+                  "zero": 2,
+                  "medianRatio": 0.9565608970195314,
+                  "withinFactorTwo": 0.5,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 34,
+                  "unavailable": 2,
+                  "statuses": {
+                    "scored": 34,
+                    "zero-annual-flow": 2
+                  },
+                  "scoreN": 36,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 2,
+                  "score": -0.27144945994315656,
+                  "correlation": 0.6768060415525282,
+                  "peakN": 34,
+                  "peakWithinMonth": 0.6176470588235294,
+                  "range": 1.0413062809892637,
+                  "peakRatio": 0.9049829616279967,
+                  "low": 0.6461969222336088,
+                  "flood": 0.3235294117647059,
+                  "floodMeasured": 0.38235294117647056,
+                  "phaseN": 34,
+                  "early": 0.058823529411764705,
+                  "greatN": 5,
+                  "greatEarly": 0.4
+                }
+              },
+              "after": {
+                "matched": 36,
+                "annual": {
+                  "n": 36,
+                  "invalid": 0,
+                  "zero": 2,
+                  "medianRatio": 0.9565608970195314,
+                  "withinFactorTwo": 0.5,
+                  "rmsFactor": "Infinity"
+                },
+                "seasonal": {
+                  "n": 34,
+                  "unavailable": 2,
+                  "statuses": {
+                    "scored": 34,
+                    "zero-annual-flow": 2
+                  },
+                  "scoreN": 36,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 2,
+                  "score": -0.28830493271733293,
+                  "correlation": 0.7035502168881999,
+                  "peakN": 34,
+                  "peakWithinMonth": 0.6176470588235294,
+                  "range": 1.047436104166099,
+                  "peakRatio": 0.9161632525616662,
+                  "low": 0.6461969222336088,
+                  "flood": 0.3235294117647059,
+                  "floodMeasured": 0.38235294117647056,
+                  "phaseN": 34,
+                  "early": 0.11764705882352941,
+                  "greatN": 5,
+                  "greatEarly": 0.6
+                }
+              }
+            },
+            "cold": {
+              "before": {
+                "matched": 41,
+                "annual": {
+                  "n": 41,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.911518542407808,
+                  "withinFactorTwo": 0.7560975609756098,
+                  "rmsFactor": 2.293587890597855
+                },
+                "seasonal": {
+                  "n": 41,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 41
+                  },
+                  "scoreN": 41,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": -0.03775269868557468,
+                  "correlation": 0.7735089817873008,
+                  "peakN": 41,
+                  "peakWithinMonth": 0.8048780487804879,
+                  "range": 0.898531217455719,
+                  "peakRatio": 0.8458310933862987,
+                  "low": 0.7320825624442054,
+                  "flood": 0.24390243902439024,
+                  "floodMeasured": 0.5121951219512195,
+                  "phaseN": 41,
+                  "early": -0.1951219512195122,
+                  "greatN": 6,
+                  "greatEarly": -0.6666666666666666
+                }
+              },
+              "after": {
+                "matched": 41,
+                "annual": {
+                  "n": 41,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 0.911518542407808,
+                  "withinFactorTwo": 0.7560975609756098,
+                  "rmsFactor": 2.293587890597855
+                },
+                "seasonal": {
+                  "n": 41,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 41
+                  },
+                  "scoreN": 41,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": -0.035908203991998455,
+                  "correlation": 0.7665516731602754,
+                  "peakN": 41,
+                  "peakWithinMonth": 0.8292682926829268,
+                  "range": 0.9012908873214975,
+                  "peakRatio": 0.8458503518301058,
+                  "low": 0.7259601146162948,
+                  "flood": 0.24390243902439024,
+                  "floodMeasured": 0.5121951219512195,
+                  "phaseN": 41,
+                  "early": -0.12195121951219512,
+                  "greatN": 6,
+                  "greatEarly": -0.6666666666666666
+                }
+              }
+            },
+            "great": {
+              "before": {
+                "matched": 13,
+                "annual": {
+                  "n": 13,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 1.122797283207345,
+                  "withinFactorTwo": 0.7692307692307693,
+                  "rmsFactor": 2.6115090644443715
+                },
+                "seasonal": {
+                  "n": 13,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 13
+                  },
+                  "scoreN": 13,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": -0.025689628227909544,
+                  "correlation": 0.694912898186322,
+                  "peakN": 13,
+                  "peakWithinMonth": 0.5384615384615384,
+                  "range": 1.1940773937189268,
+                  "peakRatio": 1.124954550375818,
+                  "low": 0.7330387692834636,
+                  "flood": 0.15384615384615385,
+                  "floodMeasured": 0.15384615384615385,
+                  "phaseN": 13,
+                  "early": -0.46153846153846156,
+                  "greatN": 13,
+                  "greatEarly": -0.46153846153846156
+                }
+              },
+              "after": {
+                "matched": 13,
+                "annual": {
+                  "n": 13,
+                  "invalid": 0,
+                  "zero": 0,
+                  "medianRatio": 1.122797283207345,
+                  "withinFactorTwo": 0.7692307692307693,
+                  "rmsFactor": 2.6115090644443715
+                },
+                "seasonal": {
+                  "n": 13,
+                  "unavailable": 0,
+                  "statuses": {
+                    "scored": 13
+                  },
+                  "scoreN": 13,
+                  "invalidScoreN": 0,
+                  "infinitePenaltyN": 0,
+                  "score": -0.046538505139317066,
+                  "correlation": 0.6958913813815609,
+                  "peakN": 13,
+                  "peakWithinMonth": 0.6153846153846154,
+                  "range": 1.2165583111542004,
+                  "peakRatio": 1.1286058688275118,
+                  "low": 0.7338839440223424,
+                  "flood": 0.15384615384615385,
+                  "floodMeasured": 0.15384615384615385,
+                  "phaseN": 13,
+                  "early": -0.3076923076923077,
+                  "greatN": 13,
+                  "greatEarly": -0.3076923076923077
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "groupSensitivity": [
+    {
+      "climate": "observed climate",
+      "group": 0,
+      "role": "reserved validation",
+      "n": 34,
+      "scoreBefore": 0.10738051323411812,
+      "scoreAfter": 0.1278634665695884,
+      "rBefore": 0.8645402908616296,
+      "rAfter": 0.8557710871808027,
+      "peakBefore": 0.8529411764705882,
+      "peakAfter": 0.8529411764705882
+    },
+    {
+      "climate": "observed climate",
+      "group": 1,
+      "role": "participated in calibration",
+      "n": 26,
+      "scoreBefore": 0.20835907969841871,
+      "scoreAfter": 0.21329681004937046,
+      "rBefore": 0.8910602489104558,
+      "rAfter": 0.8906682894283698,
+      "peakBefore": 0.8846153846153846,
+      "peakAfter": 0.8846153846153846
+    },
+    {
+      "climate": "observed climate",
+      "group": 2,
+      "role": "participated in calibration",
+      "n": 31,
+      "scoreBefore": 0.33354715117008765,
+      "scoreAfter": 0.3195237743042849,
+      "rBefore": 0.9057117691045585,
+      "rAfter": 0.9040000250104882,
+      "peakBefore": 0.8387096774193549,
+      "peakAfter": 0.8387096774193549
+    },
+    {
+      "climate": "observed climate",
+      "group": 3,
+      "role": "participated in calibration",
+      "n": 29,
+      "scoreBefore": 0.17002430887864328,
+      "scoreAfter": 0.17854961906687133,
+      "rBefore": 0.9175854705389646,
+      "rAfter": 0.9261100969710596,
+      "peakBefore": 0.9310344827586207,
+      "peakAfter": 0.9310344827586207
+    },
+    {
+      "climate": "simulated climate",
+      "group": 0,
+      "role": "reserved validation",
+      "n": 34,
+      "scoreBefore": -0.27144945994315656,
+      "scoreAfter": -0.28830493271733293,
+      "rBefore": 0.6768060415525282,
+      "rAfter": 0.7035502168881999,
+      "peakBefore": 0.6176470588235294,
+      "peakAfter": 0.6176470588235294
+    },
+    {
+      "climate": "simulated climate",
+      "group": 1,
+      "role": "participated in calibration",
+      "n": 27,
+      "scoreBefore": -0.05103405017043405,
+      "scoreAfter": -0.05006986034895111,
+      "rBefore": 0.7017896555985724,
+      "rAfter": 0.6945012092337064,
+      "peakBefore": 0.6296296296296297,
+      "peakAfter": 0.6296296296296297
+    },
+    {
+      "climate": "simulated climate",
+      "group": 2,
+      "role": "participated in calibration",
+      "n": 29,
+      "scoreBefore": -0.0227902148622246,
+      "scoreAfter": -0.002700693557421141,
+      "rBefore": 0.7565725517165569,
+      "rAfter": 0.750449427913838,
+      "peakBefore": 0.7241379310344828,
+      "peakAfter": 0.7586206896551724
+    },
+    {
+      "climate": "simulated climate",
+      "group": 3,
+      "role": "participated in calibration",
+      "n": 27,
+      "scoreBefore": -0.32481057504429106,
+      "scoreAfter": -0.3348680921450705,
+      "rBefore": 0.5808218969512201,
+      "rAfter": 0.584823565170626,
+      "peakBefore": 0.5555555555555556,
+      "peakAfter": 0.5555555555555556
+    }
+  ],
+  "regressions": {
+    "defaultEqualsOverride": true,
+    "scenarios": [
+      {
+        "scenario": "241024",
+        "resolution": 40001,
+        "checks": [
+          {
+            "name": "All terrain heights finite",
+            "pass": true
+          },
+          {
+            "name": "River coordinates and discharges finite",
+            "pass": true
+          },
+          {
+            "name": "River arrays have consistent lengths",
+            "pass": true
+          },
+          {
+            "name": "River regimes have documented codes",
+            "pass": true
+          },
+          {
+            "name": "Land climate and lake levels finite",
+            "pass": true
+          },
+          {
+            "name": "Annual runoff shares close",
+            "pass": true
+          }
+        ],
+        "changedArrays": [
+          "rivers.regime",
+          "rivers.floodFrom",
+          "rivers.floodTo",
+          "rivers.farFed"
+        ],
+        "unchangedArrays": [
+          "z",
+          "ocean",
+          "lake",
+          "lakeLevel",
+          "rivers.start",
+          "rivers.lat",
+          "rivers.lon",
+          "rivers.q",
+          "rivers.season",
+          "climate.koppen",
+          "climate.tAnnual",
+          "climate.pAnnual",
+          "climate.sat.0",
+          "climate.sat.1",
+          "climate.sat.2",
+          "climate.cover",
+          "climate.stats.tRange",
+          "climate.stats.aridity",
+          "climate.stats.growing",
+          "climate.stats.rainSeason",
+          "climate.flow",
+          "climate.young"
+        ]
+      },
+      {
+        "scenario": "241024",
+        "resolution": 160001,
+        "checks": [
+          {
+            "name": "All terrain heights finite",
+            "pass": true
+          },
+          {
+            "name": "River coordinates and discharges finite",
+            "pass": true
+          },
+          {
+            "name": "River arrays have consistent lengths",
+            "pass": true
+          },
+          {
+            "name": "River regimes have documented codes",
+            "pass": true
+          },
+          {
+            "name": "Land climate and lake levels finite",
+            "pass": true
+          },
+          {
+            "name": "Annual runoff shares close",
+            "pass": true
+          }
+        ],
+        "changedArrays": [
+          "rivers.regime",
+          "rivers.floodFrom",
+          "rivers.floodTo",
+          "rivers.farFed"
+        ],
+        "unchangedArrays": [
+          "z",
+          "ocean",
+          "lake",
+          "lakeLevel",
+          "rivers.start",
+          "rivers.lat",
+          "rivers.lon",
+          "rivers.q",
+          "rivers.season",
+          "climate.koppen",
+          "climate.tAnnual",
+          "climate.pAnnual",
+          "climate.sat.0",
+          "climate.sat.1",
+          "climate.sat.2",
+          "climate.cover",
+          "climate.stats.tRange",
+          "climate.stats.aridity",
+          "climate.stats.growing",
+          "climate.stats.rainSeason",
+          "climate.flow",
+          "climate.young"
+        ]
+      },
+      {
+        "scenario": "754534770",
+        "resolution": 640001,
+        "checks": {
+          "terrainFinite": true,
+          "riverCoordinatesFinite": true,
+          "riverFlowsFinite": true,
+          "regimesValid": true,
+          "annualClosure": true
+        },
+        "frameUnchanged": true,
+        "changedArrays": [
+          "rivers.regime",
+          "rivers.floodFrom",
+          "rivers.floodTo",
+          "rivers.farFed"
+        ],
+        "unchangedArrays": [
+          "z",
+          "ocean",
+          "lake",
+          "lakeLevel",
+          "rivers.start",
+          "rivers.lat",
+          "rivers.lon",
+          "rivers.q",
+          "rivers.season",
+          "climate.koppen",
+          "climate.tAnnual",
+          "climate.pAnnual",
+          "climate.sat.0",
+          "climate.sat.1",
+          "climate.sat.2",
+          "climate.cover",
+          "climate.flow",
+          "climate.young"
+        ]
+      }
+    ]
+  },
+  "verification": {
+    "metricTests": {
+      "pass": 5,
+      "fail": 0
+    },
+    "transportTests": {
+      "pass": 9,
+      "fail": 0
+    },
+    "fullSaveCheck": {
+      "pass": true,
+      "historicalFrames": 31,
+      "historicalMapsRendered": 84
+    },
+    "climateCodeChanged": false,
+    "climateBenchmarksRepeated": false,
+    "new10MRun": false,
+    "mobilePerformanceChecked": false,
+    "originalResearchOutputsRewritten": false
+  },
+  "readyToMerge": false,
+  "limitations": [
+    "Reserved-quarter simulated-climate seasonal score at 2.56M declines despite improved global score.",
+    "Global median correlation declines slightly in both climates at 2.56M.",
+    "Great-basin simulated seasonal score declines while mean phase improves.",
+    "Cold-zone floods remain underrepresented; simulated spring rain and snow are biased.",
+    "Annual zero-flow cases and infinite multiplicative RMS remain.",
+    "No independent observation period or physical basin-connectivity validation."
+  ]
+}

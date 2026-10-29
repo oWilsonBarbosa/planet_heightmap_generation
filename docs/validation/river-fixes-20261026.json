@@ -1,0 +1,263 @@
+{
+  "date": "2026-10-26",
+  "baseCommit": "69b0bd0dadc6540f8a71df947094e6c6fdbbe691",
+  "correctedReviewItems": [
+    "R1",
+    "R2",
+    "R3",
+    "R4"
+  ],
+  "tests": {
+    "metrics": 5,
+    "transport": 9,
+    "cliModes": [
+      "standard JSON",
+      "list JSON",
+      "two tuning thresholds"
+    ],
+    "save": "passed including 31-frame fixture and 84 maps",
+    "evolution": {
+      "40k": {
+        "actualCells": 40001,
+        "checksPassed": 6,
+        "changedArrays": [
+          "rivers.regime",
+          "rivers.floodFrom",
+          "rivers.floodTo"
+        ],
+        "unchangedArrays": 23
+      },
+      "160k": {
+        "actualCells": 160001,
+        "checksPassed": 6,
+        "changedArrays": [
+          "rivers.regime",
+          "rivers.floodFrom",
+          "rivers.floodTo"
+        ],
+        "unchangedArrays": 23
+      }
+    },
+    "determinism40k": {
+      "identical": true,
+      "arrays": 26
+    }
+  },
+  "earth2560001": [
+    {
+      "climate": "observed climate",
+      "annualFlowsIdenticalForMatchedGauges": true,
+      "beforeRouting": {
+        "matched": 122,
+        "annual": {
+          "n": 122,
+          "invalid": 0,
+          "zero": 2,
+          "medianRatio": 0.9138285143479746,
+          "withinFactorTwo": 0.8360655737704918,
+          "rmsFactor": "Infinity"
+        },
+        "seasonal": {
+          "n": 120,
+          "unavailable": 2,
+          "statuses": {
+            "scored": 120,
+            "zero-annual-flow": 2
+          },
+          "scoreN": 122,
+          "invalidScoreN": 0,
+          "infinitePenaltyN": 2,
+          "score": 0.2331881968590658,
+          "correlation": 0.9006765165002498,
+          "peakN": 120,
+          "peakWithinMonth": 0.875,
+          "range": 0.9360362247826156,
+          "peakRatio": 0.9252165405617411,
+          "low": 0.8813875316070112,
+          "flood": 0.35833333333333334,
+          "floodMeasured": 0.39166666666666666,
+          "phaseN": 120,
+          "early": 0.06666666666666667,
+          "greatN": 13,
+          "greatEarly": 0
+        }
+      },
+      "afterRouting": {
+        "matched": 122,
+        "annual": {
+          "n": 122,
+          "invalid": 0,
+          "zero": 2,
+          "medianRatio": 0.9138285143479746,
+          "withinFactorTwo": 0.8360655737704918,
+          "rmsFactor": "Infinity"
+        },
+        "seasonal": {
+          "n": 120,
+          "unavailable": 2,
+          "statuses": {
+            "scored": 120,
+            "zero-annual-flow": 2
+          },
+          "scoreN": 122,
+          "invalidScoreN": 0,
+          "infinitePenaltyN": 2,
+          "score": 0.21791795673184172,
+          "correlation": 0.894788693213369,
+          "peakN": 120,
+          "peakWithinMonth": 0.875,
+          "range": 0.9309932116179839,
+          "peakRatio": 0.9227374349913235,
+          "low": 0.8942533275225046,
+          "flood": 0.3416666666666667,
+          "floodMeasured": 0.39166666666666666,
+          "phaseN": 120,
+          "early": -0.03333333333333333,
+          "greatN": 13,
+          "greatEarly": -0.6923076923076923
+        }
+      }
+    },
+    {
+      "climate": "simulated climate",
+      "annualFlowsIdenticalForMatchedGauges": true,
+      "beforeRouting": {
+        "matched": 125,
+        "annual": {
+          "n": 125,
+          "invalid": 0,
+          "zero": 7,
+          "medianRatio": 0.8424249587986621,
+          "withinFactorTwo": 0.552,
+          "rmsFactor": "Infinity"
+        },
+        "seasonal": {
+          "n": 117,
+          "unavailable": 8,
+          "statuses": {
+            "scored": 117,
+            "zero-annual-flow": 7,
+            "no-river-series": 1
+          },
+          "scoreN": 124,
+          "invalidScoreN": 0,
+          "infinitePenaltyN": 7,
+          "score": -0.21801246421794984,
+          "correlation": 0.7031642511925184,
+          "peakN": 117,
+          "peakWithinMonth": 0.6581196581196581,
+          "range": 1.0027188453452844,
+          "peakRatio": 0.9940270257882665,
+          "low": 0.7161099410259699,
+          "flood": 0.39316239316239315,
+          "floodMeasured": 0.36752136752136755,
+          "phaseN": 117,
+          "early": -0.13675213675213677,
+          "greatN": 13,
+          "greatEarly": 0.23076923076923078
+        }
+      },
+      "afterRouting": {
+        "matched": 125,
+        "annual": {
+          "n": 125,
+          "invalid": 0,
+          "zero": 7,
+          "medianRatio": 0.8424249587986621,
+          "withinFactorTwo": 0.552,
+          "rmsFactor": "Infinity"
+        },
+        "seasonal": {
+          "n": 117,
+          "unavailable": 8,
+          "statuses": {
+            "scored": 117,
+            "zero-annual-flow": 7,
+            "no-river-series": 1
+          },
+          "scoreN": 124,
+          "invalidScoreN": 0,
+          "infinitePenaltyN": 7,
+          "score": -0.262769684258842,
+          "correlation": 0.694912898186322,
+          "peakN": 117,
+          "peakWithinMonth": 0.6324786324786325,
+          "range": 0.9932002764331197,
+          "peakRatio": 0.976334918989749,
+          "low": 0.7327812244581585,
+          "flood": 0.36752136752136755,
+          "floodMeasured": 0.36752136752136755,
+          "phaseN": 117,
+          "early": -0.2564102564102564,
+          "greatN": 13,
+          "greatEarly": -0.46153846153846156
+        }
+      }
+    }
+  ],
+  "additionalEvolutionScenario": {
+    "status": "passed",
+    "seed": 754534770,
+    "role": "additional test, not a replacement for Evolution 241024",
+    "settings": {
+      "seed": 754534770,
+      "continentalFraction": 0.2,
+      "lengthMyr": 1200,
+      "ending": "none",
+      "requestedSimCells": 80000,
+      "requestedTerrainCells": 640000,
+      "meshSeed": 12345,
+      "greenhouseWm2": 0,
+      "precipScale": 1
+    },
+    "actualSimCells": 80001,
+    "actualTerrainCells": 640001,
+    "checksPerRun": 5,
+    "changedAfterCorrections": [
+      "rivers.regime",
+      "rivers.floodFrom",
+      "rivers.floodTo",
+      "rivers.farFed"
+    ],
+    "upstreamToCandidateChanged": [
+      "z",
+      "ocean",
+      "lake",
+      "lakeLevel",
+      "rivers.start",
+      "rivers.lat",
+      "rivers.lon",
+      "rivers.q",
+      "rivers.season",
+      "rivers.regime",
+      "rivers.floodFrom",
+      "rivers.floodTo",
+      "rivers.farFed",
+      "climate.koppen",
+      "climate.tAnnual",
+      "climate.pAnnual",
+      "climate.sat.0",
+      "climate.sat.1",
+      "climate.sat.2",
+      "climate.cover",
+      "climate.flow"
+    ]
+  },
+  "codeBlobs": {
+    "tuning/water/earth-rivers.mjs": "9376628ec11a50bfd08e24051fb71c1c712e1453",
+    "tuning/water/lib/metrics.mjs": "2d2d819593f300119791853d0f7f5bdab97e394b",
+    "v2/js/finish/finish-hydro.js": "db397b25bc23449adbd6a39e4e22be4d94f2b899",
+    "v2/js/finish/river-travel.js": "412055580f7e350c34629c60bd58d3e8b91b8300",
+    "tests/river-metrics.test.mjs": "dcbd62a9fba3320594956c5299a38500cf3cd235",
+    "tests/river-transport.test.mjs": "b5268c51a3e5ae265cbba014f906dff078023888"
+  },
+  "scope": [
+    "Climate source and calibration constants unchanged.",
+    "River annual discharge and gauge matching unchanged in paired Earth tests.",
+    "Some seasonal Earth scores worsened after the travel correction; recalibration remains pending.",
+    "The v2 scoring convention includes zero-flow penalties, so older v1 scores are not directly comparable.",
+    "Original 241024 datasets were not rewritten.",
+    "No saved-data enums, units or layouts changed; the optional network/debug edge lengths are not added to saved moments."
+  ],
+  "readyToMerge": false
+}

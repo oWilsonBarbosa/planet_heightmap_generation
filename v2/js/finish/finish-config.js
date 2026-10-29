@@ -114,6 +114,22 @@ export const FINISH = {
     // glacialKeepShare of that) — no closed basins
     lakeKeepKm2: 5000,
     glacialKeepShare: 0.5,
+    // a basin that a gorge from upstream drains below its own floor holds no water along that gorge (off: the gorge's
+    // cells under the floor read as a lake strung along it — 21 of the 121 fresh lakes of seed 10673275 at 250K cells;
+    // on Generate's planet 06cy8w6z6a89kow6psje93 a 54,600 km² "lake" over a canyon cut 100 m below its surface)
+    drainBelowFloor: true,
+    // a remnant of the sea is a lake whatever its size, one cell or a few metres deep too (off: only from lakeMinKm2, two
+    // cells and lakeMinDepthM, as any hollow — a smaller one holds no water. On for Generate, js/water-new.js, which keeps
+    // the water where the pages draw it: there such a remnant, never full, was where its rivers ended)
+    seaRemnantAnySize: false,
+    // a basin on land its rivers cannot fill — what flows in less than what it would evaporate full — is where they end: a
+    // salt lake at its balance, or a salt pan where that keeps less than a lake the map can show (off: the developer's
+    // rule, "every river needs to end at ocean not lake" — it is cut through. On for Generate, js/water-new.js)
+    closedBasins: false,
+    closedBasinPluvial: 2,      // …where its rivers would not fill it with this many times what they bring either: wetter
+                                // times (the ice ages' pluvials) overfilled the basins a little short of full, and they cut
+                                // their way out. On real Earth's map (tuning/water/earth-rivers.mjs, observed climate) 2
+                                // leaves 19 % of the land draining to closed basins (Earth: ≈ 18–20 %), 1 24 %, 3 18 %
     // Where a river must cut through — a basin it drains, a pocket in it — its gorge keeps the river's own course, every bend
     // of it, unless a shortcut is enough less work: the rock it cuts, and gorgeLengthKm for each km of its length (developer:
     // rivers "that go back and forth"; then "there should be some balance … between the 'true down' path and the 'shortcut'
@@ -156,12 +172,19 @@ export const FINISH = {
     // each river's year: each month's runoff — rain, and snow kept until it melts (snowMeltMmPerC per °C above freezing, a
     // month) — less a share of the month's potential evaporation (monthEvapShare); a share of it seeps into the ground
     // (baseflowShare where it is humid, none in deserts) and drains back to the rivers slowly (baseflowMonths: the time a
-    // dry season takes to drain the ground to a third); big lakes even out what they pass on (lakeRegulation)
+    // dry season takes to drain the ground to a third); big lakes even out what they pass on (lakeRegulation), a basin
+    // its river cuts through, holding no water, does not (lakeRegulationDry). Set against measured flows on real Earth
+    // (tuning/water/earth-rivers.mjs). Recalibrated after the final-network travel fix, 2026-10-26:
+    // 45 km/day improves the v2 score for both observed and simulated climates at 640K and 2.56M. Other water
+    // constants stay fixed; subgroup/holdout tradeoffs remain (docs/RIVER_RECALIBRATION_20261026.md).
     snowMeltMmPerC: 90,
     monthEvapShare: 0.8,
-    baseflowShare: 0.5,
-    baseflowMonths: 2.5,
+    baseflowShare: 0.7,
+    baseflowMonths: 3,
     lakeRegulation: 0.6,
+    lakeRegulationDry: 0,
+    riverSpeedKmDay: 45,        // the water's way down to each river point, km a day: its months that much later, spread by
+                                // how far its water comes from (0: none, a month's water at the mouth within the month)
     // regimes: a month is dry when the river carries under dryShare of its mean (or under dryM3s); dry ephemeralMonths or
     // more — dry most of the year; fewer — seasonal; never — permanent, with a flood season if its peak month carries
     // floodRatio × its mean (the Nile, the Ganges, the snowmelt rivers; not the Amazon, the Mississippi, the Rhine). Fed
