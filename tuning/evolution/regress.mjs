@@ -19,18 +19,9 @@
  */
 
 import fs from 'node:fs';
-import path from 'node:path';
-import v8 from 'node:v8';
 import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import Delaunator from 'delaunator';
-import { setDelaunator } from '../../js/sphere-mesh.js';
-import { buildSimMesh } from '../../v2/js/core/sim-mesh.js';
-import { runHistory } from '../../v2/js/app/history-runner.js';
-import { TERRAIN_SCENES } from '../../v2/js/tectonics/scenarios/terrain-scenes.js';
-import { TerrainPool, FRAME_FIELDS } from '../../v2/js/terrain/terrain-pool.js';
-import { finishPlanet } from '../../v2/js/finish/finish.js';
 import { FINISH } from '../../v2/js/finish/finish-config.js';
+import { worldFrame, finishWorld } from './lib/world.mjs';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 
@@ -48,32 +39,12 @@ const SEED = Number(arg('--seed', 10673275)), CONT = Number(arg('--cont', 30)), 
 const TIME = Number(arg('--time', 300)), CELLS = Number(arg('--cells', 250000));
 const SET = Object.fromEntries((arg('--set', '') || '').split(',').filter(Boolean).map(kv => { const [k, v] = kv.split('='); return [k, v === 'true' ? true : v === 'false' ? false : Number(v)]; }));
 for (const k of Object.keys(SET)) if (!(k in FINISH)) throw new Error(`--set: no constant ${k} in FINISH`);
-const MESH_SEED = 12345;                                  // the page's: every planet's sim mesh is the same
-const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), 'data');
 const t0 = performance.now(), log = (m) => console.error(`[${((performance.now() - t0) / 1000).toFixed(0)} s] ${m}`);
-setDelaunator(Delaunator);
 
-// ── the world's history to the moment, as the page runs it (its scene 'cycle', from its start), cached ──
-fs.mkdirSync(DATA, { recursive: true });
-const frameFile = path.join(DATA, `frame-${SEED}-${CONT}-${SIM}-${TIME}.bin`);
-let frame;
-if (fs.existsSync(frameFile)) frame = v8.deserialize(fs.readFileSync(frameFile)).frame;
-else {
-    const scene = TERRAIN_SCENES.find(s => s.id === 'cycle');
-    let last = 0;
-    await runHistory({ list: 'terrain', scene, ending: 'none', start: { continentalFraction: CONT / 100 }, lengthMyr: Math.ceil((TIME + 10) / 10) * 10, keep: false },
-        buildSimMesh(SIM, MESH_SEED), SEED, 10, () => {}, f => {
-            if (f.time - last >= 100) { last = f.time; log(`history ${f.time} Myr`); }
-            if (Math.abs(f.time - TIME) < 1e-6) { frame = Object.fromEntries(FRAME_FIELDS.map(k => [k, f[k]])); frame.plates = f.plates.map(p => p && { quat: p.quat }); }
-        });
-    if (!frame) throw new Error(`no frame at ${TIME} Myr`);
-    fs.writeFileSync(frameFile, v8.serialize({ frame }));
-}
+// ── the world's history to the moment, cached; its finish (Add detail), as the page's worker runs it (lib/world.mjs) ──
+const frame = await worldFrame({ seed: SEED, cont: CONT, sim: SIM, time: TIME, log });
 log(`history: seed ${SEED}, ${SIM.toLocaleString()} plate cells, ${TIME} Myr`);
-
-// ── the finish (Add detail), as the page's worker runs it, with the page's default climate options ──
-const simMesh = buildSimMesh(SIM, MESH_SEED), pool = await TerrainPool.create(simMesh);
-const fin = await finishPlanet({ frame, simMesh, seed: SEED, cells: CELLS, pool, closePool: true, F: { ...FINISH, ...SET }, climateOptions: { greenhouseWm2: 0, precipScale: 1 } });
+const fin = await finishWorld({ frame, seed: SEED, sim: SIM, cells: CELLS, F: { ...FINISH, ...SET } });
 log(`finished at ${CELLS.toLocaleString()} cells${Object.keys(SET).length ? `, ${JSON.stringify(SET)}` : ''}`);
 const w = fin.stats.water, reg = [0, 0, 0, 0];
 for (const r of fin.rivers.regime) reg[r]++;

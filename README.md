@@ -334,9 +334,10 @@ tuning/
   relief/               Earth's hypsometry for js/earth-relief.js — downloads a sample of ETOPO 2022 (NOAA NCEI) and
                         computes how much of Earth's land lies below each height, and of its sea floor above each depth
                         (see tuning/relief/README.md)
-  evolution/            The Evolution's regression check — builds and finishes one Evolution world headless and hashes
-                        every output, to show a change to the code it shares leaves it as it was (see
-                        tuning/evolution/README.md)
+  evolution/            The Evolution's checks, each on one Evolution world built and finished headless (lib/world.mjs):
+                        the regression check (regress.mjs) hashes every output, to show a change to the code it shares
+                        leaves it as it was; the drainage check (drainage.mjs) checks its drainage network — connectivity,
+                        levels, lake outlets, the network the same at every detail (see tuning/evolution/README.md)
 ```
 
 The river travel calculation in `v2/js/finish/river-travel.js` follows the final redirected network in physical km,

@@ -1,4 +1,9 @@
-# Evolution Regression Check
+# Evolution Checks
+
+Two checks on one Evolution world built and finished headless (`lib/world.mjs`): the regression check, below, and the
+[drainage check](#drainage-check).
+
+## Regression check
 
 The Evolution page shares code with Generate and Import — the climate (`v2/js/climate/`) and the finish's hydrology
 (`v2/js/finish/`). `regress.mjs` builds one Evolution world headless, as the page builds it (its scene `cycle`, from its
@@ -42,3 +47,30 @@ rest.
 - `seaRemnantAnySize` changes nothing (a remnant of the sea under `seaBasinKm2` is the land's there).
 - `closedBasins` at 640K: 17 salt lakes and 159 salt pans, 1,102 regions kept up to 1.4 km higher (rims no longer cut
   through). Not taken up: the developer's rule, "every river needs to end at ocean".
+
+## Drainage check
+
+`drainage.mjs` finishes the same world at each of `--cells` (160K and 640K by default) with its drainage network
+(`finishPlanet`'s `network`: each cell's receiver, each lake cell's outlet, discharge, drainage area, runoff) and checks
+it as a river network must be, beyond the finite numbers and the closed water budget:
+
+- **connectivity** — every land cell drains to a neighbour (a lake's cells to its outlet), only a closed lake's water
+  goes no further, no loops, every cell's water reaches the sea or a closed lake, each dry cell's drainage area is what
+  drains into it down the network, no cell passes on more water than it gathers;
+- **levels** — a lake's surface is flat and above its bed, its shore not below it (a remnant of the sea's down to sea
+  level), the rivers run downhill (a climb is a pit the water cannot leave), no dry land below sea level but a salt
+  sea's shore;
+- **outlets** — each fresh lake has one outlet (in it, beside it, or at the end of the gorge a remnant of the sea leaves
+  by), passes on no more than flows in and never back into itself; a closed lake has none; what reaches the sea down the
+  network is the water budget's;
+- **scale** — between the first and last detail: the runoff, the land draining to the sea, the ten largest rivers at the
+  sea, the drawn rivers' length per area, the drawn river points' regimes, the lakes the coarser mesh can draw.
+
+```bash
+node tuning/evolution/drainage.mjs                                    # the regression world, 160K and 640K (~1.5 min)
+node tuning/evolution/drainage.mjs --cells 640000,2560000             # finer (~5 min, ~9 GB)
+node tuning/evolution/drainage.mjs --seed 754534770 --cont 20 --time 1200 --cells 160000,640000   # salt lakes, pans
+```
+
+Exit code 1 when a check fails. What it found on 2026-10-29, and the fixes, are in
+[docs/DRAINAGE_20261029.md](../../docs/DRAINAGE_20261029.md).

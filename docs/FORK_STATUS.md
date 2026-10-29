@@ -77,6 +77,10 @@ O [primeiro ajuste após a correção do percurso](RIVER_RECALIBRATION_20261026.
   bacias fechadas (regras do Generate) com a área da bacia inteira e nenhuma água; corrigidas em `finish-hydro.js`. Com
   as regras do Evolution não havia zeros. O que resta é a chuva do clima simulado e o mapa grosseiro da Terra
   ([relatório de 28/10](ZERO_FLOWS_20261028.md)).
+- [x] Ampliar os ensaios de drenagem do Evolution para conectividade, cotas, exutórios e escala da rede:
+  `tuning/evolution/drainage.mjs`. Ele achou rios subindo para fora de poços (até 1.384 m, 1,2 % das terras), lagos acima
+  de desfiladeiros ao lado e saídas de lagos fechados por cima da borda; corrigidos em `finish-hydro.js`. Restam a mudança
+  de regimes entre 160K e 640K e a dos lagos grandes num mundo de 1.200 Myr ([relatório de 29/10](DRAINAGE_20261029.md)).
 - [ ] Decidir a integração após essa revisão. O PR #2 permanece em rascunho; nenhum merge automático foi feito.
 
 ## Organização e pesquisa que continuam abertas
