@@ -88,6 +88,9 @@ O [primeiro ajuste após a correção do percurso](RIVER_RECALIBRATION_20261026.
 - [x] Reduzidos nove branches remotos para três; seis históricos preservados por tags e bundle de recuperação testado. Relatório inicial de auditoria reunido no catálogo.
 - [ ] Consultar e portar seletivamente ideias dos experimentos arquivados quando houver uma necessidade concreta; não exigem branches ativos permanentes.
 - [ ] Avaliar convergência e desempenho do Atlas antes de ampliar seu uso; sua conexão ao Evolution é uma etapa futura.
+- [ ] Investigar os verões frios demais de 70 a 80° N no 0r063N, reexportado de `170b560` em 29/10 com o clima polar
+  do upstream (PR #74): o mês mais quente a 75–80° N cai de −0,7 para −6,9 °C, com calotas em terras baixas. Na Terra
+  o mesmo ajuste melhorou o Ártico; o planeta tem ali um continente largo (`plans/FORK_HANDOFF.md`, item 9).
 - [ ] Retomar a investigação física sobre a referência histórica preservada. Os testes desta integração não resolvem retroativamente problemas de drenagem de arquivos já salvos.
 
 Uma seed não identifica sozinha um resultado: registrar modo, parâmetros, época, resolução e commit. O estudo Evolution baseado em `47edc28` e os conjuntos Generate antigos são referências distintas. Relatórios, mapas e matrizes da pesquisa permanecem fora do código distribuído; o catálogo é mantido separadamente.

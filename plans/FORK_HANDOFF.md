@@ -12,7 +12,9 @@ como verificá-las e o que ficou em aberto. Os detalhes de cada mudança estão 
   - Nada foi mesclado na `main` do fork e nenhum pull request foi aberto.
 - **Repositório irmão:** `oWilsonBarbosa/0r063N`, mesmo branch.
   - Contém o conjunto de dados do planeta `06cy8w6z6a89kow6psje93` (semente 10673275, 2.560.001 regiões), gerado por
-    este fork no commit `4e7c1b0`.
+    este fork no commit `170b560` (2026-10-29): a integração com o `main` do original (`7026cc6`, com o clima polar
+    do PR #74 dele), a viagem dos rios pela rede final a 45 km/dia, as saídas das bacias fechadas e as correções do
+    ensaio de drenagem. O conjunto anterior, de `4e7c1b0`, fica no histórico de lá.
   - O `HANDOFF.md` de lá descreve os dados, as ferramentas e o mapa de rios publicado.
 - **Para retomar numa nova sessão:**
   - `git fetch origin ccr-85cb1372-invlm5 && git checkout -B <branch da sessão> origin/ccr-85cb1372-invlm5`.
@@ -249,6 +251,16 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
    - **O que falta na primavera simulada:** a 60–80° N, março e abril seguem 4–6 °C quentes, e o inverno dos interiores
      também (Iacútia +11–13 °C, Quebec +9–11 °C): o inverno "sem núcleo" dos continentes frios não fica frio o
      bastante. A chuva de abril a junho nas terras frias também sai ×2–5 (`diag-spring.mjs`).
+
+9. **Verões frios demais no extremo norte do 0r063N** (2026-10-29), com o clima polar do original (PR #74:
+   `TEMP_POLAR_SUMMER_DAMP` 0,5, a circulação de revolvimento entregando o calor antes do mar polar).
+   - De 70 a 75° N o mês mais quente cai de 5,1 para 0,9 °C em média; de 75 a 80° N, de −0,7 para −6,9 °C. Calotas
+     (EF) em 46 % e 82 % dessas terras, inclusive em terras baixas (1,15 % das terras é EF abaixo de 500 m).
+   - Na Terra, as terras baixas nessas latitudes têm julho de +1 a +8 °C e tundra fora das calotas; lá o PR #74
+     melhorou o Ártico (Köppen exato de 66,5° N para cima 22 → 40 %). O extremo norte do planeta é um continente
+     largo, não ilhas e costas.
+   - A investigar com `tuning/climate/diag-polar.mjs` num planeta assim: o tamanho do continente, a parte do verão na
+     amplitude anual, a neve no chão (item 15). O gelo marinho ficou mais plausível: o mar polar já não abre no verão.
 
 ## Regras de trabalho
 
