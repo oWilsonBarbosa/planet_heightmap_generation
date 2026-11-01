@@ -275,6 +275,9 @@ export function columnWaterRain() {
         // ── Per point in the year: the moisture wind, mixing, storm and stability factors, lift, evaporation ──
         const prep = [], eadyOut = [];
         const TairK = Array.from({ length: K }, (_, k) => co(tA.subarray(k * core.size, (k + 1) * core.size)));
+        // (experiment) the inversion layer by the ground, for the column's water: the free air above it holds it
+        const invA = temperature.inversion && globalThis.process?.env?.EXP_COL_FREE ? atAnchors(temperature.inversion, core.size, ctx.anchorMonths) : null;
+        const invK = invA ? Array.from({ length: K }, (_, k) => co(invA.subarray(k * core.size, (k + 1) * core.size))) : null;
         for (let k = 0; k < K; k++) {
             const sl = (arr) => arr.subarray(k * core.size, (k + 1) * core.size);
             const u = co(sl(uA)), v = co(sl(vA)), Tair = TairK[k], Tsl = co(sl(sA));
@@ -412,7 +415,7 @@ export function columnWaterRain() {
                     // the column's temperature follows the surface only in part — the troposphere above a hot or frozen
                     // surface stays nearer its latitude's temperature — and that sets how much water it holds (over an ice
                     // sheet, as cold as its free air: iceWarm)
-                    p.Ws[c] = saturatedColumn(Tair[c] + iceWarm[c] + (1 - P_.RAIN_COLUMN_LOCAL) * (Tzs[j] - Tsl[c]), P_.RAIN_VAPOUR_HEIGHT_KM);
+                    p.Ws[c] = saturatedColumn(Tair[c] - (invK ? Math.min(0, invK[k][c]) * (+globalThis.process.env.EXP_COL_FREE) : 0) + iceWarm[c] + (1 - P_.RAIN_COLUMN_LOCAL) * (Tzs[j] - Tsl[c]), P_.RAIN_VAPOUR_HEIGHT_KM);
                     p.snow[c] = Math.min(1, Math.max(0, (2 - Tair[c]) / 4));            // share of the rain falling as snow
                     p.Tair[c] = Tair[c];
                     const bulk = RHO_AIR * P_.RAIN_EVAP_COEFF * Math.sqrt(u[c] * u[c] + v[c] * v[c] + gust2) * (1 - P_.RAIN_SURFACE_RH);

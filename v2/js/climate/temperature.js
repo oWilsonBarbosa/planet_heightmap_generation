@@ -666,20 +666,39 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
                 for (let i = 0; i < w; i++) {
                     const c = j * w + i;
                     let T = tmp[c];
-                    if (withInversion && dark > 0) {
+                    // (experiment) snow reflects most of the sun: beyond the tree line the ground stays colder than the air into the spring
+                    const invCut = +(globalThis.process?.env?.EXP_INV_SNOW || 0);
+                    let darkC = dark;
+                    if (invCut > 0 && withInversion) {
+                        const snowC = landFrac[c] * iceRamp(T - lapseEff[c] * surfKm[c]) * (openLand ? openLand[c] : 1) + (1 - landFrac[c]) * iceRamp(T);
+                        let xx = 1 - q * (1 - invCut * snowC) / WEAK_SUN; xx = xx <= 0 ? 0 : xx >= 1 ? 1 : xx; darkC = xx * xx * (3 - 2 * xx);
+                    }
+                    if (withInversion && darkC > 0) {
                         const f = landFrac[c], snow = f * iceRamp(T - lapseEff[c] * surfKm[c]) + (1 - f) * iceRamp(T);
                         let calm = 1;
                         if (winds) {
                             const u = (1 - fm) * uM[ma * G + c] + fm * uM[mb * G + c], v = (1 - fm) * vM[ma * G + c] + fm * vM[mb * G + c];
                             calm = 1 / (1 + (u * u + v * v) / U0sq);          // wind mixes the inversion away
                         }
-                        T -= P.TEMP_INVERSION_C * snow * dark * calm;
+                        T -= P.TEMP_INVERSION_C * snow * darkC * calm;
                     }
                     tmp[c] = T;
                 }
             }
             return tmp;
         };
+        // (experiment) open land beyond the tree line: the warmest month (the harmonics, at the surface) below EXP_TREE_FROM … EXP_TREE_TO
+        let openLand = null;
+        if (globalThis.process?.env?.EXP_INV_SNOW && globalThis.process.env.EXP_TREE_FROM) {
+            openLand = new Float64Array(G);
+            const tf = +globalThis.process.env.EXP_TREE_FROM, tt = +globalThis.process.env.EXP_TREE_TO;
+            for (let c = 0; c < G; c++) {
+                let mx = -1e9;
+                for (let k = 0; k < NT; k++) { const th = 2 * Math.PI * k / NT; mx = Math.max(mx, c0[c] + 2 * (c1r[c] * Math.cos(th) - c1i[c] * Math.sin(th)) + 2 * (c2r[c] * Math.cos(2 * th) - c2i[c] * Math.sin(2 * th))); }
+                mx -= lapseEff[c] * surfKm[c];
+                let x = (tf - mx) / (tf - tt); x = x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x); openLand[c] = x;
+            }
+        }
         // Back to the core grid: monthly sea-level temperature (no inversion: used for the sea surface), and the
         // surface air temperature at each grid cell's reference height
         const href = ctx.surface.meanLandKm;
