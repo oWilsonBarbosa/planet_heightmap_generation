@@ -81,6 +81,9 @@ O [primeiro ajuste após a correção do percurso](RIVER_RECALIBRATION_20261026.
   Corrigido em parte ([relatório](ARCTIC_SEA_ICE_20261029.md)): o gelo de verão de um mar polar fechado fica claro e
   segura o ar perto de 0 °C — setembro a ≥ 80° N 0,79 (real 0,83), outono 2–3 °C menos quente, Köppen 48,7 → 49,3 %.
   Faltam a primavera (5–7 °C quente a 70–80° N) e os mares nórdicos congelados no inverno.
+  Em 01/11 ([relatório](SPRING_ARCTIC_20261101.md)): a inversão de inverno dura a primavera sobre a neve da tundra e o
+  gelo marinho, e a coluna da chuva lê em parte o ar acima da inversão — terras a 60–70° N, erro mensal 2,05 → 0,95 °C;
+  Köppen 49,3 → 49,5 %, Kottek 0,7298 → 0,7300. Faltam abril–maio a 70–80° N (+4,6 / +5,6 °C) e os mares nórdicos.
 - [ ] Analisar as perdas em grupos climáticos e nas regiões identificadas; corrigir ou justificar os compromissos antes de declarar a candidata pronta.
 - [x] Investigar os casos de vazão zero, o RMS infinito e as divergências de saída das bacias. Os zeros eram saídas de
   bacias fechadas (regras do Generate) com a área da bacia inteira e nenhuma água; corrigidas em `finish-hydro.js`. Com

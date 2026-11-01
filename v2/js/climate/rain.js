@@ -278,7 +278,7 @@ export function columnWaterRain() {
         // The column's water lies mostly above the cold layer by the ground — the inversion over snow, a few hundred metres
         // under the ≈ 2 km the vapour fills — so its saturation is taken RAIN_COLUMN_FREE_AIR of the way to the free air's,
         // as the circulation reads it. (By the air by the ground, the winter's inversions held the cold interiors' columns
-        // to little water and they rained it out: November–January at 60–70° N 1.5–1.6 × the observed.)
+        // to little water and they rained it out: November–January at 60–70° N 1.5–1.8 × the observed, now 1.3–1.4.)
         const invA = temperature.inversion && P_.RAIN_COLUMN_FREE_AIR > 0 ? atAnchors(temperature.inversion, core.size, ctx.anchorMonths) : null;
         const invK = invA ? Array.from({ length: K }, (_, k) => co(invA.subarray(k * core.size, (k + 1) * core.size))) : null;
         const sprA = temperature.inversionSpring ? atAnchors(temperature.inversionSpring, core.size, ctx.anchorMonths) : null;

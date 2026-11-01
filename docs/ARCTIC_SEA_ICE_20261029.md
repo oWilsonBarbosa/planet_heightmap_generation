@@ -85,7 +85,8 @@ resultado, mais rápido.
 ## O que falta
 
 - A primavera do extremo norte: a 70–80° N, março a maio ainda 5–7 °C quentes. Primeiro fazer o estágio de chuva ler a
-  coluna acima da inversão; depois, a inversão da primavera sobre a neve.
+  coluna acima da inversão; depois, a inversão da primavera sobre a neve. Feito em 01/11
+  ([relatório](SPRING_ARCTIC_20261101.md)): fevereiro–março consertados, abril–maio ainda +4,6 / +5,6 °C.
 - Os mares nórdicos no inverno: o mar da Noruega com 0,7 de gelo em março (real 0), Barents 1,0 (real 0,3). O mar
   simulado oscila demais (Barents de −15 °C em março a 10 °C em setembro; real +1 e +5), e Tromsø fica a −21 °C em
   janeiro (real −6).

@@ -115,6 +115,16 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
       Irlanda); os rios com o clima simulado, nota −0,173 → −0,211 (o México e o Sahel mais secos), o pico dos rios
       frios no mês certo 78 → 88 %.
 
+17. **`78a0b30`, `4630799` (2026-11-01): a primavera do extremo norte** (`temperature.js`, `rain.js`;
+    `TEMP_SNOW_SUN_CUT` 0,8, `RAIN_COLUMN_FREE_AIR` 0,35; `docs/SPRING_ARCTIC_20261101.md`).
+    - **Correção:** sobre neve além da linha das árvores (não sobre mantos de gelo) e sobre o gelo marinho, a inversão de
+      inverno conta só o sol que a neve deixa entrar, e dura a primavera; a coluna da chuva lê 35 % do caminho até o ar
+      livre acima da inversão, e nunca a parte da primavera.
+    - **Resultado na Terra:** terras a 60–70° N, erro mensal 2,05 → 0,95 °C; 70–80° N 3,98 → 2,98 °C (março +6,5 → +2,5);
+      Köppen 49,3/86,6 → 49,5/86,6 %, continentes 45,1 → 45,6 %; Kottek 0,7298 → 0,7300; planetas −0,14 ponto de aridez.
+    - **Ficou:** abril e maio a 70–80° N (+4,6 / +5,6 °C; o albedo da neve no balanço de energia); a Escandinávia fria
+      demais na primavera (os mares nórdicos).
+
 ### Relevo
 
 4. **`59f4740` e `ac299ae`: alturas como as da Terra** (`js/earth-relief.js` `earthLikeHeights`).
@@ -197,11 +207,11 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
 
 ## Números de referência atuais (Terra real, 2,56M regiões)
 
-- **Clima** (`46c7ae2`, Terra a 160K):
-  - Köppen contra Beck: 49,3 % exato, 86,6 % próximo (continentes iguais 45,1 / 85,8 %);
-  - Kottek: 0,7298;
-  - erro da temperatura das terras 3,53 °C; da chuva (log) 0,71 por continente (`coupled-check`);
-  - gelo marinho em setembro a ≥ 80° N 0,79 (OISST 0,83); chuva das terras ao norte de 55° N ×1,36 a de Beck.
+- **Clima** (`4630799`, Terra a 160K):
+  - Köppen contra Beck: 49,5 % exato, 86,6 % próximo (continentes iguais 45,6 / 85,9 %);
+  - Kottek: 0,7300;
+  - erro da temperatura das terras 3,51 °C; da chuva (log) 0,70 por continente (`coupled-check`);
+  - gelo marinho em setembro a ≥ 80° N 0,79 (OISST 0,83); chuva das terras ao norte de 55° N ×1,32 a de Beck.
 - **Rios, clima observado** (122 estações):
   - nota anual 0,252;
   - escoamento dentro de ×2 em 84 % (×0,91);
@@ -280,9 +290,9 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
        mar congelado, a terra baixa mantém. Começar com gelo só em terra alta resolveria o 0r063N, mas tira o gelo de
        continentes polares como a Antártida (planeta de teste evo-101). **Decidido:** só na exportação com alturas da
        Terra (`TEMP_ICE_START_KM` 0,6 em `EARTH_RELIEF_CLIMATE`); um critério geral fica em aberto.
-10. **O extremo norte fora do verão** (2026-10-29, item 16): a primavera a 70–80° N segue 5–7 °C quente (o estágio de
-    chuva toma a água da coluna pelo ar junto ao chão; uma inversão de primavera sobre a neve consertaria a temperatura,
-    mas sem isso custa 1 ponto de Köppen), e os mares nórdicos congelam no inverno (Tromsø −21 °C em janeiro, real −6).
+10. **O extremo norte fora do verão** (itens 16 e 17): abril e maio a 70–80° N seguem +4,6 / +5,6 °C (com o sol forte, o
+    mês sai quente demais para contar como neve: o albedo da neve sazonal quase não clareia o fundo nas altas latitudes),
+    e os mares nórdicos congelam no inverno (Tromsø −21 °C em janeiro, real −6; −9 em abril, real 0).
 
 ## Regras de trabalho
 
