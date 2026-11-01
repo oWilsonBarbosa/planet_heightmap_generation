@@ -199,7 +199,7 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_SUPPLY_START_MM: 5000, // mm/yr      the air brings only so much water: a 1° cell's year of rain above this is drawn toward …
     RAIN_SUPPLY_MAX_MM: 0,      // mm/yr      … this, at most, every month alike. 0: no bound — the pages' climate; js/earth-relief.js
                                 //            EARTH_RELIEF_CLIMATE sets 7,500 for a planet on Earth's heights
-    RAIN_COLUMN_FREE_AIR: 0.75, // –          the column holds its water this share of the way to the free air above the
+    RAIN_COLUMN_FREE_AIR: 0.35, // –          the column holds its water this share of the way to the free air above the
                                 //            inversion by the ground (0 = the air by the ground)
     RAIN_COLUMN_LAPSE_MAX: 6.5, // °C/km      the air column holds its water as if cooled with height by at most this (over ice sheets)
     RAIN_NEWTON: 30,          //            at most this many Newton steps per point in the year …
