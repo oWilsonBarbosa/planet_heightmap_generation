@@ -57,6 +57,7 @@ const CLOUD_RAIN_MM = 100;                  // mm/month of rain at which land is
 const WEAK_SUN = SOLAR_CONSTANT / 8;        // W/m² — half the planet's mean sunlight: below it, inversions form
 const PIN_CAP_DEG = 80, PIN_CAP_SEA = [0.3, 0.7];       // ° and share: a polar sea (see enclosedPolarSea) …
 const PIN_RING_DEG = 60, PIN_RING_LAND = [0.25, 0.5];   // … ringed by land
+const OPEN_LAND_C = [16, 10];                // °C: the warmest month (the energy balance's own) from forest to open land
 
 /**
  * How enclosed each hemisphere's polar sea is (0–1, [north, south]): its pole mostly sea (the share of sea poleward of
@@ -641,7 +642,7 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
         // Surface air temperature at time t (months), on the energy-balance grid: the harmonics, the air masses, and —
         // near snowy or icy ground under a weak sun — the winter inversion, the air by the ground colder than the air
         // above it.
-        const tmp = new Float64Array(G);
+        const tmp = new Float64Array(G), springTmp = new Float64Array(G);   // (springTmp: the spring's extra inversion, below)
         const surfaceAt = (t, withInversion) => {
             const th = 2 * Math.PI * t / 12, co = Math.cos(th), sn = Math.sin(th), co2 = Math.cos(2 * th), sn2 = Math.sin(2 * th);
             const delta = declination(t, tiltDeg);
@@ -666,13 +667,21 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
                 for (let i = 0; i < w; i++) {
                     const c = j * w + i;
                     let T = tmp[c];
-                    // (experiment) snow reflects most of the sun: beyond the tree line the ground stays colder than the air into the spring
-                    const invCut = +(globalThis.process?.env?.EXP_INV_SNOW || 0);
+                    // Over snow on open land — beyond the tree line, where no forest darkens it — and over sea ice, the snow
+                    // reflects most of the sun (TEMP_SNOW_SUN_CUT of it), so the ground stays colder than the air above it
+                    // into the spring, as in the dark: the darkness counts only the sun the snow lets in. (The snow the
+                    // winter piled up on the ground — on a dry plateau like Tibet's, thin and patchy, it reflects less — and
+                    // not on ice sheets, whose near-surface cold is already their lapse, TEMP_ICE_LAPSE.) By the sun alone
+                    // the Arctic's spring came a month or two early: March–May at 70–80° N 5–7 °C warm, Cambridge Bay −6 °C in
+                    // April against −20.
                     let darkC = dark;
-                    if (invCut > 0 && withInversion) {
-                        const snowC = landFrac[c] * iceRamp(T - lapseEff[c] * surfKm[c]) * (openLand ? openLand[c] : 1) + (1 - landFrac[c]) * iceRamp(T);
-                        let xx = 1 - q * (1 - invCut * snowC) / WEAK_SUN; xx = xx <= 0 ? 0 : xx >= 1 ? 1 : xx; darkC = xx * xx * (3 - 2 * xx);
+                    if (withInversion && openLand) {
+                        const kT = ((Math.round(t * NT / 12) % NT) + NT) % NT, rampL = iceRamp(T - lapseEff[c] * surfKm[c]);
+                        const lying = (coverK ? Math.min(rampL, coverK[kT * G + c]) : rampL) * (1 - perennial[c]);
+                        const snowC = landFrac[c] * lying * openLand[c] + (1 - landFrac[c]) * iceRamp(T);
+                        let xx = 1 - q * (1 - P.TEMP_SNOW_SUN_CUT * snowC) / WEAK_SUN; xx = xx <= 0 ? 0 : xx >= 1 ? 1 : xx; darkC = xx * xx * (3 - 2 * xx);
                     }
+                    springTmp[c] = 0;
                     if (withInversion && darkC > 0) {
                         const f = landFrac[c], snow = f * iceRamp(T - lapseEff[c] * surfKm[c]) + (1 - f) * iceRamp(T);
                         let calm = 1;
@@ -681,20 +690,23 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
                             calm = 1 / (1 + (u * u + v * v) / U0sq);          // wind mixes the inversion away
                         }
                         T -= P.TEMP_INVERSION_C * snow * darkC * calm;
+                        springTmp[c] = P.TEMP_INVERSION_C * snow * (darkC - dark) * calm;
                     }
                     tmp[c] = T;
                 }
             }
             return tmp;
         };
-        // (experiment) open land beyond the tree line: the warmest month (the harmonics, at the surface) below EXP_TREE_FROM … EXP_TREE_TO
+        // Open land beyond the tree line, for the spring's inversion (surfaceAt): the warmest month of the energy balance's
+        // own seasons at the surface below OPEN_LAND_C[0] … OPEN_LAND_C[1] (warmer than the summer reported, which the
+        // polar summers' damping holds back: about the 10 °C tree line)
         let openLand = null;
-        if (globalThis.process?.env?.EXP_INV_SNOW && globalThis.process.env.EXP_TREE_FROM) {
+        if (P.TEMP_SNOW_SUN_CUT > 0) {
             openLand = new Float64Array(G);
-            const tf = +globalThis.process.env.EXP_TREE_FROM, tt = +globalThis.process.env.EXP_TREE_TO;
+            const [tf, tt] = OPEN_LAND_C;
             for (let c = 0; c < G; c++) {
                 let mx = -1e9;
-                for (let k = 0; k < NT; k++) { const th = 2 * Math.PI * k / NT; mx = Math.max(mx, c0[c] + 2 * (c1r[c] * Math.cos(th) - c1i[c] * Math.sin(th)) + 2 * (c2r[c] * Math.cos(2 * th) - c2i[c] * Math.sin(2 * th))); }
+                for (const [co, sn, co2, sn2] of sampleCS) mx = Math.max(mx, c0[c] + 2 * (c1r[c] * co - c1i[c] * sn) + 2 * (c2r[c] * co2 - c2i[c] * sn2));
                 mx -= lapseEff[c] * surfKm[c];
                 let x = (tf - mx) / (tf - tt); x = x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x); openLand[c] = x;
             }
@@ -711,12 +723,13 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
             for (let c = 0; c < core.size; c++) { const hr = Math.max(href[c] === href[c] ? Math.max(0, href[c]) : 0, domeCore[c]); out[offset + c] -= lapseCore[c] * hr; }
         };
         const monthlySL = new Float32Array(12 * core.size), monthly = new Float32Array(12 * core.size);
-        const inversion = new Float32Array(12 * core.size);
+        const inversion = new Float32Array(12 * core.size), inversionSpring = new Float32Array(12 * core.size);
         for (let m = 0; m < 12; m++) {
             const sl = surfaceAt(m + 0.5, false);
             refine(g, core, ratio, sl, monthlySL, m * core.size);
             const air = surfaceAt(m + 0.5, true);                     // (surfaceAt's buffer is shared: sl is done with)
             refine(g, core, ratio, air, monthly, m * core.size);
+            refine(g, core, ratio, springTmp, inversionSpring, m * core.size);
             // (the inversion alone: a layer by the ground — the circulation reads the air above it)
             for (let c = 0, o = m * core.size; c < core.size; c++) inversion[o + c] = monthly[o + c] - monthlySL[o + c];
             heightCorrect(monthly, m * core.size);
@@ -813,7 +826,7 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
             return (drawn = { seaSL, seaIceOpen, domeDraw });
         };
         const state = { step: g.step, c0, c1r, c1i, c2r, c2i, snowYear, perennial };
-        const out = { T, monthly, monthlySL, iceFrac: iceCore, domeKm: domeCore, lapse: lapseCore, inversion, state, solverStats: stats, profile: prof, ms: performance.now() - t0, source: 'energy balance' };
+        const out = { T, monthly, monthlySL, iceFrac: iceCore, domeKm: domeCore, lapse: lapseCore, inversion, inversionSpring, state, solverStats: stats, profile: prof, ms: performance.now() - t0, source: 'energy balance' };
         return Object.defineProperties(out, {
             seaIce: { get: seaIceOf, enumerable: true },
             seaIceOpen: { get: () => drawnOf().seaIceOpen, enumerable: true },

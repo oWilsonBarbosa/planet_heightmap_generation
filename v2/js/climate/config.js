@@ -64,6 +64,8 @@ export const PARAMS_DEFAULTS = Object.freeze({
                                 //            cold alone, TEMP_ICE_WARM_C … TEMP_ICE_COLD_C) …
     TEMP_SNOW_ALBEDO: 0.45,     // –          … reflecting this much (the snow itself; TEMP_ALBEDO_SNOW where the cold alone
                                 //            stands for it, counting dry frozen ground as snowy)
+    TEMP_SNOW_SUN_CUT: 0.8,     // –          snow on open land and sea ice reflects this share of the sun: the ground stays
+                                //            colder than the air into the spring, the winter's inversion with it (0 = off)
     TEMP_BLOCK_KM: 1.5,           // km         mountains block the low air's heat exchange: e^{−(ridge above the lower side)/this}; 0 = off
     TEMP_LOCAL_K: 11,            // W/m²/K     land's own seasons below the grid: a column's exchange with its surroundings (0 = off)
     TEMP_LOCAL_KM: 1925,        // km         … its departure from the region within this (Gaussian σ) is added over land
@@ -197,6 +199,8 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_SUPPLY_START_MM: 5000, // mm/yr      the air brings only so much water: a 1° cell's year of rain above this is drawn toward …
     RAIN_SUPPLY_MAX_MM: 0,      // mm/yr      … this, at most, every month alike. 0: no bound — the pages' climate; js/earth-relief.js
                                 //            EARTH_RELIEF_CLIMATE sets 7,500 for a planet on Earth's heights
+    RAIN_COLUMN_FREE_AIR: 0.75, // –          the column holds its water this share of the way to the free air above the
+                                //            inversion by the ground (0 = the air by the ground)
     RAIN_COLUMN_LAPSE_MAX: 6.5, // °C/km      the air column holds its water as if cooled with height by at most this (over ice sheets)
     RAIN_NEWTON: 30,          //            at most this many Newton steps per point in the year …
     RAIN_TOL: 2e-3,             //            … stopping when the column water changes less than this (relative)
@@ -254,6 +258,7 @@ export const PARAM_PRIORS = Object.freeze({
     TEMP_SNOW_MELT_MM:  { value: 90, min: 45, max: 150, source: 'degree-day factors for snow ≈ 1.5–5 mm/°C/day (Hock 2003; Braithwaite 2008): ≈ 45–150 mm/°C a month; the latent heat of fusion 334 kJ/kg' },
     TEMP_SNOW_COVER_MM: { value: 30, min: 10, max: 80, source: 'snow depletion curves: open ground fully covered from ≈ 10–40 mm of snow water, patchy below; forests and rough ground need more (Liston 2004; Niu & Yang 2007)' },
     TEMP_SNOW_ALBEDO:   { value: 0.45, min: 0.35, max: 0.6, source: 'planetary (top-of-atmosphere) albedo over snow-covered land ≈ 0.35–0.45 over boreal forest, 0.5–0.65 over open land, against ≈ 0.25–0.35 snow-free (CERES, MODIS; Qu & Hall 2007)' },
+    TEMP_SNOW_SUN_CUT:  { value: 0.8, min: 0.5, max: 0.9, source: 'dry snow reflects ≈ 0.8–0.9 of the sun, old and wet snow ≈ 0.6–0.7 (Warren 1982); surface-based inversions persist over the Arctic\'s snow into April and May (Serreze et al. 1992)' },
     TEMP_ICE_START_C:   { value: -30, min: -40, max: -20, source: 'ice-sheet hysteresis: once grown, polar ice sheets persist under climates that would not grow them (e.g. DeConto & Pollard 2003; Abe-Ouchi et al. 2013)' },
     TEMP_ICE_START_KM:  { value: 0, min: 0, max: 1, source: 'ice sheets start on highlands and plateaus and spread to the lowland (Laurentide: Baffin and Labrador; Fennoscandian: the Scandinavian mountains); 0 starts them on any cold land' },
 
@@ -341,6 +346,7 @@ export const PARAM_PRIORS = Object.freeze({
     RAIN_CELL_FACTOR_MAX: { value: 1.5, min: 1.25, max: 2.5, source: 'no direct literature value: windward rain grows ≈ 5–10 % per 100 m (Roe 2005), so the few hundred metres a terrain cell stands above or below its 1° surroundings make ≈ ×1.2–1.6' },
     RAIN_SUPPLY_START_MM: { value: 5000, min: 4000, max: 7500, source: "Earth's wettest 1° land cells get ≈ 5–7.5 m a year (Beck et al. 2023 at 1°: 7.5 m) — the Chocó, Mt Cameroon, the Khasi Hills; the climate gives Earth that with or without the bound" },
     RAIN_SUPPLY_MAX_MM: { value: 7500, min: 7000, max: 12000, source: 'no 1° land cell on Earth reaches 8 m a year (Beck et al. 2023); the wettest stations ≈ 11.9 m (Mawsynram, Cherrapunji), a terrain cell up to ×RAIN_CELL_FACTOR_MAX its 1° cell' },
+    RAIN_COLUMN_FREE_AIR: { value: 0.8, min: 0.3, max: 1, source: 'surface-based inversions over snow are ≈ 0.3–1 km deep (Serreze et al. 1992; Bradley et al. 1992) under a water-vapour scale height of ≈ 2 km: most of the column\'s water lies above them' },
     RAIN_COLUMN_LAPSE_MAX: { value: 6.5, min: 6.5, max: 10, source: 'the free troposphere cools ≈ 6.5 K/km (standard atmosphere); the ≈ 8 K/km of an ice-sheet surface (Fortuin & Oerlemans 1990) is its near-surface inversion, which holds little of the column\'s water' },
 });
 
