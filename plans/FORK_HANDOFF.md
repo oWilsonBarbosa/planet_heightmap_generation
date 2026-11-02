@@ -295,7 +295,9 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
     cai 0,7300 → 0,7276 (o nordeste da Ásia, já frio demais no verão, perde a Dwa). O verão do nordeste da Ásia não
     se consertou sem perdas (a monção chega dois meses cedo pela circulação de primavera; a chuva é reciclada; o mar ao
     lado oscila pouco — `docs/SPRING_ARCTIC_20261101.md`); a neve a 0,5 com as nuvens a 0,24 e a coluna a 0,25 empata o
-    Kottek (0,730026 contra 0,730038). **Decisão do dono**,
+    Kottek (0,730026 contra 0,730038). A circulação de primavera (a baixa das Aleutas, que em abril ainda chega ao Japão)
+    não se consertou com uma baixa subpolar sobre os oceanos: o nordeste da China fica quase certo, o mundo perde (pressão
+    3,08 → 3,41–3,78 hPa, Kottek 0,7169–0,7268); falta uma componente de ondas estacionárias. **Decisão do dono**,
     e os mares nórdicos congelam no inverno (Tromsø −21 °C em janeiro, real −6; −9 em abril, real 0).
 
 ## Regras de trabalho

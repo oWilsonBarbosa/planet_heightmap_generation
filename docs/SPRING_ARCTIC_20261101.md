@@ -133,6 +133,32 @@ piora outras regiões. **Uma combinação empata:** a neve da tundra a 0,5, as n
 `evaluate` 0,730026 contra 0,730038, Köppen igual (49,5 / 86,6 %), abril–maio a 70–80° N +4,1 / +5,0 °C (de +4,6 / +5,6),
 60–70° N erro mensal 0,95 → 0,76 °C, planetas −0,04 ponto. Não está aplicada: à decisão.
 
+## A circulação de primavera do Leste da Ásia (02/11)
+
+O erro maior está sobre o oceano: em abril, a 45° N, o NCEP tem a pressão caindo para leste do continente ao Pacífico
+(0, −2, −4, −3, −4 hPa da média da latitude a 110, 120, 130, 140 e 150° E — a baixa das Aleutas ainda se estende até o
+Japão); o modelo tem o contrário (−3, −1, +1, +2, +2), e o vento sobre o nordeste da China vira de sul. Em julho, +6 hPa
+a 150° E contra −3; em janeiro a baixa das Aleutas fica em −3 a −5 contra −10. A circulação põe a faixa de baixas
+subpolares igual em toda a latitude (a 65° N) e as altas e baixas da temperatura; as baixas das Aleutas e da Islândia,
+o rastro das tempestades sobre os oceanos, não estão nela.
+
+Tentado (uma baixa subpolar sobre os oceanos, pela parte de mar acima da média da latitude × a depressão da faixa):
+
+| | vento de sul no nordeste da China, abr / mai (NCEP 0,3 / 0,8) | pressão contra NCEP | vento a ±45° | Köppen exato | `evaluate` |
+|---|---:|---:|---:|---:|---:|
+| sem (atual) | 1,9 / 2,7 m/s | 3,08 hPa | 78,5 % | 49,5 % | 0,7300 |
+| na faixa subpolar (65° N), ±15° | 1,7 / 2,6 | — | — | — | — |
+| na faixa das tempestades, ±20°, força 1 / 1,5 | — / 0,5 / 1,3 | 3,41 / 3,78 | 76,5 / 75,3 % | 49,3 / 48,8 % | 0,7213 / 0,7169 |
+| … só sobre o oceano, a média da latitude devolvida | 2,2 / 2,9 | 3,27 | 76,9 % | 49,3 % | 0,7268 |
+
+Na faixa das tempestades, o nordeste da China fica quase certo (a chuva de maio 141 → 96 mm, Beck 54; junho −1,3 →
+−0,2 °C, o inverno mais frio pela monção de inverno mais forte), mas a pressão sobe demais sobre os continentes — o
+anticiclone siberiano de janeiro +27 contra +17 a 45° N, a baixa de verão mais fraca — e o mundo todo perde. A pista do
+calor que o oceano entrega (as baixas rio abaixo das correntes quentes) não serve: no modelo o Kuroshio entrega só
+14–16 W/m² (o real, centenas no inverno), e a baixa sairia no Atlântico subpolar, não no Pacífico. A baixa das Aleutas
+é em boa parte uma onda estacionária (o Tibete e as Rochosas, o Kuroshio), que a circulação do modelo não tem; seria
+preciso uma componente de ondas estacionárias, um projeto à parte.
+
 ## O que falta
 
 - Maio a 70–80° N (+5,6 °C) e abril (+4,6): o albedo da neve da tundra (acima; `TEMP_SNOW_ALBEDO_OPEN` desligado
