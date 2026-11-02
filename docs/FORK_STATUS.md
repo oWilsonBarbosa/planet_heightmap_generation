@@ -86,6 +86,9 @@ O [primeiro ajuste após a correção do percurso](RIVER_RECALIBRATION_20261026.
   Köppen 49,3 → 49,5 %, Kottek 0,7298 → 0,7300. Faltam abril–maio a 70–80° N (+4,6 / +5,6 °C) e os mares nórdicos.
   Em 02/11: a neve seca da tundra mais clara (`TEMP_SNOW_ALBEDO_OPEN`, desligado) consertaria parte de abril–maio
   (+3,0 / +3,9 °C a 0,6; Köppen 49,9 %), mas custa Kottek 0,0024 pelo verão já frio do nordeste da Ásia — à decisão.
+  O verão do nordeste da Ásia não se consertou sem perdas: a raiz é a circulação de primavera (a baixa térmica de verão já
+  em abril, sem o anticiclone da Mongólia) e o ciclo anual do mar; uma combinação (neve 0,5, nuvens 0,24, coluna 0,25)
+  empata o Kottek e o Köppen, com abril–maio a 70–80° N +4,1 / +5,0 °C — à decisão.
 - [ ] Analisar as perdas em grupos climáticos e nas regiões identificadas; corrigir ou justificar os compromissos antes de declarar a candidata pronta.
 - [x] Investigar os casos de vazão zero, o RMS infinito e as divergências de saída das bacias. Os zeros eram saídas de
   bacias fechadas (regras do Generate) com a área da bacia inteira e nenhuma água; corrigidas em `finish-hydro.js`. Com

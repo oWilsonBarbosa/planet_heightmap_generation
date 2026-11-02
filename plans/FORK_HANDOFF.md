@@ -292,7 +292,10 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
        Terra (`TEMP_ICE_START_KM` 0,6 em `EARTH_RELIEF_CLIMATE`); um critério geral fica em aberto.
 10. **O extremo norte fora do verão** (itens 16 e 17): abril e maio a 70–80° N seguem +4,6 / +5,6 °C. A neve seca da
     tundra mais clara (`TEMP_SNOW_ALBEDO_OPEN` 0,6, desligado) os leva a +3,0 / +3,9 e o Köppen a 49,9 %, mas o Kottek
-    cai 0,7300 → 0,7276 (o nordeste da Ásia, já frio demais no verão, perde a Dwa): **decisão do dono**,
+    cai 0,7300 → 0,7276 (o nordeste da Ásia, já frio demais no verão, perde a Dwa). O verão do nordeste da Ásia não
+    se consertou sem perdas (a monção chega dois meses cedo pela circulação de primavera; a chuva é reciclada; o mar ao
+    lado oscila pouco — `docs/SPRING_ARCTIC_20261101.md`); a neve a 0,5 com as nuvens a 0,24 e a coluna a 0,25 empata o
+    Kottek (0,730026 contra 0,730038). **Decisão do dono**,
     e os mares nórdicos congelam no inverno (Tromsø −21 °C em janeiro, real −6; −9 em abril, real 0).
 
 ## Regras de trabalho

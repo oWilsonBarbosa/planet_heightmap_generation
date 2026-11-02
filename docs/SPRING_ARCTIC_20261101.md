@@ -94,6 +94,45 @@ cruza os 22 °C (Dwa → Dwb). Mas esse verão já era frio demais antes (nordes
 0,7166 a 7). Pela regra do projeto (nenhuma das duas checagens piora), o parâmetro fica desligado; ligar 0,6 é uma
 escolha: o Ártico mais certo, o nordeste da Ásia um pouco mais frio.
 
+## O verão frio do nordeste da Ásia (02/11)
+
+Para ligar a neve da tundra sem perder o `evaluate`, primeiro o verão do nordeste da Ásia, que a neve empurrava para o
+lado de lá dos 22 °C. Diagnóstico (Terra, 160K; simulado − ERA5 e chuva contra Beck):
+
+| | abr | mai | jun | jul | jan |
+|---|---:|---:|---:|---:|---:|
+| nordeste da China, chuva simulada / Beck (mm) | 91 / 24 | 141 / 54 | 164 / 93 | 160 / 155 | 16 / 5 |
+| … temperatura | +0,5 | −0,8 | −1,3 | −1,3 | +4,9 |
+| … sem as nuvens da chuva | +2,4 | +2,0 | +2,2 | +2,2 | +5,7 |
+| vento de sul no nordeste da China, simulado / NCEP (m/s) | 1,9 / 0,3 | 2,7 / 0,8 | 3,2 / 1,3 | 2,9 / 1,6 | — |
+| Coreia, chuva simulada / Beck | 83 / 76 | 99 / 94 | 108 / 135 | 118 / 320 | 27 / 22 |
+| Pacífico Noroeste a 30–40° N, mar simulado / OISST (°C) | 16,2 / 16,1 | 17,4 / 17,9 | 19,1 / 20,4 | 20,9 / 23,6 | 18,1 / 16,7 |
+
+- **A monção chega dois meses cedo.** Em abril a circulação já tem a baixa térmica de verão sobre o continente
+  (−3 a −4 hPa da média da latitude) onde o NCEP ainda tem o anticiclone da Mongólia (+5 a +7), e a baixa do Tibete fica
+  funda demais em maio–julho (−14 a −23 contra −1 a −8). Os ventos de sul trazem o mar Amarelo a partir de abril.
+- **A chuva da primavera é reciclada.** Em maio, 111 dos 136 mm vêm da evaporação local: o inverno úmido demais enche o
+  solo, o sol forte evapora, a água chove ali mesmo. As nuvens dessa chuva tiram ~3,5 °C do verão.
+- **O mar ao lado oscila pouco.** O Pacífico Noroeste tem um ciclo anual de 6,5 °C contra 10,7 (a camada de mistura
+  de 50 m o ano todo): a Coreia e o Japão ficam frios no verão e quentes no inverno.
+
+Tentado, sem ganho que valesse (`evaluate`, base 0,7300):
+
+| | nordeste da China, julho | `evaluate` |
+|---|---:|---:|
+| parâmetros de chuva (solo, estabilidade, mistura de fundo, convecção, vento, frente polar, degelo) | −1,2 a −1,6 °C (a chuva quase não muda) | — |
+| baixas térmicas mais fracas sobre terra amena (`CIRC_HEAT_LOW_MILD` 0,75 / 0,55) | −1,3 °C | 0,7295 / 0,7282 |
+| a mistura das tempestades mais fraca no ar estável (novo fator de face no resolvedor) | −1,3 °C (janeiro 16 → 10 mm) | 0,7186–0,7237 |
+| camada de mistura do mar mais rasa (40 / 32 m) | −0,6 / +0,1 °C | 0,7231 / 0,7140 |
+| estações próprias da terra mais fortes (`TEMP_LOCAL_K` 9 / 7) | — | 0,7232 / 0,7166 |
+| nuvens da chuva menos claras (`TEMP_CLOUD_ALBEDO` 0,22 / 0,24; valor da literatura 0,15) | −0,6 °C a 0,2 | 0,7299 / 0,7295 |
+
+A raiz está na circulação de primavera do Leste da Ásia (o anticiclone da Mongólia é em boa parte dinâmico, e a
+circulação do modelo só tem as altas e baixas da temperatura) e no ciclo anual do mar; cada mudança global que a ataca
+piora outras regiões. **Uma combinação empata:** a neve da tundra a 0,5, as nuvens a 0,24 e a coluna da chuva a 0,25 —
+`evaluate` 0,730026 contra 0,730038, Köppen igual (49,5 / 86,6 %), abril–maio a 70–80° N +4,1 / +5,0 °C (de +4,6 / +5,6),
+60–70° N erro mensal 0,95 → 0,76 °C, planetas −0,04 ponto. Não está aplicada: à decisão.
+
 ## O que falta
 
 - Maio a 70–80° N (+5,6 °C) e abril (+4,6): o albedo da neve da tundra (acima; `TEMP_SNOW_ALBEDO_OPEN` desligado
