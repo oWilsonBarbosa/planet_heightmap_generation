@@ -69,11 +69,35 @@ fica pior (abril em Tromsø −9 °C, real 0): ela já era fria demais, pelos ma
 - **A quantidade de inversão pela neve acumulada** (em vez do frio do mês): o inverno a 70–80° N fica 8–9 °C quente,
   porque o modelo cobre pouco chão no começo do inverno ártico, onde neva pouco.
 
+## O albedo da neve na tundra (02/11, desligado por padrão)
+
+Abril e maio ficavam quentes porque, nas altas latitudes, a neve sazonal do balanço de energia (0,45) quase não
+clareia o fundo (0,435 a 75°): em maio, a 75° N, o modelo absorvia ~70 W/m² a mais que sobre a tundra nevada real
+(albedo no topo da atmosfera ≈ 0,6). Novo parâmetro `TEMP_SNOW_ALBEDO_OPEN`: em terra aberta além da linha das
+árvores, a neve seca (abaixo de −5 °C) reflete esse valor e escurece até o da floresta ao se aproximar de 0 °C, quando
+molha e derrete — por isso, ao contrário da neve da tundra mais clara do relatório anterior, o verão não esfria.
+
+| Na Terra (160K) | Desligado | 0,5 | 0,6 |
+|---|---:|---:|---:|
+| terras a 70–80° N: abril / maio / junho / julho, simulado − ERA5 | +4,6 / +5,6 / +2,3 / −0,6 °C | +4,1 / +5,0 / +2,0 / −0,8 | +3,0 / +3,9 / +1,2 / −1,1 |
+| … média quadrática dos meses: 50–60 / 60–70 / 70–80° N | 1,84 / 0,95 / 2,98 °C | 1,75 / 0,77 / 2,75 | 1,59 / 0,63 / 2,30 |
+| `coupled-check --quick`: Köppen exato, continentes iguais | 49,5 %, 45,6 % | 49,7 %, 45,8 % | 49,9 %, 46,0 % |
+| … Europa / América do Norte / Ásia | 36,5 / 46,1 / 34,8 % | 36,9 / 46,5 / 35,0 % | 38,2 / 46,8 / 35,1 % |
+| `evaluate.mjs` | 0,7300 | 0,7291 | 0,7276 |
+| planetas gerados: parte árida, média | 44,12 % | — | 43,99 % |
+
+**Por que o `evaluate` cai.** Quase só pela classe Dwa (inverno seco, verão quente: o nordeste da China e a Coreia;
+65 células na amostra), F1 0,317 → 0,227 a 0,6: o Ártico mais claro esfria a região ~0,3 °C o ano todo, e o verão dela
+cruza os 22 °C (Dwa → Dwb). Mas esse verão já era frio demais antes (nordeste da China −1,3 °C em junho e julho, Coreia
+−2,7 °C em julho, com invernos +4–5 °C quentes): é a sazonalidade fraca dos continentes, um viés anterior. Diminuir
+`TEMP_LOCAL_K` (as estações próprias da terra) para dar mais estação ao interior derruba o `evaluate` (0,7232 a 9,
+0,7166 a 7). Pela regra do projeto (nenhuma das duas checagens piora), o parâmetro fica desligado; ligar 0,6 é uma
+escolha: o Ártico mais certo, o nordeste da Ásia um pouco mais frio.
+
 ## O que falta
 
-- Maio a 70–80° N (+5,6 °C) e abril (+4,6): com o sol forte, o próprio mês sai quente demais para contar como neve. É
-  o albedo da neve no balanço de energia: nas altas latitudes, a neve sazonal (0,45) quase não clareia o fundo (0,435
-  a 75°). A neve da tundra mais clara já foi testada (relatório do gelo marinho) e esfriava o verão.
+- Maio a 70–80° N (+5,6 °C) e abril (+4,6): o albedo da neve da tundra (acima; `TEMP_SNOW_ALBEDO_OPEN` desligado
+  pela queda do `evaluate`), à espera de uma decisão ou de se consertar antes o verão frio do nordeste da Ásia.
 - Os mares nórdicos congelados no inverno, e com eles a Escandinávia fria demais.
 
 ## Reprodução
@@ -81,6 +105,7 @@ fica pior (abril em Tromsø −9 °C, real 0): ela já era fria demais, pelos ma
 ```bash
 node tuning/climate/diag-sea-ice.mjs
 node tuning/climate/diag-sea-ice.mjs --set TEMP_SNOW_SUN_CUT=0,RAIN_COLUMN_FREE_AIR=0     # sem a correção
+node tuning/climate/diag-sea-ice.mjs --set TEMP_SNOW_ALBEDO_OPEN=0.6                       # a neve da tundra mais clara
 node tuning/climate/coupled-check.mjs
 node tuning/climate/evaluate.mjs
 node tuning/climate/planets-dry.mjs

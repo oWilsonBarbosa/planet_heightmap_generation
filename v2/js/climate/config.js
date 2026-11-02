@@ -64,6 +64,8 @@ export const PARAMS_DEFAULTS = Object.freeze({
                                 //            cold alone, TEMP_ICE_WARM_C … TEMP_ICE_COLD_C) …
     TEMP_SNOW_ALBEDO: 0.45,     // –          … reflecting this much (the snow itself; TEMP_ALBEDO_SNOW where the cold alone
                                 //            stands for it, counting dry frozen ground as snowy)
+    TEMP_SNOW_ALBEDO_OPEN: 0,   // –          dry snow on open land beyond the tree line reflects this, darkening as it melts
+                                //            (0 = off: the forest's TEMP_SNOW_ALBEDO everywhere; see docs/SPRING_ARCTIC_20261101.md)
     TEMP_SNOW_SUN_CUT: 0.8,     // –          snow on open land and sea ice reflects this share of the sun: the ground stays
                                 //            colder than the air into the spring, the winter's inversion with it (0 = off)
     TEMP_BLOCK_KM: 1.5,           // km         mountains block the low air's heat exchange: e^{−(ridge above the lower side)/this}; 0 = off
@@ -258,6 +260,7 @@ export const PARAM_PRIORS = Object.freeze({
     TEMP_SNOW_MELT_MM:  { value: 90, min: 45, max: 150, source: 'degree-day factors for snow ≈ 1.5–5 mm/°C/day (Hock 2003; Braithwaite 2008): ≈ 45–150 mm/°C a month; the latent heat of fusion 334 kJ/kg' },
     TEMP_SNOW_COVER_MM: { value: 30, min: 10, max: 80, source: 'snow depletion curves: open ground fully covered from ≈ 10–40 mm of snow water, patchy below; forests and rough ground need more (Liston 2004; Niu & Yang 2007)' },
     TEMP_SNOW_ALBEDO:   { value: 0.45, min: 0.35, max: 0.6, source: 'planetary (top-of-atmosphere) albedo over snow-covered land ≈ 0.35–0.45 over boreal forest, 0.5–0.65 over open land, against ≈ 0.25–0.35 snow-free (CERES, MODIS; Qu & Hall 2007)' },
+    TEMP_SNOW_ALBEDO_OPEN: { value: 0.6, min: 0.45, max: 0.7, source: 'planetary albedo over snow-covered open land ≈ 0.5–0.65, against ≈ 0.35–0.45 over boreal forest (CERES, MODIS; Qu & Hall 2007); dry snow is brighter than melting snow (Warren 1982)' },
     TEMP_SNOW_SUN_CUT:  { value: 0.8, min: 0.5, max: 0.9, source: 'dry snow reflects ≈ 0.8–0.9 of the sun, old and wet snow ≈ 0.6–0.7 (Warren 1982); surface-based inversions persist over the Arctic\'s snow into April and May (Serreze et al. 1992)' },
     TEMP_ICE_START_C:   { value: -30, min: -40, max: -20, source: 'ice-sheet hysteresis: once grown, polar ice sheets persist under climates that would not grow them (e.g. DeConto & Pollard 2003; Abe-Ouchi et al. 2013)' },
     TEMP_ICE_START_KM:  { value: 0, min: 0, max: 1, source: 'ice sheets start on highlands and plateaus and spread to the lowland (Laurentide: Baffin and Labrador; Fennoscandian: the Scandinavian mountains); 0 starts them on any cold land' },

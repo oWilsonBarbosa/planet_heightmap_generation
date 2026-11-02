@@ -58,6 +58,7 @@ const WEAK_SUN = SOLAR_CONSTANT / 8;        // W/m² — half the planet's mean 
 const PIN_CAP_DEG = 80, PIN_CAP_SEA = [0.3, 0.7];       // ° and share: a polar sea (see enclosedPolarSea) …
 const PIN_RING_DEG = 60, PIN_RING_LAND = [0.25, 0.5];   // … ringed by land
 const OPEN_LAND_C = [16, 10];                // °C: the warmest month (the energy balance's own) from forest to open land
+const SNOW_DRY_C = [-5, 0];                  // °C: snow dry and bright below the first, wet and darker at the second
 
 /**
  * How enclosed each hemisphere's polar sea is (0–1, [north, south]): its pole mostly sea (the share of sea poleward of
@@ -391,9 +392,8 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
                 surfKm[c] = Math.max(landKm[c], P.TEMP_ICE_DOME_KM * perennial[c]);
             }
             if (snowOn) snowBudget();
-            // (experiment) open land beyond the tree line, from this round's temperature, for the snow's whiteness
-            const SNOW_OPEN = +(globalThis.process?.env?.EXP_SNOW_OPEN || 0), dryRange = (globalThis.process?.env?.EXP_SNOW_DRY || '-5,0').split(',').map(Number);
-            const openW = SNOW_OPEN > 0 && coverK ? new Float64Array(G) : null;
+            // (open land beyond the tree line, from this round's temperature, for its dry snow's whiteness: below)
+            const openW = P.TEMP_SNOW_ALBEDO_OPEN > 0 && coverK ? new Float64Array(G) : null;
             if (openW) for (let c = 0; c < G; c++) {
                 if (!(landFrac[c] > 0)) continue;
                 let mx = -1e9;
@@ -434,10 +434,12 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
                         // ground as snowy); the snow budget's, as snow does; snow that survives the summer — an ice
                         // sheet — like sea ice, and all year: a sheet stays white through its summer melt (by the month's
                         // own snow alone, a sheet went dark the first month above freezing and melted away)
+                        // (on open land beyond the tree line, dry snow — colder than SNOW_DRY_C[0] — reflects
+                        // TEMP_SNOW_ALBEDO_OPEN, darkening to the forest's as it warms to SNOW_DRY_C[1] and melts)
                         let aS = coverK ? P.TEMP_SNOW_ALBEDO : P.TEMP_ALBEDO_SNOW;
                         if (openW && openW[c] > 0) {
-                            let dry = (dryRange[1] - (T - lapseEff[c] * surfKm[c])) / (dryRange[1] - dryRange[0]); dry = dry <= 0 ? 0 : dry >= 1 ? 1 : dry * dry * (3 - 2 * dry);
-                            aS += (SNOW_OPEN - aS) * openW[c] * dry;
+                            let dry = (SNOW_DRY_C[1] - (T - lapseEff[c] * surfKm[c])) / (SNOW_DRY_C[1] - SNOW_DRY_C[0]); dry = dry <= 0 ? 0 : dry >= 1 ? 1 : dry * dry * (3 - 2 * dry);
+                            aS += (P.TEMP_SNOW_ALBEDO_OPEN - aS) * openW[c] * dry;
                         }
                         const albSnow = aS + (P.TEMP_ALBEDO_ICE - aS) * perennial[c];
                         const sLa = Math.max(coverK ? coverK[k * G + c] : sL, perennial[c]);

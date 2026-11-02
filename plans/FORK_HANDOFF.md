@@ -290,8 +290,9 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
        mar congelado, a terra baixa mantém. Começar com gelo só em terra alta resolveria o 0r063N, mas tira o gelo de
        continentes polares como a Antártida (planeta de teste evo-101). **Decidido:** só na exportação com alturas da
        Terra (`TEMP_ICE_START_KM` 0,6 em `EARTH_RELIEF_CLIMATE`); um critério geral fica em aberto.
-10. **O extremo norte fora do verão** (itens 16 e 17): abril e maio a 70–80° N seguem +4,6 / +5,6 °C (com o sol forte, o
-    mês sai quente demais para contar como neve: o albedo da neve sazonal quase não clareia o fundo nas altas latitudes),
+10. **O extremo norte fora do verão** (itens 16 e 17): abril e maio a 70–80° N seguem +4,6 / +5,6 °C. A neve seca da
+    tundra mais clara (`TEMP_SNOW_ALBEDO_OPEN` 0,6, desligado) os leva a +3,0 / +3,9 e o Köppen a 49,9 %, mas o Kottek
+    cai 0,7300 → 0,7276 (o nordeste da Ásia, já frio demais no verão, perde a Dwa): **decisão do dono**,
     e os mares nórdicos congelam no inverno (Tromsø −21 °C em janeiro, real −6; −9 em abril, real 0).
 
 ## Regras de trabalho

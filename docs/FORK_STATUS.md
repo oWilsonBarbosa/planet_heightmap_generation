@@ -84,6 +84,8 @@ O [primeiro ajuste após a correção do percurso](RIVER_RECALIBRATION_20261026.
   Em 01/11 ([relatório](SPRING_ARCTIC_20261101.md)): a inversão de inverno dura a primavera sobre a neve da tundra e o
   gelo marinho, e a coluna da chuva lê em parte o ar acima da inversão — terras a 60–70° N, erro mensal 2,05 → 0,95 °C;
   Köppen 49,3 → 49,5 %, Kottek 0,7298 → 0,7300. Faltam abril–maio a 70–80° N (+4,6 / +5,6 °C) e os mares nórdicos.
+  Em 02/11: a neve seca da tundra mais clara (`TEMP_SNOW_ALBEDO_OPEN`, desligado) consertaria parte de abril–maio
+  (+3,0 / +3,9 °C a 0,6; Köppen 49,9 %), mas custa Kottek 0,0024 pelo verão já frio do nordeste da Ásia — à decisão.
 - [ ] Analisar as perdas em grupos climáticos e nas regiões identificadas; corrigir ou justificar os compromissos antes de declarar a candidata pronta.
 - [x] Investigar os casos de vazão zero, o RMS infinito e as divergências de saída das bacias. Os zeros eram saídas de
   bacias fechadas (regras do Generate) com a área da bacia inteira e nenhuma água; corrigidas em `finish-hydro.js`. Com
