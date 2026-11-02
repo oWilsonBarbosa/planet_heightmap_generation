@@ -391,6 +391,16 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
                 surfKm[c] = Math.max(landKm[c], P.TEMP_ICE_DOME_KM * perennial[c]);
             }
             if (snowOn) snowBudget();
+            // (experiment) open land beyond the tree line, from this round's temperature, for the snow's whiteness
+            const SNOW_OPEN = +(globalThis.process?.env?.EXP_SNOW_OPEN || 0), dryRange = (globalThis.process?.env?.EXP_SNOW_DRY || '-5,0').split(',').map(Number);
+            const openW = SNOW_OPEN > 0 && coverK ? new Float64Array(G) : null;
+            if (openW) for (let c = 0; c < G; c++) {
+                if (!(landFrac[c] > 0)) continue;
+                let mx = -1e9;
+                for (const [co, sn, co2, sn2] of sampleCS) mx = Math.max(mx, c0[c] + 2 * (c1r[c] * co - c1i[c] * sn) + 2 * (c2r[c] * co2 - c2i[c] * sn2));
+                mx -= lapseEff[c] * surfKm[c];
+                let x = (OPEN_LAND_C[0] - mx) / (OPEN_LAND_C[0] - OPEN_LAND_C[1]); x = x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x); openW[c] = x;
+            }
             // (the summer pack's hold, from this round's temperature: none from a fresh start's first guess)
             const pinNow = pinOn && (it > 0 || warm);
             if (pinNow) {
@@ -424,7 +434,11 @@ export function energyBalanceTemperature({ tiltDeg = 23.44 } = {}) {
                         // ground as snowy); the snow budget's, as snow does; snow that survives the summer — an ice
                         // sheet — like sea ice, and all year: a sheet stays white through its summer melt (by the month's
                         // own snow alone, a sheet went dark the first month above freezing and melted away)
-                        const aS = coverK ? P.TEMP_SNOW_ALBEDO : P.TEMP_ALBEDO_SNOW;
+                        let aS = coverK ? P.TEMP_SNOW_ALBEDO : P.TEMP_ALBEDO_SNOW;
+                        if (openW && openW[c] > 0) {
+                            let dry = (dryRange[1] - (T - lapseEff[c] * surfKm[c])) / (dryRange[1] - dryRange[0]); dry = dry <= 0 ? 0 : dry >= 1 ? 1 : dry * dry * (3 - 2 * dry);
+                            aS += (SNOW_OPEN - aS) * openW[c] * dry;
+                        }
                         const albSnow = aS + (P.TEMP_ALBEDO_ICE - aS) * perennial[c];
                         const sLa = Math.max(coverK ? coverK[k * G + c] : sL, perennial[c]);
                         const abc = ab + albVary[c];
