@@ -148,7 +148,7 @@ Tentado (uma baixa subpolar sobre os oceanos, pela parte de mar acima da média 
 |---|---:|---:|---:|---:|---:|
 | sem (atual) | 1,9 / 2,7 m/s | 3,08 hPa | 78,5 % | 49,5 % | 0,7300 |
 | na faixa subpolar (65° N), ±15° | 1,7 / 2,6 | — | — | — | — |
-| na faixa das tempestades, ±20°, força 1 / 1,5 | — / 0,5 / 1,3 | 3,41 / 3,78 | 76,5 / 75,3 % | 49,3 / 48,8 % | 0,7213 / 0,7169 |
+| na faixa das tempestades, ±20°, força 1 / 1,5 | 0,5 / 1,3 (força 1,5) | 3,41 / 3,78 | 76,5 / 75,3 % | 49,3 / 48,8 % | 0,7213 / 0,7169 |
 | … só sobre o oceano, a média da latitude devolvida | 2,2 / 2,9 | 3,27 | 76,9 % | 49,3 % | 0,7268 |
 
 Na faixa das tempestades, o nordeste da China fica quase certo (a chuva de maio 141 → 96 mm, Beck 54; junho −1,3 →
