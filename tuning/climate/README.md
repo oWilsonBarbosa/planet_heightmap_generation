@@ -141,6 +141,12 @@ node tuning/climate/planets-dry.mjs [--set …] [--climate <snapshot>]  # the ge
                                                 #   ranks Generate seeds by how Earth-like their land is
 node tuning/climate/render-koppen-maps.mjs --tag <name> [--set …]   # Köppen PNGs of Earth (and observed) and the generated
                                                 #   planets → tuning/results/climate/maps/<name>/, to compare by eye
+node tuning/climate/glance-check.mjs --tag <name>  # the glance test on those maps: arid share, rain forest at the equator,
+                                                #   subtropical desert vs humid east coast, Mediterranean west coasts —
+                                                #   each map against Earth observed (docs/PLAUSIBILITY_REVIEW_20261106.md)
+node tuning/climate/diag-rain-seasons.mjs [--planets …|none]  # Earth's winter and summer rain where they decide the class
+                                                #   (Cfa east coasts, Cs coasts, wet tropics) vs Beck; the worlds' equatorial
+                                                #   land by distance from the sea, and their coasts walled by mountains
 node tuning/climate/probe-planets.mjs [--prefix RAIN_,CIRC_]  # each setting ±¼ of its range: Earth's score and aridity vs
                                                 #   the generated planets' (which settings dry the planets)
 node tuning/climate/profile-climate.mjs         # every stage call timed
@@ -218,10 +224,13 @@ and latitude, ones that are not (one continent, much or little land), stock Evol
 tune turns down any step that leaves one of them more than 1 point more arid. They come out drier than Earth (about 38–43 %
 of ice-free land arid against Earth's 31 %) because their continents are walled by mountains — about a third of their
 coast has high ground within 300 km, against 8 % of Earth's — so expect that, not a fault, unless the terrain changes.
+Not all of it is the terrain: the rain also follows the sun too much (winter rain on Earth's subtropical east coasts ¼ of
+the observed, the wet tropics' dry season too dry), which flat test continents show too — `diag-rain-seasons.mjs`,
+`glance-check.mjs` and `docs/PLAUSIBILITY_REVIEW_20261106.md`.
 
 Files: `fetch-references.mjs`, `regrid-references.mjs`, `inspect-references.mjs` (list variables),
 `season-test.mjs`, `stage-audit.mjs`, `hash-earth.mjs`, `skeleton-check.mjs`, `temperature-check.mjs`, `planets-dry.mjs`,
-`render-koppen-maps.mjs`, `probe-planets.mjs`, `lib/gen-planets.mjs` (the generated planets, terrain cached in
+`render-koppen-maps.mjs`, `glance-check.mjs`, `diag-rain-seasons.mjs`, `probe-planets.mjs`, `lib/gen-planets.mjs` (the generated planets, terrain cached in
 `tuning/results/climate/cache/`),
 `diag-temperature.mjs`, `test-solver.mjs`, `circulation-check.mjs`, `ocean-check.mjs`, `rain-check.mjs`, `diag-rain.mjs`, `diag-rain-bias.mjs`, `diag-planet-rain.mjs`, `coupled-check.mjs`,
 `profile-climate.mjs`, `hash-climate.mjs`; `lib/continents.mjs` (continent-aware scoring),

@@ -200,6 +200,16 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
   - o tamanho do pico e a parcela de rios com estação de cheia, simulada e medida, por zona climática.
   - Opções: `--n 2560000 --list`, `--set chave=valor`, `--tune` (com `--climate sim`, contra o clima simulado).
 - `tuning/climate/diag-rain-bias.mjs`: vieses de chuva na Terra contra Beck e GPCP.
+- `tuning/climate/glance-check.mjs`: o teste do olhar nos mapas de `render-koppen-maps.mjs`. Mede:
+  - a parte árida;
+  - a floresta no equador;
+  - o deserto subtropical contra a costa leste úmida;
+  - o mediterrâneo nas costas oeste.
+  Cada mapa é comparado com a Terra observada.
+- `tuning/climate/diag-rain-seasons.mjs`:
+  - a chuva de inverno e de verão da Terra onde as estações decidem a classe;
+  - o equador dos mundos por distância do mar;
+  - as costas muradas por montanhas.
 - `tuning/relief/`: hipsometria da Terra (ETOPO 2022).
 - `tuning/evolution/regress.mjs`: prova que uma mudança no código compartilhado deixa o Evolution idêntico (116 saídas
   com hash), ou mostra o que muda; `--set chave=valor` liga uma constante de `FINISH` e cada rodada imprime lagos e
@@ -299,6 +309,27 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
     não se consertou com uma baixa subpolar sobre os oceanos: o nordeste da China fica quase certo, o mundo perde (pressão
     3,08 → 3,41–3,78 hPa, Kottek 0,7169–0,7268); falta uma componente de ondas estacionárias. **Decisão do dono**,
     e os mares nórdicos congelam no inverno (Tromsø −21 °C em janeiro, real −6; −9 em abril, real 0).
+11. **O que impede a plausibilidade dos mundos** (revisão de 06/11, `docs/PLAUSIBILITY_REVIEW_20261106.md`). Medido
+    nos mundos gerados, não na Terra.
+    - **O que se vê:**
+      - mundos bege: árido 35–46 % contra 31 %;
+      - pouca floresta no equador: 17–42 % contra 51 %;
+      - o deserto subtropical chega à costa leste: árida em 37–61 % contra 32 %;
+      - quase nenhum mediterrâneo nas costas oeste: 1–24 % contra 43 %;
+      - continentes murados por cordilheiras: terra ≥ 2 km a 300 km de 35–57 % das costas, contra 8 %;
+      - o heightmap do Generate raso: mediana das terras 70 m contra 442 m; mar 2,4 km contra 4,1 km.
+    - **Causas:**
+      - a chuva segue o sol demais. Na Terra simulada, o inverno do sudeste dos EUA tem 27 contra 117 mm/mês, e o mês
+        mais seco de Bornéu 27 contra 177;
+      - as muralhas costeiras: um continente tropical plano guarda a chuva da Terra no interior, os murados perdem
+        de um quinto a um terço.
+    - **Proposta, em ordem:**
+      1. o teste do olhar no ajuste;
+      2. tempestades de inverno locais em longitude;
+      3. memória da umidade do solo nos trópicos;
+      4. alturas da Terra como opção do heightmap exportado;
+      5. margens passivas no Generate, que precisam de decisão do dono porque mexem no terreno e nas placas;
+      6. pausar o ajuste fino da Terra polar (item 10).
 
 ## Regras de trabalho
 
