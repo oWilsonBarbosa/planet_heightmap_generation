@@ -238,7 +238,8 @@ the objective took them from 18.4 to 13.1 points and Earth from 4.4 to 5.4, its 
 is the mean distance, in points, from Earth's observed map measured the same way, on the five lines that most mislead
 the eye — the arid share (against Earth's observed arid share at the latitudes where the world's land lies), rain forest
 within 10° of the equator, arid subtropical and mid-latitude east coasts, Mediterranean west coasts at 30–45° — each
-counted by how much land it covers. Earth simulated scores 4.4 points; the worlds 12–34 (mean 18.5) in November 2026. They come out drier than Earth (about 38–43 %
+counted by how much land it covers. Earth simulated scores 5.1 points; the worlds 11–33 (mean 17.3) since the cold-season
+fronts (`RAIN_FRONT_RATE`, `docs/WINTER_FRONTS_20261109.md`; before them 4.4 and 12–34, mean 18.5). They come out drier than Earth (about 38–43 %
 of ice-free land arid against Earth's 31 %) because their continents are walled by mountains — about a third of their
 coast has high ground within 300 km, against 8 % of Earth's — so expect that, not a fault, unless the terrain changes.
 Not all of it is the terrain: the rain also follows the sun too much (winter rain on Earth's subtropical east coasts ¼ of

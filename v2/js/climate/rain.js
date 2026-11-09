@@ -55,6 +55,9 @@ const ALBEDO_LAND = 0.15, ALBEDO_SNOW = 0.6;
 const BRUNT = 0.01;                           // 1/s, buoyancy frequency of the troposphere (Eady growth rate, flow blocking)
 const MAX_SHEAR = 4e-3;                       // 1/s, strongest vertical wind shear of a jet (≈ 40 m/s over 10 km)
 const STABLE_RELAX_S = 86400;                 // s, time for air to take on the stability of the surface beneath it
+const FRONT_SIGMA_REF = 1 / 86400;            // 1/s, the local Eady rate at which fronts rain at full strength (RAIN_FRONT_RATE)
+const FRONT_COLD_K = 2;                       // K, how much colder than its region the surface air is for fronts to rain at full strength
+const FRONT_AIR_C = [-15, -5];                // °C, fronts fade out in air colder than this (deep in an arctic air mass)
 const CONVECT_SUN_LOW = SOLAR_CONSTANT / 8;   // W/m² daily sunlight (top of the air) below which land does not convect …
 const CONVECT_SUN_FULL = SOLAR_CONSTANT / 4;  // … and above which it does fully (the tropics, the summer)
 const THAW_LAG_MONTHS = 1;                    // the ground's temperature lags the air's by about this
@@ -354,6 +357,34 @@ export function columnWaterRain() {
             }
             carrier.setOperator(new Float64Array(G).fill(1 / STABLE_RELAX_S), zero, u, v, 1);
             carrier.solve(Sloc, zero, Sair, SairI, { maxCycles: P_.RAIN_CARRIER_CYCLES, tol: 1e-3 });
+            // Fronts: a storm lifts the warm, moist air of its warm sector over the cold air ahead of it, so a cold air mass
+            // beside a strong temperature contrast still rains — from above its stable surface layer. Strongest where cold
+            // land meets a warm sea in winter: the east coasts and the warm currents off them (the Gulf of Mexico and the
+            // Gulf Stream, the Kuroshio, the Brazil and East Australian currents), whose winter rain the stability alone
+            // took away (Earth's subtropical east coasts got a quarter of their observed winter rain). Added to the
+            // storms' rain-out, so it follows the same steep law of the column's humidity — dry air (a desert's, the winter
+            // monsoon's) gives little: RAIN_FRONT_RATE × the local Eady rate (from the surface temperature's gradient
+            // within RAIN_FRONT_SMOOTH_KM, at most FRONT_SIGMA_REF) × how cold the air mass is (FRONT_COLD_K) × the cold
+            // season (no sun-driven convection) × fading under highs (e-folding RAIN_FRONT_RATE_HPA above the latitude's
+            // mean: the winter monsoon's and the subtropical highs' sinking air).
+            const frontRate = new Float64Array(G);
+            if (P_.RAIN_FRONT_RATE > 0) {
+                const Tf = Float64Array.from(Tsl);
+                gaussianSmooth(g, Tf, new Float64Array(G), P_.RAIN_FRONT_SMOOTH_KM);
+                for (let j = 0; j < h; j++) {
+                    const cj = Math.max(0.05, cosLat[j]), f = 2 * 7.292e-5 * Math.abs(Math.sin(g.lat[j] * DEG));
+                    for (let i = 0; i < w; i++) {
+                        const c = j * w + i, ce = j * w + (i + 1) % w, cw = j * w + (i - 1 + w) % w;
+                        const cn = j > 0 ? c - w : c, cs = j < h - 1 ? c + w : c;
+                        const gx = (Tf[ce] - Tf[cw]) / (2 * dRad * R_PLANET * cj), gy = (Tf[cn] - Tf[cs]) / ((cn === c || cs === c ? 1 : 2) * dRad * R_PLANET);
+                        const shear = Math.min(MAX_SHEAR, 9.81 * Math.hypot(gx, gy) / (Math.max(1e-9, f) * (Tf[c] + 273.15)));
+                        const sig = 0.31 * f / BRUNT * shear;                                        // 1/s, as the storms' (above)
+                        let cold = Sair[c] / FRONT_COLD_K; cold = cold <= 0 ? 0 : cold >= 1 ? 1 : cold * cold * (3 - 2 * cold);
+                        const hiFade = slp ? Math.exp(-Math.max(0, slp[c] - slpRow[j]) / P_.RAIN_FRONT_RATE_HPA) : 1;
+                        frontRate[c] = P_.RAIN_FRONT_RATE * Math.min(1, sig / FRONT_SIGMA_REF) * cold * hiFade;
+                    }
+                }
+            }
 
             const delta = declination(ctx.anchorMonths[k] + 0.5, ctx.options.tiltDeg ?? 23.44);
             const sun = Float64Array.from(g.lat, l => dailyInsolation(l * DEG, delta));
@@ -404,7 +435,11 @@ export function columnWaterRain() {
                     const sc = a * P_.RAIN_LAND_CONVECTION * land[c] * p.sunConv[j];
                     // (the storms' and the tropical disturbances' spreads add as variances)
                     const storm = Math.exp(0.5 * a * a * (sd * sd + trop[c] * trop[c]));
-                    p.rate[c] = storm * stable * Math.exp(0.5 * sc * sc);
+                    // (fronts: in the cold season — none where the sun drives convection — and at the cold air's edge, not
+                    // deep inside an arctic air mass, whose front lies far equatorward of it)
+                    let edge = (Tair[c] - FRONT_AIR_C[0]) / (FRONT_AIR_C[1] - FRONT_AIR_C[0]);
+                    edge = edge <= 0 ? 0 : edge >= 1 ? 1 : edge * edge * (3 - 2 * edge);
+                    p.rate[c] = storm * (stable + frontRate[c] * (1 - p.sunConv[j]) * edge) * Math.exp(0.5 * sc * sc);
                     // Lift where the wind blows up rising ground (1/s per unit of column water: upslope speed over the
                     // vapour scale height, times the share that rains out). Orographic rain falls in storms, so the wind
                     // is taken at the storms' speed as well as the mean's — the mean wind's direction, √(U² + (s·σL)²).

@@ -328,6 +328,19 @@ de hoje, porém, só ganham alguns pontos e quase sempre molhando tudo. Os padr�
 
 Nenhum valor padrão mudou.
 
+## Item 2, primeira parte (09/11): as frentes de inverno
+
+Ver [`WINTER_FRONTS_20261109.md`](WINTER_FRONTS_20261109.md).
+
+| | antes | depois |
+|---|---:|---:|
+| Köppen da Terra, exato | 49,5 % | 50,2 % |
+| Kottek | 0,7300 | 0,7311 |
+| erro de aparência dos mundos | 18,5 pt | 17,3 pt |
+| erro de aparência da Terra | 4,4 pt | 5,1 pt |
+
+Falta o mediterrâneo dos mundos: a baixa térmica do verão chega às costas oeste. É a segunda parte (a circulação).
+
 ## Reprodução
 
 ```bash

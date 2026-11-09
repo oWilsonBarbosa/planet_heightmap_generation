@@ -342,6 +342,15 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
         - ajustados juntos, 18,4 → 15,4, com a Terra perdendo 0,4 ponto de Köppen;
         - sem proteger a aparência da Terra, 18,4 → 13,1, apagando as sombras de chuva.
       - Nada foi adotado. Os padrões precisam dos itens 2 e 3.
+    - **Item 2, primeira parte, feita em 09/11** (`docs/WINTER_FRONTS_20261109.md`): frentes sobre o ar frio na estação
+      fria (`RAIN_FRONT_RATE` 2, `RAIN_FRONT_SMOOTH_KM` 600, `RAIN_FRONT_RATE_HPA` 2).
+      - **Terra:** Köppen 49,5 → 50,2 % (continentes 45,6 → 46,6 %); Kottek 0,7300 → 0,7311; Cw ×1,69 → ×1,54;
+        inverno do sudeste dos EUA 27 → 50 mm (real 117).
+      - **Mundos:** erro de aparência 18,5 → 17,3 pontos.
+      - **Custo:** a aparência da Terra 4,4 → 5,1 pontos, acima da salvaguarda de 0,5. Foi adotada porque as checagens
+        do CLAUDE.md melhoram.
+      - **Falta:** o mediterrâneo dos mundos. A baixa térmica chega às costas oeste no verão (−1,2 a −2,2 hPa contra a
+        média do paralelo; Terra −0,1). É a circulação, a segunda parte.
     - **Decidido em 09/11 (0r063N):** o cânone do `main` do 0r063N migra para o mundo novo (atlas, gazetteers,
       documentos, skill), depois dos itens 2 e 3 e de uma exportação nova. O inventário e a ordem estão no `HANDOFF.md`
       do 0r063N; `tools/stats/compare_june.py` de lá mede a distância ao mundo de junho.
