@@ -342,6 +342,9 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
         - ajustados juntos, 18,4 → 15,4, com a Terra perdendo 0,4 ponto de Köppen;
         - sem proteger a aparência da Terra, 18,4 → 13,1, apagando as sombras de chuva.
       - Nada foi adotado. Os padrões precisam dos itens 2 e 3.
+    - **Decidido em 09/11 (0r063N):** o cânone do `main` do 0r063N migra para o mundo novo (atlas, gazetteers,
+      documentos, skill), depois dos itens 2 e 3 e de uma exportação nova. O inventário e a ordem estão no `HANDOFF.md`
+      do 0r063N; `tools/stats/compare_june.py` de lá mede a distância ao mundo de junho.
 
 ## Regras de trabalho
 
