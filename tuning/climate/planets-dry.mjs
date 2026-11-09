@@ -4,7 +4,9 @@
  *
  *   arid (B) and desert (BW) share of the ice-free land, and its mean rain (mm/yr) — with Earth observed (Beck) and
  *   Earth simulated beside them; and "by latitude", the arid share Earth's observed land would have if it lay where the
- *   planet's land lies (each |latitude| band's observed arid fraction, weighted by the planet's land there).
+ *   planet's land lies (each |latitude| band's observed arid fraction, weighted by the planet's land there);
+ *   and the glance test (lib/glance.mjs): how unlike Earth's observed map each world looks — arid share, rain forest at
+ *   the equator, arid subtropical and mid-latitude east coasts, Mediterranean west coasts — and its glance error.
  *
  *   node tuning/climate/planets-dry.mjs [--set KEY=value,…] [--only gen-2,evo-12345] [--climate <snapshot>]
  *   node tuning/climate/planets-dry.mjs --screen 12        rank Generate seeds 1…12 by how Earth-like their land is
@@ -19,6 +21,7 @@ import { pathToFileURL } from 'node:url';
 import { elevToHeightKm } from '../../js/color-map.js';
 import { KOPPEN_CLASSES } from '../../v2/js/climate/koppen.js';
 import { GEN_PLANETS, loadGenPlanets, dryness, landStats, placementDistance, v1HeightKm, cellLatDeg, ABS_LAT_BANDS } from './lib/gen-planets.mjs';
+import { pixelToCell, glanceOfCells, glanceError, glanceLine } from './lib/glance.mjs';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 // --climate <a snapshot with v2/js/climate/>: run another version's climate on the same planets (e.g. a `git archive`)
@@ -56,12 +59,14 @@ const B = ABS_LAT_BANDS.length - 1, bandOf = (a) => { let b = 0; while (b < B - 
 const yr = new Float64Array(rg.size);
 for (let m = 0; m < 12; m++) for (let c = 0; c < rg.size; c++) yr[c] += fields.precip[m * rg.size + c];
 const obs = { n: 0, b: 0, bw: 0, p: 0, pn: 0 }, bandN = new Float64Array(B), bandB = new Float64Array(B);
+const truth = new Uint8Array(n);
 {
     const lon = new Float32Array(n);
     for (let r = 0; r < n; r++) { const x = earth.xyz[3 * r], z = earth.xyz[3 * r + 2]; lon[r] = Math.atan2(x, z) * 180 / Math.PI; }
     for (let r = 0; r < n; r++) {
         if (!(earth.elevKm[r] > 0)) continue;
         const t = truthAt01(koppen01, lat[r], lon[r]); if (!t) continue;
+        truth[r] = t;
         const code = KOPPEN_CLASSES[t].code; if (code === 'EF') continue;
         obs.n++; const b = bandOf(Math.abs(lat[r])); bandN[b]++;
         if (code[0] === 'B') { obs.b++; bandB[b]++; if (code[1] === 'W') obs.bw++; }
@@ -85,10 +90,22 @@ row('Earth observed (Beck)', earthObs, byLatitudeObs());
 function byLatitudeObs() { let s = 0; for (let b = 0; b < B; b++) s += bandN[b] / obs.n * bandArid[b]; return s; }
 const resE = planetClimate({ xyz: earth.xyz, elevKm: earth.elevKm, axes: earth.axes });
 row('Earth simulated', dryness(resE), byLatitude(resE, earth.xyz, earth.axes));
+// the glance test's target: Earth's observed map (Beck; the model's class where Beck has none), drawn on the same land
+const earthPix = pixelToCell(earth.xyz, earth.axes), obsCls = new Uint8Array(n);
+for (let r = 0; r < n; r++) obsCls[r] = resE.cell.koppen[r] ? (truth[r] || resE.cell.koppen[r]) : 0;
+const glanceRef = glanceOfCells(obsCls, earthPix);
+const glanceRow = (res, pix) => {
+    const m = glanceOfCells(res.cell.koppen, pix), e = glanceError(m, glanceRef);
+    console.log(`  ${''.padEnd(36)} glance error ${(100 * e.err).toFixed(1).padStart(4)} pt: ${glanceLine(m, glanceRef)}`);
+    return e.err;
+};
+console.log(`  ${''.padEnd(36)} (glance, %: the world's value, Earth observed's in brackets — lib/glance.mjs)`);
+glanceRow(resE, earthPix);
 
 const only = arg('--only', null)?.split(',') ?? null;
 const planets = await loadGenPlanets({ only });
 let group = null;
+const errs = [];
 for (const p of planets) {
     const g = GEN_PLANETS.find(q => q.key === p.key).group;
     if (g !== group) { group = g; console.log(g); }
@@ -97,4 +114,6 @@ for (const p of planets) {
     const s = landStats(p.xyz, p.elevKm, p.axes);
     row(p.label, dryness(res), byLatitude(res, p.xyz, p.axes),
         `   land ${pc(s.landFrac)}, unlike Earth's placement ${pc(placementDistance(s, earthLand).tv)} (${(performance.now() - t0).toFixed(0)} ms)`);
+    if (g !== 'Test planets') errs.push(glanceRow(res, pixelToCell(p.xyz, p.axes)));
 }
+if (errs.length) console.log(`The worlds' mean glance error (Generate and Evolution): ${(100 * errs.reduce((a, b) => a + b, 0) / errs.length).toFixed(1)} pt`);

@@ -11,7 +11,11 @@
  *
  * Köppen is scored per terrain cell against Beck's 0.1° map, per continent (each weighted equally); the tune also
  * counts the recall of the rarer regimes (Cs, Cw, Am, Dw; REGIME_WEIGHT) and, if asked, the cold land's rain
- * (COLD_RAIN_WEIGHT; Köppen barely sees it — tundra and taiga stay so however wet). Guardrails, on the 1° grid: land
+ * (COLD_RAIN_WEIGHT; Köppen barely sees it — tundra and taiga stay so however wet) and the generated worlds' glance error
+ * (GLANCE_WEIGHT; lib/glance.mjs — how unlike Earth's observed map they look: arid share, rain forest at the equator,
+ * arid east coasts, Mediterranean west coasts). The tune turns down a step that leaves a generated planet more than a
+ * point more arid, or the worlds' mean glance error more than PLANET_GLANCE worse, or Earth's own glance error more
+ * than EARTH_GLANCE worse (wetting everything flatters the dry worlds and over-wets Earth). Guardrails, on the 1° grid: land
  * temperature per continent (Beck), rain per continent (Beck) and ocean basin (GPCP), sea temperature (OISST), and the
  * circulation's pressure pattern and wind direction (NCEP). Earth is a check, not the target: the tune may move a
  * setting only within its literature range. Also printed: the costliest confusions, and the Mediterranean-climate
@@ -39,7 +43,8 @@ import { PARAMS, PARAMS_DEFAULTS, PARAM_PRIORS, setParams, resetParams } from '.
 import { TEST_PLANETS, buildTestPlanet } from '../../v2/js/climate/test-planets.js';
 import { KOPPEN_CLASSES } from '../../v2/js/climate/koppen.js';
 import { planetClimate } from '../../v2/js/climate/climate.js';
-import { loadGenPlanets, dryness } from './lib/gen-planets.mjs';
+import { GEN_PLANETS, TEST, loadGenPlanets, dryness } from './lib/gen-planets.mjs';
+import { pixelToCell, rasterize, glanceMetrics, glanceError, glanceOfCells, glanceLine } from './lib/glance.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, '..', 'results', 'climate');
@@ -71,6 +76,13 @@ function earthAt(N) {
 const E160 = earthAt(160000);
 const landC = new Uint8Array(E160.n); for (let r = 0; r < E160.n; r++) landC[r] = E160.elevKm[r] > 0 ? 1 : 0;
 const surface = aggregateSurface(grid, E160.lat, E160.lon, E160.elevKm, landC);
+// the glance test (lib/glance.mjs): Earth's picture, and its observed map (Beck; the model's class where Beck has none)
+const E160pix = pixelToCell(E160.xyz, 'y-up');
+const earthGlance = (koppen) => {
+    const obsCls = new Uint8Array(E160.n);
+    for (let r = 0; r < E160.n; r++) obsCls[r] = koppen[r] ? (E160.truth[r] || koppen[r]) : 0;
+    return { sim: glanceOfCells(koppen, E160pix), obs: glanceOfCells(obsCls, E160pix) };
+};
 
 // ── Masks on the 1° grid ──
 const landMask = Object.fromEntries(TUNED_CONTINENTS.map(k => [k, new Uint8Array(G)]));
@@ -157,34 +169,54 @@ function circulationScore(C) {
 const TUNED = (process.env.TUNE_KEYS ?? 'RAIN_COLUMN_LOCAL,RAIN_STABILITY,RAIN_STORM_RH,RAIN_WIND_DIV_MOIST,RAIN_SOIL_MM,TEMP_INVERSION_C').split(',');
 const REGIME_WEIGHT = +(process.env.REGIME_WEIGHT ?? 0.25);
 const COLD_RAIN_WEIGHT = +(process.env.COLD_RAIN_WEIGHT ?? 0);       // the cold land's rain error in the objective too
+// the generated worlds' mean glance error (a share: 0.01 = 1 point) in the objective too — every trial then runs the
+// planets, ~10× Earth's cost; 0 = only a guardrail, checked on the steps Earth wants
+const GLANCE_WEIGHT = +(process.env.GLANCE_WEIGHT ?? 0);
 const PRIOR_WEIGHT = 0.02, WORSEN_NEAR = 0.01, GUARD ={ temperature: 0.15, rain: 0.04, sst: 0.15, pressure: 0.3, wind45: 0.02 };
 // Generated planets must not dry out: fitting Earth alone once dried the worlds the app makes. Each planet's arid share
 // (ice-free land) may rise at most PLANET_ARID and their mean at most PLANET_ARID_MEAN, and the planets' mean land rain
 // fall at most PLANET_RAIN (a fraction). GEN_KEYS=… picks the planets (lib/gen-planets.mjs; default all).
-const PLANET_ARID = 0.01, PLANET_ARID_MEAN = 0.003, PLANET_RAIN = 0.03;
+// And they must not look less like Earth: the mean glance error of the worlds the app makes (Generate and Evolution; the
+// synthetic test planets have no Earth to look like) may rise at most PLANET_GLANCE.
+const PLANET_ARID = 0.01, PLANET_ARID_MEAN = 0.003, PLANET_RAIN = 0.03, PLANET_GLANCE = 0.005, EARTH_GLANCE = 0.005;
 let tuneLog = null;
 if (TUNE) {
     const genPlanets = await loadGenPlanets({ only: process.env.GEN_KEYS?.split(',') ?? null });
-    const genDry = () => genPlanets.map(p => dryness(planetClimate({ xyz: p.xyz, elevKm: p.elevKm, axes: p.axes })));
-    const meanOf = (d, k) => d.reduce((s, x) => s + x[k], 0) / d.length;
-    const dry0 = genDry();
+    for (const p of genPlanets) if (GEN_PLANETS.find(q => q.key === p.key)?.group !== TEST) p.pix = pixelToCell(p.xyz, p.axes);
+    let glanceRef = null;                                   // Earth's observed glance, from the first evaluation
+    const genDry = () => genPlanets.map(p => {
+        const res = planetClimate({ xyz: p.xyz, elevKm: p.elevKm, axes: p.axes });
+        return { ...dryness(res), glance: p.pix ? glanceError(glanceOfCells(res.cell.koppen, p.pix), glanceRef).err : NaN };
+    });
+    const meanOf = (d, k) => { const v = d.map(x => x[k]).filter(Number.isFinite); return v.reduce((s, x) => s + x, 0) / v.length; };
     const okPlanets = (d) => d.every((x, i) => x.aridShare <= dry0[i].aridShare + PLANET_ARID)
-        && meanOf(d, 'aridShare') <= meanOf(dry0, 'aridShare') + PLANET_ARID_MEAN && meanOf(d, 'rainMm') >= (1 - PLANET_RAIN) * meanOf(dry0, 'rainMm');
-    const planetLine = (d) => `planets arid ${pc(meanOf(d, 'aridShare'))} (${d.map(x => (100 * x.aridShare).toFixed(0)).join(' ')}), rain ${meanOf(d, 'rainMm').toFixed(0)} mm`;
-    let dryBest = dry0, planetVetoes = 0;
+        && meanOf(d, 'aridShare') <= meanOf(dry0, 'aridShare') + PLANET_ARID_MEAN && meanOf(d, 'rainMm') >= (1 - PLANET_RAIN) * meanOf(dry0, 'rainMm')
+        && meanOf(d, 'glance') <= meanOf(dry0, 'glance') + PLANET_GLANCE;
+    const planetLine = (d) => `planets arid ${pc(meanOf(d, 'aridShare'))} (${d.map(x => (100 * x.aridShare).toFixed(0)).join(' ')}), rain ${meanOf(d, 'rainMm').toFixed(0)} mm, `
+        + `worlds' glance error ${f1(100 * meanOf(d, 'glance'))} pt`;
+    let dry0 = null, dryBest = null, planetVetoes = 0;
     let best = { ...PARAMS_DEFAULTS, ...OVERRIDES };
     const prior = (p) => { let s = 0; for (const k of TUNED) { const pr = PARAM_PRIORS[k]; if (pr) s += ((p[k] - pr.value) / (pr.max - pr.min)) ** 2; } return PRIOR_WEIGHT * s; };
     // the rarer regimes count too (Cs, Cw, Am, Dw — as V1's tuner counted macro-F1): big classes must not drown them
     const regimeMean = (e) => ['Cs (Mediterranean)', 'Cw (dry-winter temperate)', 'Am (tropical monsoon)', 'Dw (dry-winter continental)'].reduce((s, k) => s + (e.regimes[k].recall || 0), 0) / 4;
     // mostly the near match (a climate like the real one is what reads as right), the exact match second
-    const ev = (p) => { setParams(p); const e = evaluate(); return { e, total: -2 * e.meanContNear - e.meanCont - REGIME_WEIGHT * regimeMean(e) + COLD_RAIN_WEIGHT * e.guard.cold.err + prior(p) }; };
+    const ev = (p) => {
+        setParams(p); const e = evaluate();
+        glanceRef ??= earthGlance(e.res.cell.koppen).obs;
+        e.glance = glanceError(glanceOfCells(e.res.cell.koppen, E160pix), glanceRef).err;
+        const d = GLANCE_WEIGHT > 0 ? genDry() : null;
+        return { e, d, total: -2 * e.meanContNear - e.meanCont - REGIME_WEIGHT * regimeMean(e) + COLD_RAIN_WEIGHT * e.guard.cold.err
+            + (d ? GLANCE_WEIGHT * meanOf(d, 'glance') : 0) + prior(p) };
+    };
     let bestE = ev(best);
-    const start = { ...bestE.e.perContNear }, g0 = guardSummary(bestE.e.guard);
+    dry0 = bestE.d ?? genDry(); dryBest = dry0;
+    const start = { ...bestE.e.perContNear }, g0 = guardSummary(bestE.e.guard), glance0 = bestE.e.glance;
     const okGuard = (e) => { const g = guardSummary(e.guard); return g.temperature <= g0.temperature + GUARD.temperature && g.rain <= g0.rain + GUARD.rain && g.sst <= g0.sst + GUARD.sst
-        && g.pressure <= g0.pressure + GUARD.pressure && g.wind45 >= g0.wind45 - GUARD.wind45; };
+        && g.pressure <= g0.pressure + GUARD.pressure && g.wind45 >= g0.wind45 - GUARD.wind45 && e.glance <= glance0 + EARTH_GLANCE; };
     console.log(`Köppen-level tune of ${TUNED.join(', ')} (near match, continents equal; none > ${100 * WORSEN_NEAR} pt worse; stage guardrails; `
-        + `${genPlanets.length} generated planets: none > ${100 * PLANET_ARID} pt more arid, their mean > ${100 * PLANET_ARID_MEAN} pt, rain down < ${100 * PLANET_RAIN} %).`);
-    const scoreLine = (e) => `Köppen ${pc(e.exact)} exact / ${pc(e.near)} near, continents ${pc(e.meanCont)} / ${pc(e.meanContNear)}, cold land's rain ×${f2(e.guard.cold.ratio)}`;
+        + `${genPlanets.length} generated planets: none > ${100 * PLANET_ARID} pt more arid, their mean > ${100 * PLANET_ARID_MEAN} pt, rain down < ${100 * PLANET_RAIN} %, `
+        + `the worlds' glance error up < ${100 * PLANET_GLANCE} pt; Earth's < ${100 * EARTH_GLANCE} pt${GLANCE_WEIGHT > 0 ? `; the worlds' glance error in the objective ×${GLANCE_WEIGHT}` : ''}).`);
+    const scoreLine = (e) => `Köppen ${pc(e.exact)} exact / ${pc(e.near)} near, continents ${pc(e.meanCont)} / ${pc(e.meanContNear)}, cold land's rain ×${f2(e.guard.cold.ratio)}, Earth's glance error ${f1(100 * e.glance)} pt`;
     console.log(`  start: ${scoreLine(bestE.e)}; ${planetLine(dry0)}`);
     let step = 0.25;
     for (let round = 0; round < 4; round++) {
@@ -196,7 +228,7 @@ if (TUNE) {
                 if (trial[k] === best[k]) continue;
                 const t = ev(trial);
                 if (!(t.total < bestE.total - 1e-4 && TUNED_CONTINENTS.every(c => t.e.perContNear[c] >= start[c] - WORSEN_NEAR) && okGuard(t.e))) continue;
-                const d = genDry();                         // only for a step Earth would take (the planets cost ~10× Earth)
+                const d = t.d ?? genDry();                  // only for a step Earth would take (the planets cost ~10× Earth)
                 if (!okPlanets(d)) { planetVetoes++; console.log(`    ${k} ${dir > 0 ? '+' : '−'}: Earth ${scoreLine(t.e)} but vetoed — ${planetLine(d)}`); continue; }
                 best = trial; bestE = t; dryBest = d; improved = true;
                 console.log(`    ${k} → ${+(+trial[k]).toPrecision(3)}: ${scoreLine(t.e)}; ${planetLine(d)}`);
@@ -206,7 +238,7 @@ if (TUNE) {
         console.log(`  round ${round + 1} (step ${(100 * step).toFixed(1)} %): ${scoreLine(bestE.e)}; ${planetLine(dryBest)}`);
         if (!improved) step /= 2;
     }
-    if (planetVetoes) console.log(`  ${planetVetoes} step(s) that Earth wanted were vetoed for drying the generated planets`);
+    if (planetVetoes) console.log(`  ${planetVetoes} step(s) that Earth wanted were vetoed for drying the generated planets or making them look less like Earth`);
     tuneLog = { params: Object.fromEntries(TUNED.map(k => [k, best[k]])), exact: bestE.e.exact, near: bestE.e.near, meanCont: bestE.e.meanCont, meanContNear: bestE.e.meanContNear,
         planets: genPlanets.map((p, i) => ({ key: p.key, start: dry0[i], tuned: dryBest[i] })) };
     setParams(best);
@@ -224,6 +256,8 @@ console.log(`  Köppen vs Beck: ${pc(main.exact)} of land exact, ${pc(main.near)
 console.log('  per continent, exact / near: ' + TUNED_CONTINENTS.map(k => `${k} ${pc(main.perCont[k])} / ${pc(main.perContNear[k])}`).join(', '));
 console.log('  regimes (recall, area new ÷ real): ' + Object.entries(main.regimes).map(([k, r]) => `${k.split(' ')[0]} ${pc(r.recall)} ×${f2(r.areaRatio)}`).join(', '));
 console.log(`  cold land's rain (≥ 55° N, Greenland aside): ×${f2(main.guard.cold.ratio)} of Beck's, monthly log error ${f2(main.guard.cold.err)}`);
+const glance = earthGlance(main.res.cell.koppen), glanceErr = glanceError(glance.sim, glance.obs).err;
+console.log(`  glance (lib/glance.mjs; Beck's in brackets, %): ${glanceLine(glance.sim, glance.obs)}; error ${f1(100 * glanceErr)} pt`);
 console.log(`  guardrails: land temperature ${f2(g.temperature)} °C (${f2(gn.temperature)} without clouds), rain ${f2(g.rain)} (${f2(gn.rain)}), sea temperature ${f2(g.sst)} °C (${f2(gn.sst)}), pressure ${f2(g.pressure)} hPa, wind within 45° ${pc(g.wind45)}`);
 const big = Object.entries(main.cmp.perClass).filter(([, p]) => p.truthArea > 0.02).sort((a, b) => b[1].truthArea - a[1].truthArea);
 console.log('  largest classes (real share → new share, recall): ' + big.map(([k, p]) => `${k} ${(100 * p.truthArea).toFixed(0)}→${(100 * p.simArea).toFixed(0)} % (${(100 * p.recall).toFixed(0)})`).join(', '));
@@ -288,7 +322,8 @@ const results = {
     earth: { ms: main.ms, timing: main.res.timing, exact: main.exact, near: main.near, major: main.major, macroF1: main.macroF1, perCont: main.perCont, meanCont: main.meanCont,
         perContNear: main.perContNear, meanContNear: main.meanContNear,
         regimes: Object.fromEntries(Object.entries(main.regimes).map(([k, r]) => [k, { recall: r.recall, areaRatio: r.areaRatio }])), guard: main.guard,
-        withoutClouds: { exact: noClouds.exact, meanCont: noClouds.meanCont, guard: noClouds.guard } },
+        withoutClouds: { exact: noClouds.exact, meanCont: noClouds.meanCont, guard: noClouds.guard },
+        glance: { sim: glance.sim.values, obs: glance.obs.values, error: glanceErr } },
     drift, planets, gate,
 };
 fs.mkdirSync(OUT_DIR, { recursive: true });

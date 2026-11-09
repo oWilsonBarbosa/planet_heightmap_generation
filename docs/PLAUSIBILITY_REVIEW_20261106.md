@@ -228,6 +228,106 @@ Já está bom e deve ser protegido:
 Feitos 2 e 3, o supercontinente deve ser medido de novo. Se o equador ainda for deserto, decidir se um piso de chuva
 equatorial vale a física.
 
+## Item 1 feito (09/11): o teste do olhar no ajuste
+
+### O que mudou
+
+- **`tuning/climate/lib/glance.mjs`:** o teste do olhar, medido nas classes de cada célula ou num PNG.
+  - **O erro de aparência** é a distância média, em pontos, ao mapa observado da Terra medido do mesmo jeito, em cinco
+    linhas:
+    1. a parte árida;
+    2. a floresta no equador;
+    3. a costa leste subtropical árida;
+    4. a costa leste das latitudes médias árida;
+    5. o Cs nas costas oeste a 30–45°.
+  - Cada linha pesa pela terra que cobre.
+  - **O alvo da parte árida** é a aridez observada da Terra nas latitudes onde fica a terra do mundo: um mundo com mais
+    terra subtropical deve ser mais árido.
+- **`coupled-check.mjs`:**
+  - imprime a linha de aparência da Terra em toda rodada (a Terra simulada tem erro de 4,4 pontos);
+  - no `--tune`, recusa um passo que piore em mais de 0,5 ponto o erro médio dos mundos (Generate e Evolution) ou o da
+    própria Terra;
+  - `GLANCE_WEIGHT=…` põe o erro dos mundos no objetivo. Cada tentativa passa a rodar os mundos, com cerca de 10× o
+    custo.
+- **`planets-dry.mjs`:** mostra a aparência e o erro de cada mundo. No começo, o erro dos mundos vai de 12 a 34 pontos
+  (média 18,5).
+- **`probe-planets.mjs`:** mostra o efeito de cada parâmetro no erro de aparência da Terra e dos mundos.
+- **`glance-check.mjs` e `render-koppen-maps.mjs`:** passam a usar a mesma biblioteca. Os PNGs saem idênticos byte a
+  byte.
+
+### O que os parâmetros atuais conseguem
+
+**Sondagem dos 67 parâmetros de chuva e circulação, um por vez, a ±¼ da faixa.** Mundos: sementes 2, 6 e 10 e Evolution
+202.
+
+- Nenhum parâmetro tira mais de 4,1 dos 18,9 pontos.
+- Os que mais tiram molham tudo, e deixam pior a aparência da própria Terra:
+
+  | parâmetro | mundos | Terra | Köppen da Terra (continentes) |
+  |---|---:|---:|---:|
+  | `RAIN_SURFACE_RH` | −4,1 pt | +2,6 pt | −1,1 |
+  | `RAIN_EVAP_COEFF` | −3,6 pt | +1,8 pt | −0,8 |
+  | `CIRC_OCEAN_HIGH_HPA` | −2,9 pt | +1,1 pt | −0,4 |
+
+- Só dois melhoram os dois lados:
+
+  | parâmetro | mundos | Terra | Köppen da Terra (continentes) |
+  |---|---:|---:|---:|
+  | `RAIN_SOIL_MM` 87,5 → 150 (o valor da literatura) | −1,1 pt | −0,2 pt | −0,1 |
+  | `CIRC_TURN_OCEAN_DEG` 12,5 → 10 | −1,3 pt | −1,2 pt | −0,4 |
+
+**Ajuste 1, com `GLANCE_WEIGHT=1` e sem a salvaguarda da aparência da Terra** (seis parâmetros, 11 mundos):
+
+| | antes | depois |
+|---|---:|---:|
+| erro de aparência dos mundos | 18,4 pt | 13,1 pt |
+| Köppen da Terra, exato / próximo | 49,5 / 86,6 % | 49,9 / 86,9 % |
+| erro de aparência da Terra | 4,4 pt | 5,4 pt |
+| floresta no equador da Terra (real 52 %) | 47 % | 58 % |
+| chuva do extremo norte | ×1,32 | ×1,40 |
+| vento dentro de 45° | 78,5 % | 76,9 % |
+| Cw, área ÷ real | ×1,69 | ×1,72 |
+| Dw, área ÷ real | ×1,41 | ×1,52 |
+
+- O ajuste levou as sombras de chuva ao mínimo da faixa (`RAIN_LEE_PER_KM` 1 → 0,3) e a chuva de frente a 22,5 mm/mês.
+- Ele "conserta" as muralhas do terreno apagando a sombra de chuva, justamente onde a Terra já é úmida demais (a
+  Patagônia a sotavento chove ×2,15).
+- Daí veio a salvaguarda da aparência da Terra.
+
+**Ajuste 2, com a aparência da Terra protegida, sem as sombras de chuva e com a chuva do extremo norte no objetivo
+(`COLD_RAIN_WEIGHT=1`):**
+
+| | antes | depois |
+|---|---:|---:|
+| erro de aparência dos mundos | 18,4 pt | 15,4 pt |
+| erro de aparência da Terra | 4,4 pt | 4,9 pt |
+| Köppen da Terra, exato / próximo | 49,5 / 86,6 % | 49,1 / 86,3 % |
+| … continentes | 45,6 / 85,9 % | 45,4 / 85,7 % |
+| pressão | 3,08 hPa | 3,15 hPa |
+| Cw, área ÷ real | ×1,69 | ×1,80 |
+
+- Valores encontrados:
+  - `RAIN_SOIL_MM` 150;
+  - `CIRC_MONSOON_HPA_PER_K` 1,38;
+  - `RAIN_FRONT_MM` 19,4;
+  - `RAIN_STORM_RH` 0,326.
+- Os mundos ganham 3 pontos, mas a Terra perde. O CLAUDE.md não deixa o `coupled-check` regredir, então nada foi
+  adotado.
+- Com `GLANCE_WEIGHT=1`, 1 ponto de aparência dos mundos vale tanto quanto meio ponto do Köppen próximo da Terra. Um
+  peso menor faz o ajuste trocar menos.
+
+### Conclusão
+
+O teste do olhar agora está no ajuste e impede que um conserto do clima piore os mundos sem ninguém ver. Os parâmetros
+de hoje, porém, só ganham alguns pontos e quase sempre molhando tudo. Os padrões que enganam o olho precisam dos itens
+2 e 3:
+
+- o inverno seco das costas leste;
+- a falta de mediterrâneo;
+- a estação seca do equador.
+
+Nenhum valor padrão mudou.
+
 ## Reprodução
 
 ```bash

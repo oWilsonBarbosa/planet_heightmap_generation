@@ -330,6 +330,18 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
       4. alturas da Terra como opção do heightmap exportado;
       5. margens passivas no Generate, que precisam de decisão do dono porque mexem no terreno e nas placas;
       6. pausar o ajuste fino da Terra polar (item 10).
+    - **Item 1 feito em 09/11** (`tuning/climate/lib/glance.mjs`):
+      - **O que está no ajuste agora:**
+        - o erro de aparência dos mundos e o da Terra são salvaguardas do `coupled-check --tune`: no máximo +0,5 ponto
+          cada;
+        - `GLANCE_WEIGHT` põe o erro dos mundos no objetivo;
+        - `planets-dry.mjs` e `probe-planets.mjs` mostram os dois erros.
+      - **Ponto de partida:** Terra 4,4 pontos; mundos 18,5 em média (12–34).
+      - **O que os parâmetros de hoje dão:**
+        - um por vez, até 4 pontos, molhando tudo;
+        - ajustados juntos, 18,4 → 15,4, com a Terra perdendo 0,4 ponto de Köppen;
+        - sem proteger a aparência da Terra, 18,4 → 13,1, apagando as sombras de chuva.
+      - Nada foi adotado. Os padrões precisam dos itens 2 e 3.
 
 ## Regras de trabalho
 

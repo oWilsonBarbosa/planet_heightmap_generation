@@ -44,9 +44,13 @@ node tuning/climate/evaluate.mjs --maps
 node tuning/climate/coupled-check.mjs --quick
 
 # Tune: the Köppen-level couplings, each within its literature range (PARAM_PRIORS), no continent worse,
-# every stage's score a guardrail; it writes the values to tuning/results/climate/coupled-tuned.json —
-# copy them into PARAMS_DEFAULTS in v2/js/climate/config.js (then review the diff)
+# every stage's score a guardrail, no generated world drier or less Earth-like to the eye; it writes the values
+# to tuning/results/climate/coupled-tuned.json — copy them into PARAMS_DEFAULTS in v2/js/climate/config.js
+# (then review the diff). GLANCE_WEIGHT=1 also scores the worlds' glance error (slower: every trial runs them)
 node tuning/climate/coupled-check.mjs --tune
+
+# The worlds the app makes: their dryness and the glance test (how unlike Earth's observed map they look)
+node tuning/climate/planets-dry.mjs
 ```
 
 (The old coordinate-descent optimizer — `optimize.mjs`, `param-space.mjs`, `apply-params.mjs` — tuned the old
@@ -135,20 +139,26 @@ node tuning/climate/coupled-check.mjs [--tune] [--quick]  # Phase 6: every stage
                                                 #   near match (TUNE_KEYS=… to choose), vetoing any step that dries the
                                                 #   generated planets (GEN_KEYS=… to choose them); also the cold land's
                                                 #   rain (≥ 55° N) against Beck's, which Köppen barely sees
-                                                #   (COLD_RAIN_WEIGHT=… counts it in the tune)
+                                                #   (COLD_RAIN_WEIGHT=… counts it in the tune); Earth's glance line;
+                                                #   the tune also vetoes a step that raises the generated worlds' mean
+                                                #   glance error > 0.5 pt, or Earth's own > 0.5 pt (GLANCE_WEIGHT=…
+                                                #   counts the worlds' in the objective)
 node tuning/climate/planets-dry.mjs [--set …] [--climate <snapshot>]  # the generated planets' arid share and rain vs Earth
-                                                #   observed and vs what their land's latitudes predict; --screen N
+                                                #   observed and vs what their land's latitudes predict, and each world's
+                                                #   glance test and error (lib/glance.mjs); --screen N
                                                 #   ranks Generate seeds by how Earth-like their land is
 node tuning/climate/render-koppen-maps.mjs --tag <name> [--set …]   # Köppen PNGs of Earth (and observed) and the generated
                                                 #   planets → tuning/results/climate/maps/<name>/, to compare by eye
-node tuning/climate/glance-check.mjs --tag <name>  # the glance test on those maps: arid share, rain forest at the equator,
-                                                #   subtropical desert vs humid east coast, Mediterranean west coasts —
-                                                #   each map against Earth observed (docs/PLAUSIBILITY_REVIEW_20261106.md)
+node tuning/climate/glance-check.mjs --tag <name>  # the glance test on those maps (lib/glance.mjs): arid share, rain forest
+                                                #   at the equator, subtropical desert vs humid east coast, Mediterranean
+                                                #   west coasts, and each map's glance error against Earth observed
+                                                #   (docs/PLAUSIBILITY_REVIEW_20261106.md)
 node tuning/climate/diag-rain-seasons.mjs [--planets …|none]  # Earth's winter and summer rain where they decide the class
                                                 #   (Cfa east coasts, Cs coasts, wet tropics) vs Beck; the worlds' equatorial
                                                 #   land by distance from the sea, and their coasts walled by mountains
 node tuning/climate/probe-planets.mjs [--prefix RAIN_,CIRC_]  # each setting ±¼ of its range: Earth's score and aridity vs
-                                                #   the generated planets' (which settings dry the planets)
+                                                #   the generated planets' (which settings dry the planets), and the
+                                                #   glance error of both (which make the worlds look more like Earth)
 node tuning/climate/profile-climate.mjs         # every stage call timed
 node tuning/climate/hash-climate.mjs            # fingerprint of every stage's output (exact speed-ups keep it)
 node tuning/climate/evolution-check.mjs         # Phase 7: the climate on Evolution worlds (V2 history → terrain, z north)
@@ -221,7 +231,14 @@ expects on synthetic test planets (`v2/js/climate/test-planets.js`).
 
 The worlds the app makes are guarded too (`lib/gen-planets.mjs`): Generate planets whose land is Earth-like in amount
 and latitude, ones that are not (one continent, much or little land), stock Evolution worlds and the test planets. The
-tune turns down any step that leaves one of them more than 1 point more arid. They come out drier than Earth (about 38–43 %
+tune turns down any step that leaves one of them more than 1 point more arid, or that makes the Generate and Evolution
+worlds look less like Earth: their mean **glance error** (`lib/glance.mjs`) may rise at most 0.5 point, and so may
+Earth's own (wetting everything flatters the dry worlds while it over-wets Earth: a first tune with the worlds' glance in
+the objective took them from 18.4 to 13.1 points and Earth from 4.4 to 5.4, its equator 58 % rain forest against 52 %). The glance error
+is the mean distance, in points, from Earth's observed map measured the same way, on the five lines that most mislead
+the eye — the arid share (against Earth's observed arid share at the latitudes where the world's land lies), rain forest
+within 10° of the equator, arid subtropical and mid-latitude east coasts, Mediterranean west coasts at 30–45° — each
+counted by how much land it covers. Earth simulated scores 4.4 points; the worlds 12–34 (mean 18.5) in November 2026. They come out drier than Earth (about 38–43 %
 of ice-free land arid against Earth's 31 %) because their continents are walled by mountains — about a third of their
 coast has high ground within 300 km, against 8 % of Earth's — so expect that, not a fault, unless the terrain changes.
 Not all of it is the terrain: the rain also follows the sun too much (winter rain on Earth's subtropical east coasts ¼ of
