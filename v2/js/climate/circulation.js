@@ -167,6 +167,12 @@ export function derivedCirculation() {
                     anom[c] = a * wgt;
                 }
             }
+            // the land's own warmth, for the descent west of it (below)
+            const heatLand = P.CIRC_DESCENT_HPA_PER_K > 0 ? new Float64Array(G) : null;
+            if (heatLand) {
+                for (let c = 0; c < G; c++) heatLand[c] = land[c] * Math.max(0, anom[c]);
+                gaussianSmooth(g, heatLand, new Float64Array(G), P.CIRC_ROSSBY_KM);
+            }
             gaussianSmooth(g, anom, tmp, P.CIRC_ROSSBY_KM);
             // The tropical trough follows each longitude's own warmest latitude (over the sea the warmest water,
             // over a summer continent its heat low — the monsoon trough), smoothed along ~20° of longitude, as far as
@@ -195,10 +201,24 @@ export function derivedCirculation() {
             // oceanic subtropical highs: CIRC_OCEAN_HIGH_HPA per unit of sea share above the latitude's, over a ridge
             // ±OCEAN_HIGH_DEG about each hemisphere's high (cos²)
             const ridge = (lat) => { let r = 0; for (const hi of [hiN, hiS]) { const x = (lat - hi) / OCEAN_HIGH_DEG; if (Math.abs(x) < 1) r += Math.cos(x * Math.PI / 2) ** 2; } return r; };
+            // The monsoon–desert descent (Rodwell & Hoskins 1996): a continent's summer heat low drives sinking air to its
+            // west, over the sea there — the eastern-ocean highs: CIRC_DESCENT_HPA_PER_K per degree of the land's warmth
+            // (its thermal anomaly at the Rossby scale) CIRC_DESCENT_SHIFT_DEG to the east, on the subtropical ridge, over
+            // the sea only (put over land, it fell on the east coast across a narrow ocean). Off by default: it lifts
+            // Earth's Köppen (50.2 → 50.8 %) but wets the summers of Earth's Mediterranean coasts, the onshore marine air
+            // raining (docs/WINTER_FRONTS_20261109.md).
+            const descentP = new Float64Array(G);
+            if (heatLand) {
+                const sh = Math.round(P.CIRC_DESCENT_SHIFT_DEG / g.step);
+                for (let j = 0; j < h; j++) {
+                    const rj = ridge(g.lat[j]);
+                    if (rj > 0) for (let i = 0; i < w; i++) descentP[j * w + i] = P.CIRC_DESCENT_HPA_PER_K * rj * heatLand[j * w + (i + sh) % w] * (1 - land[j * w + i]);
+                }
+            }
             let mean = 0, mw = 0;
             for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
                 const c = j * w + i;
-                p[c] = pz[c] - P.CIRC_THERMAL_HPA_PER_K * anom[c] + P.CIRC_OCEAN_HIGH_HPA * seaDep[c] * ridge(g.lat[j]);
+                p[c] = pz[c] - P.CIRC_THERMAL_HPA_PER_K * anom[c] + P.CIRC_OCEAN_HIGH_HPA * seaDep[c] * ridge(g.lat[j]) + descentP[c];
                 mean += p[c] * cosLat[j]; mw += cosLat[j];
             }
             mean /= mw;

@@ -351,6 +351,10 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
         do CLAUDE.md melhoram.
       - **Falta:** o mediterrâneo dos mundos. A baixa térmica chega às costas oeste no verão (−1,2 a −2,2 hPa contra a
         média do paralelo; Terra −0,1). É a circulação, a segunda parte.
+    - **Item 2, segunda parte (09/11), não adotada:** a subsidência monção-deserto (`CIRC_DESCENT_HPA_PER_K`, desligada).
+      - Sobre o mar, a 2 hPa/K: Köppen 50,2 → 50,8 %, mundos 17,3 → 16,8 pontos.
+      - Mas o mediterrâneo da Terra piora (acerto 23,8 → 17,9 %): o ar marinho empurrado à costa chove sob a subsidência.
+      - O mediterrâneo precisa do estágio de chuva: a camada marinha sob a inversão não chove.
     - **Decidido em 09/11 (0r063N):** o cânone do `main` do 0r063N migra para o mundo novo (atlas, gazetteers,
       documentos, skill), depois dos itens 2 e 3 e de uma exportação nova. O inventário e a ordem estão no `HANDOFF.md`
       do 0r063N; `tools/stats/compare_june.py` de lá mede a distância ao mundo de junho.

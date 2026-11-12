@@ -109,6 +109,10 @@ export const PARAMS_DEFAULTS = Object.freeze({
     CIRC_HEAT_LOW_HOT: 1,       // –          … and over hot, dry land (≥ 35 °C, outside the rainy tropics) × (1 + this): a deep boundary layer
     CIRC_COLD_HIGH_BOOST: 0.685,  // –          … a cold high over very cold land (≤ −25 °C) × (1 + this)
     CIRC_ROSSBY_KM: 812,        // km         scale the pressure responds to heating on (the Rossby radius)
+    CIRC_DESCENT_HPA_PER_K: { value: 1, min: 0, max: 2.5, source: 'Rodwell & Hoskins 1996, 2001: monsoon heating forces descent and a surface high to its west (the Mediterranean and Sahara, the eastern North Pacific and Atlantic highs in summer), of the order of the heat low itself' },
+    CIRC_DESCENT_SHIFT_DEG: { value: 25, min: 15, max: 35, source: 'the descent lies a Rossby-wave half-wavelength west of the heating, ≈ 20–30° of longitude (Rodwell & Hoskins 1996)' },
+    CIRC_DESCENT_HPA_PER_K: 0,  // hPa/K      the monsoon–desert descent: the sea west of a summer heat low higher by this per degree (0 = off) …
+    CIRC_DESCENT_SHIFT_DEG: 25, // °          … the heat low this far east of it
     CIRC_TROUGH_MAX_LAT: 35,    // °          the tropical trough follows each longitude's warmest latitude as far as this (into the
                                 //            summer heat lows: Tibet, the Sahara, Mexico, inland Australia) …
     CIRC_TROUGH_HIGH_DEG: 6,    // °          … and that longitude's subtropical high stands at least this far beyond it (one trough

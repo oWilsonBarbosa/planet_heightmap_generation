@@ -151,6 +151,60 @@ mede cinco linhas agregadas.
 2. **As costas leste ainda secas no inverno:** o sudeste dos EUA com 50 contra 117 mm, o sul do Brasil 30 contra 108, o
    sudeste da China 17 contra 66.
 
+## Segunda parte: a circulação e o mediterrâneo (não adotada)
+
+### O que se mediu
+
+Costas oeste a 30–45° (no máximo 300 km do mar a oeste, pelo menos 800 km de terra a leste):
+
+| | Terra | mundos (sementes 2, 6, 10, Evolution 202) | continente plano de teste |
+|---|---:|---:|---:|
+| verões secos (Cs) | 27 % | 16–23 % | 73 % |
+| pressão na costa contra a média do paralelo, verão | −0,1 hPa | −1,2 a −2,2 hPa | −0,1 hPa |
+| … no mar a oeste | +1,7 hPa | −0,8 a +0,8 hPa | +1,9 hPa |
+| vento para a costa, verão | −0,2 m/s | 1,0–1,4 m/s | 2,4 m/s |
+| água no solo, verão | 6 | 10–13 | 4 |
+
+Nos mundos falta a alta oceânica de verão ao lado da costa. Na latitude do continente quase tudo é mar, e o mar fica
+na média do paralelo. O continente, bem mais quente que essa média, puxa a baixa térmica até o litoral, e o verão se
+sustenta pela reciclagem (evaporação maior que a chuva).
+
+### O que não era a causa
+
+- **A pressão em si:** sem as baixas térmicas (`CIRC_THERMAL_HPA_PER_K` 0), a costa fica neutra, mas os verões ficam
+  mais chuvosos.
+- **As alturas da Terra:** com elas, as costas oeste quase não mudam.
+- **O aquecimento das muralhas costeiras** (o lapso que leva a temperatura ao nível do mar a 3 °C/km): também não; o
+  mundo de costa baixa (semente 10) é o de baixa costeira mais funda.
+- **A alta oceânica no valor da literatura** (`CIRC_OCEAN_HIGH_HPA` 8): piora a costa.
+
+### O que se tentou: a subsidência monção-deserto (Rodwell e Hoskins 1996)
+
+A baixa térmica de verão de um continente força ar descendo a oeste dela, sobre o mar: as altas do leste dos oceanos.
+O modelo responde ao calor só com a baixa, simétrica. Agora há `CIRC_DESCENT_HPA_PER_K` e `CIRC_DESCENT_SHIFT_DEG`
+(desligado; com 0 a circulação é idêntica): o mar a oeste fica mais alto por grau de calor da terra 25° a leste, na
+faixa das altas subtropicais.
+
+| | sem | 2 hPa/K, só sobre o mar |
+|---|---:|---:|
+| Köppen da Terra, exato / próximo | 50,2 / 86,8 % | 50,8 / 86,9 % |
+| … continentes | 46,6 / 86,2 % | 47,2 / 86,2 % |
+| Kottek | 0,7311 | 0,7312 |
+| Cw, área ÷ real | ×1,54 | ×1,40 |
+| **Cs na Terra: acerto / área** | **23,8 % / ×0,67** | **17,9 % / ×0,58** |
+| verão da Califórnia / Chile central (real 6 / 13 mm) | 14 / 44 | 20 / 50 |
+| erro de aparência: Terra / mundos | 5,1 / 17,3 pt | 4,8 / 16,8 pt |
+| Cs nas costas oeste dos mundos (Terra observada 43 %) | 1–46 % | 1–46 %, a maioria +2 a +7 |
+
+- **Sobre a terra também**, a alta caía na costa leste do continente vizinho através de um oceano estreito. As costas
+  leste secavam, os mundos ficavam mais áridos (semente 6, +2 pontos) e o Kottek caía para 0,7283–0,7306.
+- **Só sobre o mar**, quase tudo melhora, menos o alvo. O mediterrâneo da Terra piora: a alta mais forte empurra mais ar
+  marinho para a costa, e o estágio de chuva deixa esse ar chover sob a subsidência.
+
+**Não adotada.** O mediterrâneo precisa do estágio de chuva: a camada marinha sob a inversão de subsidência não chove,
+por úmida que esteja junto ao chão. Com isso no lugar, a subsidência pode valer a pena (ela fica disponível para o
+ajuste).
+
 ## Reprodução
 
 ```bash
@@ -161,4 +215,5 @@ node tuning/climate/diag-rain-seasons.mjs --planets none
 node tuning/climate/evolution-check.mjs
 node tuning/water/earth-rivers.mjs --n 2560000 --climate sim
 node tuning/climate/hash-climate.mjs                  # com RAIN_FRONT_RATE 0, igual ao de antes
+node tuning/climate/coupled-check.mjs --quick --set CIRC_DESCENT_HPA_PER_K=2   # a subsidência monção-deserto
 ```
