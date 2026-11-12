@@ -189,6 +189,7 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_FRONT_SMOOTH_KM: 600,  // km         … the surface temperature's gradient taken over this (Gaussian σ) …
     RAIN_FRONT_RATE_HPA: 2,     // hPa        … faded by e per this much pressure above the latitude's mean (the winter monsoon's highs)
     RAIN_SOIL_MM: 87.5,         // mm         water the soil holds for evaporation in dry months
+    RAIN_ROOT_MAX_MM: 0,        // mm         deep roots in warm climates: up to this much more, sized by the dry season's deficit (0 = off)
     RAIN_MELT_SOAK: 0.5,        // –          share of the melting snow the ground takes in (the rest runs off over the frozen soil)
     RAIN_FROZEN_EVAP: 0.2,      // –          land's evaporation while its ground is frozen, as a share of the thawed rate …
     RAIN_THAW_FROM_C: -2,       // °C         … the ground (the air a month before) thawing from this …
@@ -340,6 +341,7 @@ export const PARAM_PRIORS = Object.freeze({
     RAIN_FRONT_SMOOTH_KM: { value: 600, min: 400, max: 1000, source: 'the width of a frontal zone and its baroclinic band, a few hundred km (the Rossby radius ≈ 1000 km bounds it)' },
     RAIN_FRONT_RATE_HPA: { value: 2, min: 1, max: 4, source: 'fronts steer around blocking and the winter continental highs (the Siberian high keeps northeast China\'s winter dry); a few hPa above the zonal mean' },
     RAIN_SOIL_MM:       { value: 150, min: 50, max: 300, source: 'plant-available soil water capacity ≈ 100–200 mm (e.g. Manabe 1969 bucket: 150 mm)' },
+    RAIN_ROOT_MAX_MM:   { value: 300, min: 0, max: 600, source: 'root zone storage capacity sized by the dry season\'s deficit (Gao et al. 2014); tropical forests draw water from 8 m and deeper through the dry season (Nepstad et al. 1994; Canadell et al. 1996: tropical maximum rooting depths 7–15 m)' },
     RAIN_LAND_CONVECTION: { value: 0.08, min: 0, max: 0.12, source: 'daytime convection over wet land: rain over land peaks in the afternoon and picks up at ≈ 5–10 % lower column humidity than over the sea (Schiro et al. 2016; Bergemann & Jakob 2016); soil-moisture–precipitation coupling in monsoon regions (Koster et al. 2004)' },
     RAIN_MELT_SOAK:     { value: 0.5, min: 0.2, max: 1, source: 'little snowmelt soaks into frozen ground (Woo 1986): the spring flood carries much of the year\'s flow of rivers on frozen soils — the Lena\'s May–June flood about half (Yang et al. 2002)' },
     RAIN_FROZEN_EVAP:   { value: 0.25, min: 0.1, max: 0.5, source: 'eddy-covariance records over boreal forest and tundra: evapotranspiration stays low through the snowmelt and rises only as the soil thaws, weeks later — a few tenths of a millimetre a day against 2–3 in midsummer; no single value' },

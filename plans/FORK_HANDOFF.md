@@ -355,6 +355,12 @@ mares interiores de qualquer tamanho e as bacias fechadas ficam desligados em `F
       - Sobre o mar, a 2 hPa/K: Köppen 50,2 → 50,8 %, mundos 17,3 → 16,8 pontos.
       - Mas o mediterrâneo da Terra piora (acerto 23,8 → 17,9 %): o ar marinho empurrado à costa chove sob a subsidência.
       - O mediterrâneo precisa do estágio de chuva: a camada marinha sob a inversão não chove.
+    - **Item 3 (12/11), não adotado:** raízes profundas nos trópicos (`RAIN_ROOT_MAX_MM`, desligado).
+      - Os mundos ganham floresta no equador (aparência 17,3 → 15,2 pontos com 300 mm).
+      - Na Terra, a água evaporada na estação seca chove no mesmo mês: Aw → Am no cerrado, Am → Af; Köppen 50,2 →
+        49,4 %, Kottek 0,7311 → 0,7263.
+    - **O limite comum aos dois:** a chuva local no mesmo mês ignora a inversão de subsidência. Próximo passo de clima:
+      uma inversão que tampa a chuva onde o ar desce, e então ligar a subsidência e as raízes juntas.
     - **Decidido em 09/11 (0r063N):** o cânone do `main` do 0r063N migra para o mundo novo (atlas, gazetteers,
       documentos, skill), depois dos itens 2 e 3 e de uma exportação nova. O inventário e a ordem estão no `HANDOFF.md`
       do 0r063N; `tools/stats/compare_june.py` de lá mede a distância ao mundo de junho.

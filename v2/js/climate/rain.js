@@ -58,6 +58,7 @@ const STABLE_RELAX_S = 86400;                 // s, time for air to take on the 
 const FRONT_SIGMA_REF = 1 / 86400;            // 1/s, the local Eady rate at which fronts rain at full strength (RAIN_FRONT_RATE)
 const FRONT_COLD_K = 2;                       // K, how much colder than its region the surface air is for fronts to rain at full strength
 const FRONT_AIR_C = [-15, -5];                // °C, fronts fade out in air colder than this (deep in an arctic air mass)
+const ROOT_WARM_C = [18, 22];                 // °C, the year's mean temperature from which deep roots start, and are full (RAIN_ROOT_MAX_MM)
 const CONVECT_SUN_LOW = SOLAR_CONSTANT / 8;   // W/m² daily sunlight (top of the air) below which land does not convect …
 const CONVECT_SUN_FULL = SOLAR_CONSTANT / 4;  // … and above which it does fully (the tropics, the summer)
 const THAW_LAG_MONTHS = 1;                    // the ground's temperature lags the air's by about this
@@ -608,9 +609,28 @@ export function columnWaterRain() {
         if (P_.RAIN_SOIL_MM > 0) {
             const dtM = 12 / K, SEC = SECONDS_PER_MONTH, Smax = P_.RAIN_SOIL_MM;
             const ground = Array.from({ length: K }, () => ({ melt: new Float64Array(G), soil: new Float64Array(G) }));
+            // Deep roots (RAIN_ROOT_MAX_MM, off by default): where the year is warm (ROOT_WARM_C), the root zone also holds
+            // the dry season's water deficit, up to this much more — ecosystems size their root zone to the dry season they
+            // must outlast (Gao et al. 2014) — so a seasonal forest keeps evaporating into the dry season. It wets the
+            // generated worlds' equatorial land toward Earth's, but on Earth the water rains back where it evaporates, in
+            // the same month: the monsoon forests and savannas lose their dry season (Am → Af, Aw → Am) and Earth's Köppen
+            // its share (docs/PLAUSIBILITY_REVIEW_20261106.md, item 3) — the rain stage's local recycling is too efficient for it.
             for (let c = 0; c < G; c++) {
                 if (!(land[c] > 0)) continue;
-                let snow = 0, S = 0.5 * Smax;
+                let SmaxC = Smax;
+                if (P_.RAIN_ROOT_MAX_MM > 0) {
+                    let Ty = 0; for (let k = 0; k < K; k++) Ty += prep[k].Tair[c] / K;
+                    let wt = (Ty - ROOT_WARM_C[0]) / (ROOT_WARM_C[1] - ROOT_WARM_C[0]); wt = wt <= 0 ? 0 : wt >= 1 ? 1 : wt * wt * (3 - 2 * wt);
+                    if (wt > 0) {
+                        let D = 0, Dmax = 0;                                // the dry season's deficit: potential minus rain, summed
+                        for (let turn = 0; turn < 2; turn++) for (let k = 0; k < K; k++) {
+                            D = Math.max(0, D + (prep[k].eLand[c] - results[k].P[c] * (1 - prep[k].snow[c])) * SEC * dtM);
+                            if (D > Dmax) Dmax = D;
+                        }
+                        SmaxC = Smax + wt * Math.min(P_.RAIN_ROOT_MAX_MM, Dmax);
+                    }
+                }
+                let snow = 0, S = 0.5 * SmaxC;
                 for (let turn = 0; turn < 2; turn++) for (let k = 0; k < K; k++) {
                     const p = prep[k], Pm = results[k].P[c] * SEC, Ep = p.eLand[c] * SEC, T = p.Tair[c];
                     snow += Pm * p.snow[c] * dtM;
@@ -622,7 +642,7 @@ export function columnWaterRain() {
                     const input = Pm * (1 - p.snow[c]) + soak / dtM;                       // mm/month
                     if (turn === 1) { ground[k].melt[c] = soak / dtM / SEC; ground[k].soil[c] = S / dtM / SEC; }
                     const et = turcPike(input + S / dtM, Ep);
-                    S = Math.min(Smax, Math.max(0, S + (input - et) * dtM));
+                    S = Math.min(SmaxC, Math.max(0, S + (input - et) * dtM));
                 }
             }
             prof.ground = performance.now() - tq; tq = performance.now();

@@ -348,3 +348,62 @@ node tuning/climate/render-koppen-maps.mjs --tag review-1106 --tests
 node tuning/climate/glance-check.mjs --tag review-1106
 node tuning/climate/diag-rain-seasons.mjs --planets gen-2,gen-6,gen-10,gen-1c,evo-12345,evo-202,test-tropical,test-supercontinent
 ```
+
+## Item 2, segunda parte, e item 3 (09–12/11): não adotados
+
+### A circulação e o mediterrâneo
+
+Ver [`WINTER_FRONTS_20261109.md`](WINTER_FRONTS_20261109.md), "Segunda parte".
+
+- **O que falta nos mundos:** a alta oceânica de verão ao lado das costas oeste a 30–45°. A latitude é quase toda mar,
+  então o mar fica na média do paralelo, e a baixa térmica do continente chega ao litoral.
+- **O que se tentou:** a subsidência monção-deserto (`CIRC_DESCENT_HPA_PER_K`).
+  - Sobe o Köppen da Terra (50,2 → 50,8 %) e melhora a aparência dos mundos (17,3 → 16,8 pontos).
+  - Mas molha os verões dos mediterrâneos da Terra (acerto de Cs 23,8 → 17,9 %).
+- **Ficou desligada.** O mediterrâneo pede que o estágio de chuva não deixe a camada marinha chover sob a inversão de
+  subsidência.
+
+### Item 3: a umidade do solo nos trópicos
+
+`RAIN_ROOT_MAX_MM` (desligado): onde o ano é quente (18–22 °C), a zona das raízes guarda também o déficit da estação
+seca, até esse tanto a mais (Gao et al. 2014).
+
+| `RAIN_ROOT_MAX_MM` | Köppen da Terra | Kottek | aparência: Terra / mundos |
+|---|---:|---:|---:|
+| 0 (padrão) | 50,2 % | 0,7311 | 5,1 / 17,3 pt |
+| 100 | 49,7 % | 0,7301 | 4,1 / 16,1 pt |
+| 300 | 49,4 % | 0,7263 | 5,4 / 15,2 pt |
+| 300, só onde chove o bastante para floresta (1.300–2.000 mm/ano; Hirota et al. 2011) | 49,7 % | 0,7272 | 4,3 / 16,8 pt |
+
+Com 300 mm, nos mundos:
+
+- a floresta no equador sobe: semente 2, 28 → 42 %; semente 10, 17 → 26 %; Evolution 12345, 41 → 54 %;
+- a terra equatorial do interior ganha 100–160 mm por ano e meio mês úmido.
+
+Na Terra:
+
+- **Ganha:** a estação seca do Congo, com o mês mais seco 61 → 94 mm (real 93); a Amazônia oeste, 113 → 138 mm (real
+  157); a Indonésia.
+- **Perde mais do que ganha:** a água evaporada na estação seca chove no mesmo lugar e no mesmo mês, e as monções e
+  savanas perdem a estação seca.
+  - Aw → Am, real Aw: −448 células, quase todas no cerrado brasileiro.
+  - Am → Af, real Am: −242.
+  - BWh → BSh: −179.
+  - O acerto de Am cai de 30 para 22–25 %.
+- Na Terra real, essa água sai com o vento, e a subsidência da estação seca não a deixa chover.
+
+**Não adotado**, porque as duas checagens do CLAUDE.md regridem em todas as doses.
+
+### O que os itens 2 e 3 ensinaram
+
+As duas mudanças que fariam os mundos parecerem a Terra (a subsidência, as raízes) esbarram no mesmo limite do estágio
+de chuva: a água que chega ou que evapora chove ali mesmo, no mesmo mês, sem respeitar a inversão de subsidência.
+
+- Nas costas oeste no verão, isso apaga o mediterrâneo.
+- Nos trópicos na estação seca, apaga a savana.
+
+O próximo passo de clima seria uma inversão de subsidência que tampa a chuva, onde o ar desce (sob as altas e a oeste
+das baixas térmicas), qualquer que seja a umidade junto ao chão. Então ligar a subsidência e as raízes juntas.
+
+O resto da distância dos mundos à Terra está no terreno: as muralhas costeiras (item 5 da lista).
+
