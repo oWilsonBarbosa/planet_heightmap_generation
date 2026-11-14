@@ -16,6 +16,10 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        cells: [20000, 40000]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,14 +29,14 @@ jobs:
         run: npm install --no-save --no-package-lock delaunator
       - name: Syntax check
         run: node --check v2/tools/audit-geography.mjs
-      - name: Run 20K baseline, 3 seeds
-        run: node v2/tools/audit-geography.mjs --cells=20000 --seeds=12345,4242,31337 --until=1200 --every=100 --out=reports/geography-20k
+      - name: Run baseline for three seeds
+        run: node v2/tools/audit-geography.mjs --cells=${{ matrix.cells }} --seeds=12345,4242,31337 --until=1200 --every=100 --out=reports/geography-${{ matrix.cells }}
       - name: Upload metrics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: geography-audit-20k
+          name: geography-audit-${{ matrix.cells }}
           path: |
-            reports/geography-20k.csv
-            reports/geography-20k.json
+            reports/geography-${{ matrix.cells }}.csv
+            reports/geography-${{ matrix.cells }}.json
           if-no-files-found: warn
