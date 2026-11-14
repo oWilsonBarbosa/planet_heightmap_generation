@@ -192,7 +192,9 @@ export function giveToBackground(world, plate, background, cells) {
     for (const c of cells) {
         if (background) {
             plate.toWorld(xyz[3 * c], xyz[3 * c + 1], xyz[3 * c + 2], P);
-            const w = index.nearest(P[0], P[1], P[2]), age = Math.min(plate.crust.formedAt[c], -1);
+            // Preserve the ocean cell's actual formation time when detached ocean returns to the passive background.
+            // Clamping positive times to -1 manufactures pre-history crust, distorting age diagnostics.
+            const w = index.nearest(P[0], P[1], P[2]), age = plate.crust.formedAt[c];
             if (!background.crust.mask[w]) background.crust.create(w, CrustType.OCEAN, age);
             // a rotated raster does not land on every world cell: fill the pinholes beside it that nobody owns
             for (let k = adjOffset[w]; k < adjOffset[w + 1]; k++) { const nb = adjList[k]; if (owner[nb] === plate.id && !background.crust.mask[nb] && !plate.crust.mask[plate.cellAt(index, xyz[3 * nb], xyz[3 * nb + 1], xyz[3 * nb + 2])]) background.crust.create(nb, CrustType.OCEAN, age); }
