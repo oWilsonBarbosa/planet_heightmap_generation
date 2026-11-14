@@ -68,6 +68,12 @@ function measure(f,seed) {
     largestBlockSharePct:c?100*biggest.cells/c:null,
     largestBlockCompactnessProxy:perimeter>0?Math.min(1,4*Math.PI*biggest.cells*cellAreaKm2/perimeter**2):null,
     largestArcGroupMkm2:(ab[0]?.cells??0)*cellAreaKm2/1e6,
+    // Cumulative engine counters: arcMaturedCells is an optional counter introduced by arc-maturation.js.
+    // These are raster-cell operations, not unique crust units; interpret deltas over time.
+    arcMaturedCells:f.budget?.arcMaturedCells??0,
+    marginErodedCells:f.budget?.erodedCells??0,
+    underthrustCells:f.budget?.underthrustCells??0,
+    recycledArcCells:f.budget?.recycledCells??0,
     cycleSharePct:f.cycle?100*f.cycle.share:null, cyclePhase:f.cycle?.phase??''
   };
 }
