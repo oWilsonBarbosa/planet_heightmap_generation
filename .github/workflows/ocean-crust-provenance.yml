@@ -1,0 +1,58 @@
+name: Ocean crust provenance audit
+
+on:
+  push:
+    branches:
+      - audit/tectonic-baseline-20261114
+    paths:
+      - '.github/workflows/ocean-crust-provenance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provenance:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: 20K control, three seeds
+            cells: 20000
+            dose: control
+            suffix: 20k-control
+          - label: 20K both-half, three seeds
+            cells: 20000
+            dose: bothHalf
+            suffix: 20k-bothHalf
+          - label: 40K control, three seeds
+            cells: 40000
+            dose: control
+            suffix: 40k-control
+          - label: 40K both-half, three seeds
+            cells: 40000
+            dose: bothHalf
+            suffix: 40k-bothHalf
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Check syntax
+        run: node --check v2/tools/audit-geography.mjs
+      - name: Simulate ocean provenance
+        run: node v2/tools/audit-geography.mjs --cells=${{ matrix.cells }} --seeds=12345,4242,31337 --until=1200 --every=100 --dose=${{ matrix.dose }} --out=reports/ocean-${{ matrix.suffix }}
+      - name: Upload measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-ocean-${{ matrix.suffix }}
+          path: |
+            reports/ocean-${{ matrix.suffix }}.csv
+            reports/ocean-${{ matrix.suffix }}.json
+          if-no-files-found: warn
