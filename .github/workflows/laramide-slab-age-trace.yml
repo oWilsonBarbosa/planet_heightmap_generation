@@ -1,0 +1,70 @@
+name: Laramide slab age mechanism trace
+
+on:
+  push:
+    branches:
+      - audit/ocean-age-return-20261114
+    paths:
+      - '.github/workflows/laramide-slab-age-trace.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Laramide 40K
+            cells: 40000
+          - label: Laramide 80K
+            cells: 80000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/tectonic-baseline-20261114
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ocean-age-return-20261114
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependency
+        run: |
+          (cd baseline && npm install --no-save --no-package-lock delaunator)
+          (cd candidate && npm install --no-save --no-package-lock delaunator)
+      - name: Run same observation instrument on both engines
+        run: |
+          mkdir -p results
+          cp candidate/v2/tools/audit-slab-kinematics.mjs baseline/v2/tools/audit-slab-kinematics.mjs
+          (cd baseline && node v2/tools/audit-slab-kinematics.mjs --cells=${{ matrix.cells }} --out=../results/baseline)
+          (cd candidate && node v2/tools/audit-slab-kinematics.mjs --cells=${{ matrix.cells }} --out=../results/candidate)
+      - name: Compare age, flat slab state and mountain geometry
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const b=JSON.parse(fs.readFileSync('results/baseline.json','utf8'));
+          const c=JSON.parse(fs.readFileSync('results/candidate.json','utf8'));
+          const fields=['ageP50Myr','qualifyingFraction','flatSlabState','flatSlabKm','laramideAreaMkm2'];
+          const first={};
+          for (const f of fields) {
+            const i=b.rows.findIndex((row,j)=>row[f]!==c.rows[j][f]);
+            first[f]=i<0?null:{timeMyr:b.rows[i].timeMyr,baseline:b.rows[i][f],candidate:c.rows[i][f]};
+          }
+          const report={requestedCells:b.requestedCells,cells:b.cells,first,baselineEvents:b.changes,candidateEvents:c.changes,baselineFinal:b.rows.at(-1),candidateFinal:c.rows.at(-1)};
+          fs.writeFileSync('results/comparison.json',JSON.stringify(report,null,2)+'\n');
+          console.log(JSON.stringify(report,null,2));
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: laramide-slab-age-${{ matrix.cells }}
+          path: results/*.json
+          if-no-files-found: warn
