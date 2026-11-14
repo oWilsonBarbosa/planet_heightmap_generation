@@ -1,0 +1,38 @@
+name: Geography audit baseline
+
+on:
+  push:
+    branches:
+      - audit/tectonic-baseline-20261114
+    paths:
+      - 'v2/tools/audit-geography.mjs'
+      - '.github/workflows/geography-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Node dependency for the sphere mesh
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Syntax check
+        run: node --check v2/tools/audit-geography.mjs
+      - name: Run 20K baseline, 3 seeds
+        run: node v2/tools/audit-geography.mjs --cells=20000 --seeds=12345,4242,31337 --until=1200 --every=100 --out=reports/geography-20k
+      - name: Upload metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: geography-audit-20k
+          path: |
+            reports/geography-20k.csv
+            reports/geography-20k.json
+          if-no-files-found: warn
