@@ -1,0 +1,75 @@
+name: Ocean age fix regression comparison
+
+on:
+  push:
+    branches:
+      - audit/ocean-age-return-20261114
+    paths:
+      - '.github/workflows/ocean-age-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    name: ${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [check-invariants.mjs, check-scale.mjs, check-phase13.mjs]
+    steps:
+      - name: Checkout untouched baseline
+        uses: actions/checkout@v4
+        with:
+          ref: audit/tectonic-baseline-20261114
+          path: baseline
+      - name: Checkout experimental correction
+        uses: actions/checkout@v4
+        with:
+          ref: audit/ocean-age-return-20261114
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency in both checkouts
+        run: |
+          (cd baseline && npm install --no-save --no-package-lock delaunator)
+          (cd candidate && npm install --no-save --no-package-lock delaunator)
+      - name: Run suites and preserve failures for comparison
+        shell: bash
+        run: |
+          mkdir -p results
+          set +e
+          (cd baseline && node v2/tools/${{ matrix.suite }}) > results/baseline.log 2>&1
+          echo "$?" > results/baseline.exit
+          (cd candidate && node v2/tools/${{ matrix.suite }}) > results/candidate.log 2>&1
+          echo "$?" > results/candidate.exit
+          set -e
+          echo "BASELINE EXIT $(cat results/baseline.exit)"
+          grep -E '^(PASS|FAIL|.*checks FAILED|.*checks passed)' results/baseline.log | tail -30 || true
+          echo "CANDIDATE EXIT $(cat results/candidate.exit)"
+          grep -E '^(PASS|FAIL|.*checks FAILED|.*checks passed)' results/candidate.log | tail -30 || true
+      - name: Upload comparison logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-${{ matrix.suite }}
+          path: results/
+          if-no-files-found: warn
+
+  unit:
+    name: Ocean age unit test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Test real transfer of prehistory and new ocean
+        run: node v2/tools/check-ocean-age-return.mjs
