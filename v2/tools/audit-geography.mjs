@@ -12,6 +12,8 @@ const opt = (key, value) => process.argv.find(x => x.startsWith('--'+key+'='))?.
 const cells = Number(opt('cells', '20000')), until = Number(opt('until','1200'));
 const every = Number(opt('every','100')), seeds = opt('seeds','12345,4242,31337').split(',').map(Number);
 const out = opt('out','reports/geography-baseline');
+const ablate = opt('ablate','none');
+if (!['none','arcMaturation','marginIsles'].includes(ablate)) throw Error('Unknown --ablate option');
 if (![cells,until,every,...seeds].every(Number.isInteger) || cells < 2000 || until < 1 || every < 1 || until % every) throw Error('Invalid cells, until, every or seeds');
 const mesh = labMesh(cells), n = mesh.numCells, scene = TERRAIN_SCENES.find(s => s.id === 'cycle');
 if (!scene) throw Error('Cycle scene not found');
@@ -79,6 +81,14 @@ function measure(f,seed) {
 }
 for(const seed of seeds) {
   const started=performance.now(), world=scene.build(mesh,seed);
+  // Controlled mechanism ablation: alter parameters on this run's world only.
+  // Keep the baseline path identical when ablate=none.
+  if (ablate === 'arcMaturation') world.config.arcContinentKmPerMyr = 0;
+  if (ablate === 'marginIsles') {
+    world.config.marginIsleRatePerMyr = 0;
+    world.config.marginIsleGrowKmPerMyr = 0;
+    world.config.marginIsleCoastShare = 0;
+  }
   const firstIndex=rows.length;
   simulate(world,{untilMyr:until, drive:w=>scene.drive(w), snapshotEveryMyr:every,
     keepFrames:false, onFrame:f=>rows.push(measure(f,seed))});
@@ -94,5 +104,5 @@ fs.mkdirSync(path.dirname(out),{recursive:true});
 const columns=Object.keys(rows[0]);
 const csv=v=>{const s=v==null?'':String(v);return /[,"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
 fs.writeFileSync(out+'.csv',columns.join(',')+'\n'+rows.map(r=>columns.map(k=>csv(r[k])).join(',')).join('\n')+'\n');
-fs.writeFileSync(out+'.json',JSON.stringify({baseline:'7026cc6526fa637611d05804a4cec8eed04de017',method:'coarse tectonic crust; no terrain render',parameters:{cells,seeds,until,every},rows},null,2)+'\n');
+fs.writeFileSync(out+'.json',JSON.stringify({baseline:'7026cc6526fa637611d05804a4cec8eed04de017',method:'coarse tectonic crust; no terrain render',parameters:{cells,seeds,until,every,ablate},rows},null,2)+'\n');
 console.log('Saved '+out+'.csv and .json ('+rows.length+' frames)');
