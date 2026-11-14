@@ -45,6 +45,9 @@ function measure(f,seed) {
   const continental = new Uint8Array(n), arc = new Uint8Array(n);
   const sizes = new Int32Array(f.plates.length);
   let c=0, a=0, ocean=0, age=0, older=0, prehistory=0, gaps=0;
+  let inheritedAgeSum=0, generatedAgeSum=0, inheritedOver200=0, generatedOver200=0;
+  const ageBins=new Int32Array(6); // [0,20), [20,50), [50,100), [100,150), [150,200), [200,+inf)
+  const oceanAges=[];
   for(let w=0;w<n;w++) {
     const id=f.owner[w]; if(id<0){gaps++;continue;}
     sizes[id]++;
@@ -52,13 +55,20 @@ function measure(f,seed) {
     else if(f.type[w]===CrustType.ARC){arc[w]=1;a++;}
     else if(f.type[w]===CrustType.OCEAN) {
       ocean++; const years=Math.max(0,f.time-f.formedAt[w]); age+=years;
+      oceanAges.push(years);
+      const bin=years<20?0:years<50?1:years<100?2:years<150?3:years<200?4:5;
+      ageBins[bin]++;
       if(years>200)older++;
-      if(f.formedAt[w]<0)prehistory++;
+      if(f.formedAt[w]<0) {
+        prehistory++; inheritedAgeSum+=years; if(years>200) inheritedOver200++;
+      } else { generatedAgeSum+=years; if(years>200)generatedOver200++; }
     }
   }
   const plateSizes = f.plates.filter(p=>p.alive && !p.isBackground).map(p=>sizes[p.id]).filter(Boolean).sort((a,b)=>b-a);
   const cb=blocks(continental), ab=blocks(arc);
   const biggest=cb[0] ?? {cells:0,edges:0};
+  oceanAges.sort((a,b)=>a-b);
+  const percentile=p=>oceanAges.length?oceanAges[Math.floor((oceanAges.length-1)*p)]:null;
   // Use perimeter only as a within-resolution proxy, not a physical coastline estimate.
   const perimeter=biggest.edges*edgeKm/Math.sqrt(3);
   return {
@@ -68,6 +78,22 @@ function measure(f,seed) {
     largestPlatePct:100*(plateSizes[0]??0)/n,
     oceanMeanAgeMyr:ocean?age/ocean:null, oceanOver200Pct:ocean?100*older/ocean:null,
     prehistoryOceanPct:ocean?100*prehistory/ocean:null,
+    oceanAreaMkm2:ocean*cellAreaKm2/1e6,
+    inheritedOceanAreaMkm2:prehistory*cellAreaKm2/1e6,
+    generatedOceanAreaMkm2:(ocean-prehistory)*cellAreaKm2/1e6,
+    inheritedOceanMeanAgeMyr:prehistory?inheritedAgeSum/prehistory:null,
+    generatedOceanMeanAgeMyr:(ocean-prehistory)?generatedAgeSum/(ocean-prehistory):null,
+    oceanAgeP50Myr:percentile(0.5),
+    oceanAgeP90Myr:percentile(0.9),
+    oceanAgeP99Myr:percentile(0.99),
+    inheritedOver200AreaMkm2:inheritedOver200*cellAreaKm2/1e6,
+    generatedOver200AreaMkm2:generatedOver200*cellAreaKm2/1e6,
+    oceanAge0to20Pct:ocean?100*ageBins[0]/ocean:null,
+    oceanAge20to50Pct:ocean?100*ageBins[1]/ocean:null,
+    oceanAge50to100Pct:ocean?100*ageBins[2]/ocean:null,
+    oceanAge100to150Pct:ocean?100*ageBins[3]/ocean:null,
+    oceanAge150to200Pct:ocean?100*ageBins[4]/ocean:null,
+    oceanAge200plusPct:ocean?100*ageBins[5]/ocean:null,
     continentalBlocks:cb.length, continentalBlocksAbove1Mkm2:cb.filter(b=>b.cells*cellAreaKm2>=1e6).length,
     largestBlockMkm2:biggest.cells*cellAreaKm2/1e6,
     largestBlockSharePct:c?100*biggest.cells/c:null,
