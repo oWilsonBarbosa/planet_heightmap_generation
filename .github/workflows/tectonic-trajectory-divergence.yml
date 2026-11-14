@@ -1,0 +1,84 @@
+name: Tectonic trajectory divergence
+
+on:
+  push:
+    branches: [audit/ocean-age-return-20261114]
+    paths:
+      - '.github/workflows/tectonic-trajectory-divergence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trajectory:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Laramide 40K
+            scene: laramide
+            cells: 40000
+            seed: 12345
+            until: 50
+            every: 2
+          - label: Laramide 80K
+            scene: laramide
+            cells: 80000
+            seed: 12345
+            until: 50
+            every: 2
+          - label: Continental cycle 20K
+            scene: cycle
+            cells: 20000
+            seed: 777
+            until: 1200
+            every: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/tectonic-baseline-20261114
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ocean-age-return-20261114
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: |
+          (cd baseline && npm install --no-save --no-package-lock delaunator)
+          (cd candidate && npm install --no-save --no-package-lock delaunator)
+      - name: Copy diagnostic only, without modifying baseline motor
+        run: cp candidate/v2/tools/audit-history-divergence.mjs baseline/v2/tools/audit-history-divergence.mjs
+      - name: Run matched snapshots
+        run: |
+          (cd baseline && node v2/tools/audit-history-divergence.mjs --scene=${{ matrix.scene }} --cells=${{ matrix.cells }} --seed=${{ matrix.seed }} --until=${{ matrix.until }} --every=${{ matrix.every }} --out=../results/baseline)
+          (cd candidate && node v2/tools/audit-history-divergence.mjs --scene=${{ matrix.scene }} --cells=${{ matrix.cells }} --seed=${{ matrix.seed }} --until=${{ matrix.until }} --every=${{ matrix.every }} --out=../results/candidate)
+      - name: Compare first differences and final state
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('results/baseline.json','utf8'));
+          const b=JSON.parse(fs.readFileSync('results/candidate.json','utf8'));
+          const metrics=['formationHash','ownerHash','typeHash','orogenyHash','activePlates','visibleInheritedOceanMkm2','laramideMkm2','continentalMkm2','cycleLargestPct'];
+          const first={};
+          for(const key of metrics) {
+            const i=a.rows.findIndex((row,j)=>row[key]!==b.rows[j]?.[key]);
+            first[key]=i<0?null:{timeMyr:a.rows[i].timeMyr,baseline:a.rows[i][key],candidate:b.rows[i][key]};
+          }
+          const result={scene:a.scene,cells:a.cells,seed:a.seed,first,baselineEnd:a.rows.at(-1),candidateEnd:b.rows.at(-1)};
+          fs.writeFileSync('results/comparison.json',JSON.stringify(result,null,2)+'\n');
+          console.log(JSON.stringify(result,null,2));
+          EOF
+      - name: Archive history comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trajectory-${{ matrix.scene }}-${{ matrix.cells }}
+          path: results/*.json
+          if-no-files-found: warn
