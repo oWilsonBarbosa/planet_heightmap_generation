@@ -1,0 +1,57 @@
+name: Inherited ocean visibility trace
+
+on:
+  push:
+    branches:
+      - audit/tectonic-baseline-20261114
+    paths:
+      - '.github/workflows/ocean-exposure-trace.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: 20K control seed 12345
+            cells: 20000
+            seed: 12345
+            dose: control
+            suffix: 20k-control-12345
+          - label: 40K control seed 12345
+            cells: 40000
+            seed: 12345
+            dose: control
+            suffix: 40k-control-12345
+          - label: 40K bothHalf seed 31337
+            cells: 40000
+            seed: 31337
+            dose: bothHalf
+            suffix: 40k-bothHalf-31337
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Validate audit script
+        run: node --check v2/tools/audit-ocean-exposure.mjs
+      - name: Trace inherited ocean
+        run: node v2/tools/audit-ocean-exposure.mjs --cells=${{ matrix.cells }} --seed=${{ matrix.seed }} --until=1200 --every=50 --dose=${{ matrix.dose }} --out=reports/exposure-${{ matrix.suffix }}
+      - name: Archive results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocean-exposure-${{ matrix.suffix }}
+          path: |
+            reports/exposure-${{ matrix.suffix }}.csv
+            reports/exposure-${{ matrix.suffix }}.json
+          if-no-files-found: warn
