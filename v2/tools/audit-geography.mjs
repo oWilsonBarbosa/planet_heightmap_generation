@@ -1,0 +1,92 @@
+// Baseline audit. Run: node v2/tools/audit-geography.mjs --cells=20000 --until=1200 --every=100
+// Optional: --seeds=12345,4242,31337 --out=reports/geography-baseline
+// This measures tectonic CRUST on the coarse simulation mesh, not emerged terrain.
+import fs from 'node:fs';
+import path from 'node:path';
+import { labMesh } from './lib/check-kit.mjs';
+import { TERRAIN_SCENES } from '../js/tectonics/scenarios/terrain-scenes.js';
+import { simulate } from '../js/tectonics/simulate.js';
+import { CrustType } from '../js/tectonics/model/crust.js';
+
+const opt = (key, value) => process.argv.find(x => x.startsWith('--'+key+'='))?.split('=').slice(1).join('=') ?? value;
+const cells = Number(opt('cells', '20000')), until = Number(opt('until','1200'));
+const every = Number(opt('every','100')), seeds = opt('seeds','12345,4242,31337').split(',').map(Number);
+const out = opt('out','reports/geography-baseline');
+if (![cells,until,every,...seeds].every(Number.isInteger) || cells < 2000 || until < 1 || every < 1 || until % every) throw Error('Invalid cells, until, every or seeds');
+const mesh = labMesh(cells), n = mesh.numCells, scene = TERRAIN_SCENES.find(s => s.id === 'cycle');
+if (!scene) throw Error('Cycle scene not found');
+const {adjOffset,adjList,cellAreaKm2,edgeKm} = mesh;
+const rows = [];
+
+function blocks(mask) {
+  const seen = new Uint8Array(n), queue = new Int32Array(n), groups = [];
+  for (let w=0; w<n; w++) {
+    if (!mask[w] || seen[w]) continue;
+    let head=0, tail=1, edgeCount=0;
+    queue[0]=w; seen[w]=1;
+    while(head<tail) {
+      const a=queue[head++];
+      for(let k=adjOffset[a]; k<adjOffset[a+1]; k++) {
+        const b=adjList[k];
+        if(!mask[b]) edgeCount++;
+        else if(!seen[b]) { seen[b]=1; queue[tail++]=b; }
+      }
+    }
+    groups.push({cells:tail, edges:edgeCount});
+  }
+  return groups.sort((a,b)=>b.cells-a.cells);
+}
+function measure(f,seed) {
+  const continental = new Uint8Array(n), arc = new Uint8Array(n);
+  const sizes = new Int32Array(f.plates.length);
+  let c=0, a=0, ocean=0, age=0, older=0, prehistory=0, gaps=0;
+  for(let w=0;w<n;w++) {
+    const id=f.owner[w]; if(id<0){gaps++;continue;}
+    sizes[id]++;
+    if(f.type[w]===CrustType.CONTINENT || f.type[w]===CrustType.CRATON){continental[w]=1;c++;}
+    else if(f.type[w]===CrustType.ARC){arc[w]=1;a++;}
+    else if(f.type[w]===CrustType.OCEAN) {
+      ocean++; const years=Math.max(0,f.time-f.formedAt[w]); age+=years;
+      if(years>200)older++;
+      if(f.formedAt[w]<0)prehistory++;
+    }
+  }
+  const plateSizes = f.plates.filter(p=>p.alive && !p.isBackground).map(p=>sizes[p.id]).filter(Boolean).sort((a,b)=>b-a);
+  const cb=blocks(continental), ab=blocks(arc);
+  const biggest=cb[0] ?? {cells:0,edges:0};
+  // Use perimeter only as a within-resolution proxy, not a physical coastline estimate.
+  const perimeter=biggest.edges*edgeKm/Math.sqrt(3);
+  return {
+    seed, cells:n, timeMyr:f.time,
+    continentalCrustPct:100*c/n, arcCrustPct:100*a/n, gapsPct:100*gaps/n,
+    plateCount:plateSizes.length, platesAboveOnePct:plateSizes.filter(v=>v>=n*.01).length,
+    largestPlatePct:100*(plateSizes[0]??0)/n,
+    oceanMeanAgeMyr:ocean?age/ocean:null, oceanOver200Pct:ocean?100*older/ocean:null,
+    prehistoryOceanPct:ocean?100*prehistory/ocean:null,
+    continentalBlocks:cb.length, continentalBlocksAbove1Mkm2:cb.filter(b=>b.cells*cellAreaKm2>=1e6).length,
+    largestBlockMkm2:biggest.cells*cellAreaKm2/1e6,
+    largestBlockSharePct:c?100*biggest.cells/c:null,
+    largestBlockCompactnessProxy:perimeter>0?Math.min(1,4*Math.PI*biggest.cells*cellAreaKm2/perimeter**2):null,
+    largestArcGroupMkm2:(ab[0]?.cells??0)*cellAreaKm2/1e6,
+    cycleSharePct:f.cycle?100*f.cycle.share:null, cyclePhase:f.cycle?.phase??''
+  };
+}
+for(const seed of seeds) {
+  const started=performance.now(), world=scene.build(mesh,seed);
+  const firstIndex=rows.length;
+  simulate(world,{untilMyr:until, drive:w=>scene.drive(w), snapshotEveryMyr:every,
+    keepFrames:false, onFrame:f=>rows.push(measure(f,seed))});
+  const series=rows.slice(firstIndex);
+  console.log(JSON.stringify({
+    seed, frames:series.length, seconds:Math.round((performance.now()-started)/1000),
+    continentalCrustChangePoints:+(series.at(-1).continentalCrustPct-series[0].continentalCrustPct).toFixed(2),
+    peakLargestPlatePct:+Math.max(...series.map(r=>r.largestPlatePct)).toFixed(2),
+    finalOceanMeanAgeMyr:+series.at(-1).oceanMeanAgeMyr.toFixed(1)
+  }));
+}
+fs.mkdirSync(path.dirname(out),{recursive:true});
+const columns=Object.keys(rows[0]);
+const csv=v=>{const s=v==null?'':String(v);return /[,"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+fs.writeFileSync(out+'.csv',columns.join(',')+'\n'+rows.map(r=>columns.map(k=>csv(r[k])).join(',')).join('\n')+'\n');
+fs.writeFileSync(out+'.json',JSON.stringify({baseline:'7026cc6526fa637611d05804a4cec8eed04de017',method:'coarse tectonic crust; no terrain render',parameters:{cells,seeds,until,every},rows},null,2)+'\n');
+console.log('Saved '+out+'.csv and .json ('+rows.length+' frames)');
