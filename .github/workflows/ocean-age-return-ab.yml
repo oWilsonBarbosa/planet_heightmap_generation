@@ -1,0 +1,61 @@
+name: Ocean age return A-B experiment
+
+on:
+  push:
+    branches:
+      - audit/ocean-age-return-20261114
+    paths:
+      - '.github/workflows/ocean-age-return-ab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    name: ${{ matrix.suffix }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suffix: 20k-control-12345
+            cells: 20000
+            seed: 12345
+            dose: control
+          - suffix: 40k-control-12345
+            cells: 40000
+            seed: 12345
+            dose: control
+          - suffix: 40k-bothHalf-31337
+            cells: 40000
+            seed: 31337
+            dose: bothHalf
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependency
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Syntax
+        run: |
+          node --check v2/js/tectonics/ops/tidy-plates.js
+          node --check v2/tools/audit-ocean-exposure.mjs
+          node --check v2/tools/audit-geography.mjs
+      - name: Trace raster and exposed inherited ocean every 50 Myr
+        run: node v2/tools/audit-ocean-exposure.mjs --cells=${{ matrix.cells }} --seed=${{ matrix.seed }} --dose=${{ matrix.dose }} --until=1200 --every=50 --out=reports/agefix-exposure-${{ matrix.suffix }}
+      - name: Measure ocean-age and tectonic metrics every 100 Myr
+        run: node v2/tools/audit-geography.mjs --cells=${{ matrix.cells }} --seeds=${{ matrix.seed }} --dose=${{ matrix.dose }} --until=1200 --every=100 --out=reports/agefix-geography-${{ matrix.suffix }}
+      - name: Upload metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ocean-agefix-${{ matrix.suffix }}
+          path: |
+            reports/agefix-exposure-${{ matrix.suffix }}.csv
+            reports/agefix-exposure-${{ matrix.suffix }}.json
+            reports/agefix-geography-${{ matrix.suffix }}.csv
+            reports/agefix-geography-${{ matrix.suffix }}.json
+          if-no-files-found: warn
