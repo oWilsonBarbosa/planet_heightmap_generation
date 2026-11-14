@@ -1,0 +1,41 @@
+name: Geography causal ablations
+
+on:
+  push:
+    branches:
+      - audit/tectonic-baseline-20261114
+    paths:
+      - '.github/workflows/geography-ablation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ablate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        mechanism: [arcMaturation, marginIsles]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Syntax check
+        run: node --check v2/tools/audit-geography.mjs
+      - name: Run 20K causal ablation
+        run: node v2/tools/audit-geography.mjs --cells=20000 --seeds=12345,4242,31337 --until=1200 --every=100 --ablate=${{ matrix.mechanism }} --out=reports/geography-20000-${{ matrix.mechanism }}
+      - name: Upload causal series
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: geography-ablation-${{ matrix.mechanism }}
+          path: |
+            reports/geography-20000-${{ matrix.mechanism }}.csv
+            reports/geography-20000-${{ matrix.mechanism }}.json
+          if-no-files-found: warn
