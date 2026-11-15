@@ -57,4 +57,28 @@ O workflow exige que as áreas ARC, CONTINENT, maior componente, idades elegíve
 - Tetreault e Buiter (2014), *Future accreted terranes*, https://doi.org/10.5194/se-5-1243-2014 — arcos e platôs podem ser acrecionados ou subductados; contornos e condições reológicas importam.
 - Buiter et al. (2012), *Geodynamic models of terrane accretion*, https://doi.org/10.1029/2012JB009316 — a acreção não é consequência inevitável da flutuabilidade.
 
-**Estado no primeiro registro:** o teste de velocidades foi concluído; a comparação do balanço ARC e seus testes de invariância estavam em andamento. Não atribuir ainda números aos fluxos não observados.
+## Fluxos já medidos, 900–1200 Ma, mesma semente 4242, 20K, velocidade 3 km/Ma
+
+[GitHub Actions do livro-razão #43685183404](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43685183404), artefatos `arc-flux-gpe-1.0-20000` e `arc-flux-gpe-2.0-20000`: comparações emparelhadas concluídas com sucesso. O programa verificou **igualdade exata** de área ARC, continental, maior componente, idade elegível, alcançabilidade, maturação e reciclagem com e sem os novos contadores. A suíte `check-invariants.mjs` concluiu com **21/21 PASS**.
+
+| Operações acumuladas entre os quadros de 900 e 1200 Ma | GPE 1.0 | GPE 2.0 |
+|---|---:|---:|
+| OCEAN→ARC por `buildArcs` | 631 | **855** |
+| OCEAN→ARC por ilhas de antearco | 71 | 110 |
+| ARC→CONTINENT por maturação | 543 | 655 |
+| ARC→CONTINENT por união de ilhas de antearco | 63 | 93 |
+| ARC absorvida sobre terra existente durante `scrapeArc` | **846** | 424 |
+| ARC reciclada (`recycledCells`) | 222 | 205 |
+| ARC perdida por erosão marginal | 15 | 28 |
+| ARC removida pelo procedimento geral de subducção em `resolve` | 0 | 0 |
+| ARC transferida na raspagem sem absorção (não é nascimento novo) | 306 | 236 |
+
+No intervalo 900–1200 Ma, ARC **visível** na intensidade 1.0 cai de 24.56 para **9.03 Mkm²** (−15.53), enquanto na 2.0 sobe de 23.46 para **43.07 Mkm²** (+19.61). Aumento da produção de arco e **menor absorção durante o encontro com continentes** são dois sinais fortes. Contudo, o conjunto de fluxos monitorados NÃO fecha o estoque, em razão de fusões, reamostragem de raster, transformações não instrumentadas e projeção de área visível. Não é legítimo atribuir o resíduo a um único processo antes de medir esses caminhos.
+
+A ausência de ARC no contador de `resolve` significa zero **naquele procedimento de remoção por sobreposição**, não inexistência de reciclagem por outros mecanismos (a tabela inclui `recycledCells` separadamente).
+
+**Estado da execução na última verificação:** teste 40K de GPE 2.0 ainda em andamento; não foram registrados valores de fluxo dessa malha.
+
+**Próxima hipótese operacional:** comparar alteração de estoque ARC durante as operações `mergePlates` e `accreteTerrane` com a incorporação e absorção por raspagem. Uma diferença de contagem de raster durante fusão não equivale automaticamente a criação física de nova crosta; precisa ser distinguida de sobreposições e das células ocultas do mapa mundial.
+
+Nenhum parâmetro ou função foi modificado em `main`.
