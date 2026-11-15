@@ -69,3 +69,17 @@ Essas fontes fundamentam o desenho físico de um experimento alternativo, **não
 ## Decisão
 
 A correção do timestamp `giveToBackground` continua **isolada e correta quanto à proveniência**, porém **não aprovada para merge**: existem regressões geológicas de escala e topologia em histórias específicas. A presente investigação demonstra o gatilho inicial da divergência e dá uma direção concreta para desenvolver o modelo de forças sem restaurar a datação sabidamente incorreta.
+
+## Auditoria espacial da primeira célula: testes concluídos
+
+[Workflow #43656943372](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43656943372): três testes de localização concluídos com sucesso. O observador `v2/tools/audit-ridge-contact-location.mjs` reproduz as prioridades de forças `PULL`/`SUCTION`/`RIFT`/`RIDGE` de `step/forces.js`, verifica as idades originais das células nas placas e classifica o limite tectônico observado após o passo. A contagem do observador (**0 antes, 1 depois**) coincidiu com o contador de ridge push do motor em cada caso.
+
+| Caso / instante | Primeira célula extra | Tipo de limite do motor | Idades das duas crostas (Myr) | A outra placa é oceano passivo? |
+|---|---:|---|---|---|
+| Seed 777, 20K, 30 Myr | 6055, ~23.02°N / 70.2°W | **RIDGE** | 2 e 0 | Sim |
+| Seed 777, 40K, 24 Myr | 37803, ~63.19°S / 165.77°E | **RIDGE** | 4 e 0 | Sim |
+| Seed 12345, 20K, 20 Myr | 15210, ~31.51°S / 107.16°W | **RIDGE** | 0 e 6 | Sim |
+
+**Resultado adicional:** não é um empuxo aplicado indevidamente em uma margem classificada como transformante ou convergente nesses três exemplos. Os três contatos são classificados como dorsais, mas uma de suas placas é a placa **passiva de fundo**, um substituto numérico para o oceano anterior à simulação. Crosta oceânica jovem retornada a essa placa passiva passa a participar de forças de ridge push. Isso pode representar real gradiente gravitacional entre crostas ou artefato do substituto passivo; distinguir exige um novo ensaio, não é demonstrado pelas classificações.
+
+**Experimento seguinte:** testar em ramificação isolada a exclusão **apenas dos contatos com o oceano de fundo passivo** do termo `RIDGE` em `forces.js`. Preservar ridge push entre placas móveis e preservar a correção temporal. Comparar com a versão corrigida em mesmas sementes e resoluções, incluindo regressões de escala, invariantes, idades oceânicas e conectividade continental. Não tratar melhora de coincidência com o histórico antigo como prova de superioridade física; a física de empuxo é distribuída, não uma força binária em um único contato.
