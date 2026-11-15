@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import { recentOverriding, updateTrenchActivity } from '../js/tectonics/step/arc-activity.js';
+
+assert.equal(recentOverriding(-Infinity, 20, 15, false),false);
+assert.equal(recentOverriding(-Infinity, 20, 15, true),true);
+assert.equal(recentOverriding(10,20,15,false),true);
+assert.equal(recentOverriding(10,26,15,false),false);
+assert.equal(recentOverriding(10,10,0,false),true);
+assert.equal(recentOverriding(10,11,0,false),false);
+assert.equal(recentOverriding(-Infinity,20,-1,false),true);
+assert.throws(()=>recentOverriding(1,5,Infinity,false));
+const one={mesh:{numCells:20},time:10},two={mesh:{numCells:20},time:10};
+assert.equal(updateTrenchActivity(one,4,5,true,15),true);
+one.time=20;
+assert.equal(updateTrenchActivity(one,4,5,false,15),true);
+assert.equal(updateTrenchActivity(two,4,5,false,15),false,'different worlds cannot share memory');
+assert.equal(updateTrenchActivity(one,5,5,false,15),false,'different plates cannot share memory');
+assert.equal(updateTrenchActivity(one,4,4,false,15),false,'different cells cannot share memory');
+one.time=26;
+assert.equal(updateTrenchActivity(one,4,5,false,15),false,'memory expires');
+one.time=40;
+assert.equal(updateTrenchActivity(one,4,5,true,15),true,'new active episode refreshes memory');
+assert.equal(updateTrenchActivity(one,4,5,false,15),true);
+console.log('PASS time window boundaries and non-leaking per-world/per-plate/per-cell trench activity memory');
