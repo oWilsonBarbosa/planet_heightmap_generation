@@ -591,14 +591,55 @@ export function hydrology(ctx, F) {
                 }
                 const unique=[...new Set(cuts)];
                 unique.sort((a,b)=>cutAt[a]-cutAt[b]);
-                target.incisions=unique.slice(0,12).map(x=>({
-                    cell:x,cutElevationM:round(1000*cutAt[x]),
-                    currentTerrainM:round(1000*z[x]),prevTerrainM:round(1000*provenance.before[x]),
-                    sourceHollow:provenance.source[x],cause:provenance.cause[x],
-                    insideHollow:hollow[x]===hollow[c],
-                    lat:round(Math.asin(xyz[3*x+2])*180/Math.PI,5),
-                    lon:round(Math.atan2(xyz[3*x+1],xyz[3*x])*180/Math.PI,5)
-                }));
+                // Probe hydraulic access without mutating the graph: a low external
+                // incision alone is insufficient evidence of a connected lake outlet.
+                const reachable=new Uint8Array(n), queue=[];
+                const deep=h.deepCell;
+                if(z[deep]<=h.level+EPS){reachable[deep]=1;queue.push(deep);}
+                for(let k=0;k<queue.length;k++) {
+                    const u=queue[k];
+                    for(let e=adjOffset[u];e<adjOffset[u+1];e++){
+                        const nb=adjList[e];
+                        if(hollow[nb]===hollow[c]&&!reachable[nb]&&z[nb]<=h.level+EPS){
+                            reachable[nb]=1;queue.push(nb);
+                        }
+                    }
+                }
+                target.connectedInteriorCells=queue.length;
+                target.incisions=unique.slice(0,12).map(x=>{
+                    const boundary=[];
+                    if(hollow[x]===hollow[c])boundary.push(x);
+                    else for(let k=adjOffset[x];k<adjOffset[x+1];k++){
+                        const nb=adjList[k];if(hollow[nb]===hollow[c])boundary.push(nb);
+                    }
+                    const path={hops:0,termination:'unknown',maximumTerrainM:-Infinity,
+                        maximumClimbM:0,reachedOcean:false};
+                    let u=x;const seen=new Set();
+                    while(u>=0&&u<n&&path.hops<100000&&!seen.has(u)){
+                        seen.add(u);path.maximumTerrainM=Math.max(path.maximumTerrainM,1000*z[u]);
+                        const v=recv[u];
+                        if(v>=0&&v<n)path.maximumClimbM=Math.max(path.maximumClimbM,1000*(z[v]-z[u]));
+                        if(v<0||v>=n){path.termination='no-receiver';break;}
+                        if(ocean[v]||rank[v]<0){path.termination='ocean';path.reachedOcean=true;break;}
+                        u=v;path.hops++;
+                    }
+                    if(seen.has(u)&&path.termination==='unknown')path.termination='cycle';
+                    if(path.hops>=100000)path.termination='limit';
+                    return {
+                        cell:x,cutElevationM:round(1000*cutAt[x]),
+                        currentTerrainM:round(1000*z[x]),prevTerrainM:round(1000*provenance.before[x]),
+                        sourceHollow:provenance.source[x],cause:provenance.cause[x],
+                        insideHollow:hollow[x]===hollow[c],
+                        lat:round(Math.asin(xyz[3*x+2])*180/Math.PI,5),
+                        lon:round(Math.atan2(xyz[3*x+1],xyz[3*x])*180/Math.PI,5),
+                        adjacentLakeCells:boundary.map(nb=>({id:nb,zM:round(1000*z[nb]),
+                            reachable:!!reachable[nb],belowLakeLevel:z[nb]<=h.level+EPS})),
+                        connectedFromDeepCell:boundary.some(nb=>reachable[nb]),
+                        downstream:{...path,maximumTerrainM:round(path.maximumTerrainM),
+                            maximumClimbM:round(path.maximumClimbM),
+                            entirePathBelowLakeLevel:path.maximumTerrainM<=1000*h.level+1000*EPS}
+                    };
+                });
             }
             // (and a major river only a huge one — developer, 2026-10-27: major rivers ending in a lake "< 1% unless the lake
             // is huge": from lakeHugeQ[0] m³/s, by lakeHugeQ[1], a lake of lakeHugeKm2)
