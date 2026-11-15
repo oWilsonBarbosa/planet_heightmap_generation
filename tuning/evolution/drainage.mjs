@@ -31,6 +31,7 @@ const SEED = Number(arg('--seed', 10673275)), CONT = Number(arg('--cont', 30)), 
 const CELLS = arg('--cells', '160000,640000').split(',').map(Number);
 const DIAGNOSE = process.argv.includes('--diagnose');
 const LAKE_MATCH = process.argv.includes('--lake-match');
+const GLACIAL_SITE = process.argv.includes('--glacial-site');
 const SET = Object.fromEntries((arg('--set', '') || '').split(',').filter(Boolean).map(kv => { const [k, v] = kv.split('='); return [k, v === 'true' ? true : v === 'false' ? false : Number(v)]; }));
 for (const k of Object.keys(SET)) if (!(k in FINISH)) throw new Error(`--set: no constant ${k} in FINISH`);
 const F = { ...FINISH, ...SET }, SEC = 3.15576e7, R = 6371;
@@ -47,7 +48,8 @@ let previousLakeSnapshot = null;
 
 for (const cells of CELLS) {
     const traceCells = cells === 160000 ? [60166, 60543, 59789, 59933, 19158, 18925, 19535, 19391] : cells === 640000 ? [633654, 633277, 633798, 633044, 632667, 632434, 633510, 633421] : [];
-    const fin = await finishWorld({ frame, seed: SEED, sim: SIM, cells, F: DIAGNOSE ? { ...F, traceCells } : F, network: true });
+    const perRunF = GLACIAL_SITE ? { ...F, traceLakeSite: { lat: -76.1394, lon: 108.9841, radiusKm: 180 } } : F;
+    const fin = await finishWorld({ frame, seed: SEED, sim: SIM, cells, F: DIAGNOSE ? { ...perRunF, traceCells } : perRunF, network: true });
     log(`finished at ${cells.toLocaleString()} cells`);
     const { mesh, z, lake, lakeLevel, rivers, stats } = fin, { recv, lakeOutlet, q, area, runoff, sea, cellKm2 } = fin.network;
     const n = mesh.numCells, { adjOffset, adjList, xyz } = mesh, w = stats.water;

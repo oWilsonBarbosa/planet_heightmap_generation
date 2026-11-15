@@ -281,6 +281,23 @@ export function hydrology(ctx, F) {
     };
     // ── hollows: connected cells under their spill level, one spill level each (one lake, if it were full) ──
     const hollow = new Int32Array(n).fill(-1), hollows = [], laterCuts = [], pits = [];
+    // Controlled physical audit for a selected glacial depression. Does not change routing.
+    const auditSite = F.traceLakeSite && Number.isFinite(F.traceLakeSite.lat) &&
+        Number.isFinite(F.traceLakeSite.lon) ? F.traceLakeSite : null;
+    const siteLat = auditSite ? auditSite.lat*Math.PI/180 : 0, siteLon = auditSite ? auditSite.lon*Math.PI/180 : 0;
+    const siteXYZ = [Math.cos(siteLat)*Math.cos(siteLon),Math.cos(siteLat)*Math.sin(siteLon),Math.sin(siteLat)];
+    const siteCutoff = Math.cos((auditSite?.radiusKm ?? 180)/R);
+    const nearSite = c => !!auditSite && xyz[3*c]*siteXYZ[0]+xyz[3*c+1]*siteXYZ[1]+xyz[3*c+2]*siteXYZ[2] >= siteCutoff;
+    const siteRecords = auditSite ? new Map() : null;
+    const hydroSiteCells = auditSite ? [] : null;
+    if (auditSite) for(let c=0;c<n;c++) if(nearSite(c)) hydroSiteCells.push(c);
+    const round = (v,d=2)=>Number.isFinite(v)?+v.toFixed(d):null;
+    const siteCurve = (cells,L,deepest) => [0.25,0.5,0.75,1].map(f=>{
+        const level=deepest+f*(L-deepest);let wet=0,volume=0;
+        for(const c of cells) if(z[c]<level){wet++;volume+=(level-z[c])*cellKm2;}
+        return {levelM:round(1000*level),areaKm2:round(wet*cellKm2),
+            volumeKm3:round(volume,3)};
+    });
     for (let i = 0; i < count; i++) {
         const s = order[i];
         if (hollow[s] >= 0 || !(fill[s] > z[s] + EPS)) continue;
@@ -312,6 +329,18 @@ export function hydrology(ctx, F) {
         else if (!lake && !sea && ctx.fillHollows) pits.push(id);
         // (old: a hollow of the tectonic surface, glaciated or not; the ice age's own hollows are young)
         hollows.push({ cells, level: L, outlet, deepCell, floor: deepest, lake, inflow: 0, seasonW: 0, area: 0, glacial: glacial >= 0.5 * cells.length, old: sea || (!!ctx.tectonic && tect >= F.lakeTectonicShare * cells.length), sea });
+        if (auditSite) {
+            const inRadius = cells.reduce((total,c)=>total+(nearSite(c)?1:0),0);
+            if(inRadius) siteRecords.set(id,{
+                id, nearbyCells:inRadius, rawCells:cells.length, rawAreaKm2:round(cells.length*cellKm2),
+                depthM:round((L-deepest)*1000), spillM:round(L*1000), floorM:round(deepest*1000),
+                glacialCells:glacial, glacialFraction:round(glacial/cells.length,4),
+                tectonicCells:tect, tectonicFraction:round(tect/cells.length,4), marine:sea,
+                initiallyEligible:lake, outlet, deepCell, regionAreaKm2:round(inRadius*cellKm2),
+                rawStorageCurve:siteCurve(cells,L,deepest),
+                fullStorageKm3:round(cells.reduce((v,c)=>v+Math.max(0,L-z[c])*cellKm2,0),3)
+            });
+        }
     }
     // ── discharge, upstream first (each cell comes after the cell it drains into in the flood's order): each cell's own
     // runoff; a lake gathers its cells' and passes on only what it does not evaporate, at its outlet; a river loses water
@@ -633,6 +662,18 @@ export function hydrology(ctx, F) {
             for (const x of water) { lakeKind[x] = kind; lakeLevel[x] = level; }
             if (h.sea ? kind === Water.FRESH : !closed && !water.length) cutPockets(h, id, c);
             h.kind = water.length ? kind : h.pan ? Water.PAN : Water.NONE; h.levelNow = level; h.outflow = outflow; h.fullEvap = full; h.outletIn = h.inflow;
+            if(siteRecords?.has(id)){
+                const item=siteRecords.get(id);
+                item.decision={drainedByGorge:drained, crossingElevationM:round(crossed*1000),
+                    inflowM3s:round(h.inflow,3), fullEvapM3s:round(full,3),
+                    inflowToEvapRatio:full>0?round(h.inflow/full,4):null,
+                    keepAreaKm2:round(keepKm2), preDecisionAreaKm2:round(areaKm2),
+                    closed, waterCellsBeforeAdjust:water.length, waterAreaKm2:round(water.length*cellKm2),
+                    decisionLevelM:round(level*1000), outcomeKind:h.kind, outflowM3s:round(outflow,3),
+                    reason:drained?'gorge':
+                        areaKm2<keepKm2?'minimum-area':
+                        h.inflow<full?'insufficient-water':'other-or-retained'};
+            }
             // (a basin its rivers end in passes nothing on: its outlet is its dry ground like the rest, its own water and
             // area drained down into the basin (below) — not a river leaving over the rim with the basin's area and none
             // of its water)
@@ -832,6 +873,38 @@ export function hydrology(ctx, F) {
         for (const x of h.cells) if (lakeKind[x]) { lakeOutlet[x] = to; lakeOrigin[x] = origin; if (x !== h.outlet || to < 0) { recv[x] = to; stepKm[x] = to >= 0 ? edgeKmOf(xyz, x, to) : 0; } }
     }
     traceStage('after-network-export');
+    if(auditSite){
+        const regional={cells:hydroSiteCells.length,areaKm2:round(hydroSiteCells.length*cellKm2),
+            glaciatedCells:0,tectonicCells:0,marineCells:0,freshCells:0,saltCells:0,
+            panCells:0,dryCells:0,minZKm:null,maxZKm:null,
+            rainfallMm:0,runoffMm:0,petMm:0};
+        let min=Infinity,max=-Infinity, validP=0;
+        for(const c of hydroSiteCells){
+            if(ctx.glaciated?.[c])regional.glaciatedCells++;
+            if(ctx.tectonic?.[c])regional.tectonicCells++;
+            if(ocean[c])regional.marineCells++;
+            else if(lakeKind[c]===Water.FRESH)regional.freshCells++;
+            else if(lakeKind[c]===Water.SALT)regional.saltCells++;
+            else if(lakeKind[c]===Water.PAN)regional.panCells++;
+            else regional.dryCells++;
+            if(z[c]<min)min=z[c];if(z[c]>max)max=z[c];
+            if(Number.isFinite(rain[c])){regional.rainfallMm+=rain[c];regional.petMm+=pet[c];regional.runoffMm+=runoff[c];validP++;}
+        }
+        regional.minZKm=round(min,4);regional.maxZKm=round(max,4);
+        if(validP){regional.rainfallMm=round(regional.rainfallMm/validP);
+            regional.petMm=round(regional.petMm/validP);regional.runoffMm=round(regional.runoffMm/validP);}
+        const candidates=[...siteRecords.values()].map(x=>{
+            const hh=hollows[x.id],finalWet=hh.cells.filter(c=>lakeKind[c]).length;
+            return {...x,finalWetCells:finalWet,finalWetKm2:round(finalWet*cellKm2),
+                finalLevelM:round(hh.levelNow*1000),finalKind:hh.kind,
+                finalFloorM:round(hh.floor*1000)};
+        }).sort((a,b)=>b.regionAreaKm2-a.regionAreaKm2||b.rawAreaKm2-a.rawAreaKm2);
+        const summary={site:auditSite,cells:n,cellKm2:round(cellKm2,2),regional,
+            nearbyDepressions:candidates.length,eligibleDepressions:candidates.filter(x=>x.initiallyEligible).length,
+            retainedDepressions:candidates.filter(x=>x.finalWetCells>0).length,
+            largest:candidates.slice(0,25)};
+        console.log('OROGEN_GLACIAL_SITE ' + JSON.stringify(summary));
+    }
     return {
         lake: lakeKind, lakeLevel, q, area, recv, order: order.subarray(0, count),
         // (the network, on request: the cell each land cell drains into — a lake's water its outlet; −1 on the sea and

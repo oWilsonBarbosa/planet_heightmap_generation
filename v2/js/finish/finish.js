@@ -238,7 +238,34 @@ export async function finishPlanet({ frame, simMesh, seed, cells, pool = null, c
 
     // ── F3: the last ice age ──
     onStage('ice age');
+    // Site-specific elevation diagnostic before and after the glacial geomorphic stage.
+    const siteAudit = F.traceLakeSite;
+    let siteBefore = null;
+    const siteCells = siteAudit ? [] : null;
+    const siteRegion = cells => {
+        if(!cells?.length)return null;
+        let min=Infinity,max=-Infinity,sum=0;
+        for(const c of cells){const v=C.z[c];min=Math.min(min,v);max=Math.max(max,v);sum+=v;}
+        return {cells:cells.length, minZKm:+min.toFixed(4),maxZKm:+max.toFixed(4),
+            meanZKm:+(sum/cells.length).toFixed(4)};
+    };
+    if(siteAudit){
+        const a=siteAudit.lat*Math.PI/180,b=siteAudit.lon*Math.PI/180;
+        const sx=Math.cos(a)*Math.cos(b),sy=Math.cos(a)*Math.sin(b),sz=Math.sin(a);
+        const limit=Math.cos((siteAudit.radiusKm??180)/6371);
+        for(let c=0;c<n;c++)if(mesh.xyz[3*c]*sx+mesh.xyz[3*c+1]*sy+mesh.xyz[3*c+2]*sz>=limit)siteCells.push(c);
+        siteBefore=siteRegion(siteCells);
+    }
     const I = lastIceAge({ mesh, z: C.z, lat, lon, warmSl, rain: pAnn, grid, cellKm2, seed }, F);
+    if(siteAudit){
+        let glaciated=0;
+        for(const c of siteCells)if(I.ice[c])glaciated++;
+        console.log('OROGEN_GLACIAL_TERRAIN '+JSON.stringify({
+            site:siteAudit,cells:n,cellKm2, beforeLastIceAge:siteBefore,
+            afterLastIceAge:siteRegion(siteCells),glaciatedCells:glaciated,
+            glaciatedFraction:siteCells.length?glaciated/siteCells.length:0
+        }));
+    }
     forgetEdgeKm(mesh);
     stats.iceKm2 = I.iceKm2; stats.iceSheets = I.sheets;
     lap('ice age');
