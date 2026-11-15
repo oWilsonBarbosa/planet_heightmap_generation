@@ -73,3 +73,24 @@ A desativação **piora a validação geomorfológica**, produzindo um lago doce
 
 **Próximo ensaio rigoroso:** rastrear a conectividade e a incisão `cutAt` da depressão 912 desde a escultura do terreno, comparar soleira e rio cruzando a bacia na mesma geografia, e construir um critério geométrico e físico para persistência de um lago. Testar com dados independentes, verificar cota do exutório e evitar limiares artificialmente escolhidos para que a auditoria passe. Os números de corpos e áreas acima não são um estado aprovado de Orogen.
 
+
+
+## Proveniência geomorfológica dos cortes que drenam a depressão 912
+
+[Código de rastreamento `b544b95`](https://github.com/oWilsonBarbosa/planet_heightmap_generation/commit/b544b95225403a39d0fa42354507da069eb3cab2);
+[execução no Actions 43762680343](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43762680343). Semente Evolution `10673275`, 1.280.001 células, **não** atlas canônico.
+
+O último rastreio do `cutAt` fornece por célula valor, etapa, depressão de origem e relevo anterior ao corte. A depressão `912` tem soleira `109,28 m`, porém apresenta duas incisões de **hollows vizinhos**, ambas inferiores à soleira:
+
+| Célula cortada | Coordenadas | Cota antes → depois | Fonte | Motivo registrado |
+|---|---|---|---|---|
+| `1264061` | −77,18069°, 121,62257° | 112,05 → **96,06 m** | Hollow `973` | `cause=4`: corte para drenar outro lago |
+| `1264849` | −77,48956°, 117,69208° | 118,02 → **100,91 m** | Hollow `2424` | `cause=5`: brecha glacial |
+
+Os dois cortes estão fora da `912`. O código de decisão percorre cada célula de `912` e seus vizinhos externos: se qualquer `cutAt` é mais baixo do que `h.level−0.01 km`, `drainedByGorge` fica verdadeiro. O menor nível, **96,06 m**, é o de uma ação sobre o hollow `973`, portanto a drenagem de `912` não se resolve somente reduzindo `glacialBreachShare` — conforme já demonstrado pelos testes `0.5/0.1/0`.
+
+**Causalidade demonstrada:** os cortes foram introduzidos pela hidrologia de hollows distintos. **Ainda não demonstrado:** se existe caminho contínuo e abaixo do nível do lago conectando cada canal à depressão `912`, ou se a adjacência por célula indica conexão espúria após os cortes; a geomorfologia da saída requer teste de conectividade. Não se deve eliminar cortes vizinhos apenas porque possuem origem diferente.
+
+**Próximo portão técnico:** construir teste observacional que percorra o grafo até o oceano e avalie a soleira efetiva entre o corpo lacustre candidato e os trechos incisos. Comparar malha 640K e 1,28M em unidades físicas, sem forçar conservação artificial de lagos.
+
+**Contribuição para outros projetos:** [E2-OG1 no catálogo compartilhado expert-spoon](https://github.com/oWilsonBarbosa/expert-spoon/blob/main/biblioteca_tecnica/casos/orogen_lagos_glaciais_v3_20261115.md) contém a lição transferível e as evidências reproduzíveis.
