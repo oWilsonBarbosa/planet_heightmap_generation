@@ -59,3 +59,25 @@ tau = 80 Ma (a calibrar)
 - O teste sintético é condição necessária, não suficiente; cartografia dos resultados ainda está pendente.
 
 **Situação:** hipótese implementada e instrumentada, testes unitários e triagem de escala aprovados, validação geológica completa ainda em execução no momento inicial deste registro. Nenhum commit foi mesclado à `main`.
+
+## Detalhamento do piloto (120 Myr, dados confirmados)
+
+As histórias comparadas usam a correção de `formedAt` em ambas as versões, e diferem **somente** pela formulação do empuxo das dorsais. Registros de `v2/tools/audit-cycle-polarity.mjs`, na resolução de 2 Myr.
+
+| Caso | Primeiro quadro com força divergente | Primeiro quadro com propriedade de célula divergente | Placas ao final: empuxo anterior → GPE distribuída |
+|---|---:|---:|---:|
+| 12345, 20K | 8 Myr | 12 Myr | 7 → 6 |
+| 777, 20K | 8 Myr | 20 Myr | 5 → 5 |
+| 777, 40K | 6 Myr | 16 Myr | 6 → 5 |
+
+Empuxo das dorsais, soma dos **módulos do torque por placa**, nas unidades internas do modelo, ao t=80 Myr:
+
+| Caso | Versão antiga com idade corrigida | GPE distribuída |
+|---|---:|---:|
+| 12345, 20K | 23,03 | 5,26 |
+| 777, 20K | 23,05 | 5,71 |
+| 777, 40K | 22,32 | 7,85 |
+
+A distribuição nova não deve ser considerada "mais física" somente porque tem mais células ativas; o torque integrado é diferente. O parâmetro de escala de GPE ainda requer calibração. A divergência histórica logo no começo é natural ao substituir uma força binária por campo distribuído, não evidência automática de regressão.
+
+**Verificação da suíte de escala já obtida na comparação completa:** versão com `formedAt` corrigido e versão distribuída apresentaram **6/7** aprovações, ambas com a mesma falha herdada de extensão Laramide: 14,80 Mkm² em 40K, 16,54 em 80K (diferença 10,5% > tolerância de 10%). O modo de GPE não alterou esse teste kinemático prescrito. As demais suítes e longas histórias devem ser consultadas nos seus logs antes de concluir melhoria global.
