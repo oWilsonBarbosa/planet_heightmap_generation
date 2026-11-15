@@ -12,8 +12,8 @@ O [experimento de exclusão do oceano passivo](https://github.com/oWilsonBarbosa
 
 Ridge push deriva da estrutura gravitacional e térmica da litosfera oceânica, não apenas de dois fragmentos jovens que se tocam. A formulação em gradientes espaciais de energia potencial gravitacional (GPE) é fisicamente mais apropriada, quando se dispõe de grades de idade oceânica, do que tratar a força exclusivamente como impulso linear na dorsal.
 
-- Müller et al. / artigo *Assessing plate reconstruction models using plate driving force consistency tests* (2023), Scientific Reports, https://doi.org/10.1038/s41598-023-37117-w — compara aproximações na dorsal com trações distribuídas baseadas em GPE.
-- Hasterok et al., *Reassessing the Thermal Structure of Oceanic Lithosphere With Revised Global Inventories of Basement Depths and Heat Flow Measurements* (2018), JGR Solid Earth, https://doi.org/10.1029/2018JB015998 — ressalta limites do modelo simples de resfriamento de meio-espaço para litosfera antiga.
+- Clennett et al., *Assessing plate reconstruction models using plate driving force consistency tests* (2023), Scientific Reports, https://doi.org/10.1038/s41598-023-37117-w — compara aproximações na dorsal com trações distribuídas baseadas em GPE.
+- Richards et al., *Reassessing the Thermal Structure of Oceanic Lithosphere With Revised Global Inventories of Basement Depths and Heat Flow Measurements* (2018), JGR Solid Earth, https://doi.org/10.1029/2018JB015998 — ressalta limites do modelo simples de resfriamento de meio-espaço para litosfera antiga.
 
 Estas referências respaldam **a direção** do experimento, **não** garantem os números ou a fórmula proxy definidos aqui.
 
