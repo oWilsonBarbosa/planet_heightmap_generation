@@ -1,0 +1,48 @@
+name: GPE arc cluster cartographic diagnosis
+
+on:
+  push:
+    branches:
+      - audit/gpe-strength-sensitivity-20261115
+    paths:
+      - '.github/workflows/gpe-arc-cartography.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  arc:
+    name: Seed 4242, GPE ${{ matrix.strength }}, 20K
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        strength: ['1.0', '2.0']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Validate audit script
+        run: node --check v2/tools/audit-arc-clusters.mjs
+      - name: Model arcs and render four maps from actual simulation cells
+        run: |
+          node v2/tools/audit-arc-clusters.mjs \
+            --cells=20000 --seed=4242 \
+            --strength=${{ matrix.strength }} \
+            --until=1200 --every=100 --targets=900,1000,1100,1200 \
+            --out=reports/arc-4242-20k-gpe-${{ matrix.strength }}
+      - name: Upload arc statistics and diagnostic SVG maps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arc-4242-gpe-${{ matrix.strength }}
+          path: |
+            reports/arc-4242-20k-gpe-${{ matrix.strength }}.csv
+            reports/arc-4242-20k-gpe-${{ matrix.strength }}.json
+            reports/arc-4242-20k-gpe-${{ matrix.strength }}-t*.svg
+          if-no-files-found: warn
