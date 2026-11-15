@@ -6,6 +6,7 @@ on:
       - audit/gpe-strength-sensitivity-20261115
     paths:
       - '.github/workflows/gpe-arc-cartography.yml'
+      - 'v2/tools/audit-arc-clusters.mjs'
   workflow_dispatch:
 
 permissions:
