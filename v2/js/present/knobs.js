@@ -52,6 +52,12 @@ export function knobOverrides(s = {}) {
 export function finishOverrides(s = {}) {
     return { carveTimeMyr: FINISH.carveTimeMyr * (s.hydraulicErosion ?? DEFAULTS.hydraulicErosion) / DEFAULTS.hydraulicErosion };
 }
+/** Generate-only experimental hydrology profile; the default site behavior is unchanged.
+ *  Import and Evolution continue using their existing finish settings. */
+export function generateFinishOverrides(s = {}, hydrologyProfile = 'v3') {
+    const overrides = finishOverrides(s);
+    return hydrologyProfile === 'closed-basins' ? { ...overrides, closedBasins: true, seaRemnantAnySize: true } : overrides;
+}
 /** The finish's config for the sliders. */
 export const finishConfigOf = (s = {}) => ({ ...FINISH, ...finishOverrides(s) });
 
