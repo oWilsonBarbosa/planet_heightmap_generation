@@ -1,0 +1,42 @@
+name: Arc volcanic production resolution control
+
+on:
+  push:
+    branches: [audit/arc-reconstruction-provenance-20261115]
+    paths:
+      - '.github/workflows/arc-production-resolution.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scene:
+    name: Same wings scene / ${{ matrix.cells }} cells
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        cells: [20000, 40000, 80000]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --no-package-lock delaunator
+      - name: Check observer syntax
+        run: node --check v2/tools/audit-arc-production-scale.mjs
+      - name: Measure arc births and possibly dormant widening in fixed scene
+        run: |
+          node v2/tools/audit-arc-production-scale.mjs \
+            --cells=${{ matrix.cells }} --until=110 --every=10 \
+            --out=reports/controlled-arc-${{ matrix.cells }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arc-production-${{ matrix.cells }}
+          path: |
+            reports/controlled-arc-${{ matrix.cells }}.json
+            reports/controlled-arc-${{ matrix.cells }}.csv
+          if-no-files-found: warn
