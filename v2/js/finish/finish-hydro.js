@@ -352,7 +352,15 @@ export function hydrology(ctx, F) {
                 q:+q[c].toFixed(2), isHollowOutlet:outletH >= 0 ? outletH : null
             };
         });
-        console.log('OROGEN_HYDRO_TRACE ' + JSON.stringify({ stage, n, samples }));
+        const chains = (stage === 'after-early-gorges' || stage === 'after-receiver-reorder') ?
+            [60166, 19158].filter(c=>traceIds.includes(c)).map(start => {
+                const nodes=[], seen=new Set(); let c=start;
+                while(c>=0 && c<n && nodes.length<45 && !seen.has(c)){
+                    seen.add(c);nodes.push({c,z:+(z[c]*1000).toFixed(2),r:recv[c],h:hollow[c],rank:rank[c],cut:Number.isFinite(cutAt[c]) ? +(1000*cutAt[c]).toFixed(2):null});c=recv[c];
+                }
+                return {start,nodes,tail:c,cycle:seen.has(c)};
+            }):[];
+        console.log('OROGEN_HYDRO_TRACE ' + JSON.stringify({ stage, n, samples, chains }));
     };
     traceStage('before-pits');
     for (const id of pits) { const h = hollows[id]; for (const c of h.cells) if (z[c] < h.level) z[c] = h.level; }
