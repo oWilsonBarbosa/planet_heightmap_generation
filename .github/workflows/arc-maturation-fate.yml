@@ -1,0 +1,46 @@
+name: Old arc fate and maturation audit
+
+on:
+  push:
+    branches: [audit/gpe-strength-sensitivity-20261115]
+    paths:
+      - '.github/workflows/arc-maturation-fate.yml'
+      - 'v2/tools/audit-arc-fate.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    name: ARC native-raster reachability / GPE ${{ matrix.strength }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        strength: ['1.0', '2.0']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Check syntax
+        run: node --check v2/tools/audit-arc-fate.mjs
+      - name: Run identical seed and resolution for arc lifetime
+        run: |
+          node v2/tools/audit-arc-fate.mjs \
+            --seed=4242 --cells=20000 --strength=${{ matrix.strength }} \
+            --until=1200 --every=100 --targets=900,1000,1100,1200 \
+            --out=reports/arc-fate-4242-20k-gpe-${{ matrix.strength }}
+      - name: Archive arc fate and maturation metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arc-fate-4242-gpe-${{ matrix.strength }}
+          path: |
+            reports/arc-fate-4242-20k-gpe-${{ matrix.strength }}.csv
+            reports/arc-fate-4242-20k-gpe-${{ matrix.strength }}.json
+          if-no-files-found: warn
