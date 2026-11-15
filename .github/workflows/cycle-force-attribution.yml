@@ -1,0 +1,98 @@
+name: Cycle force attribution A-B
+
+on:
+  push:
+    branches:
+      - audit/ocean-age-return-20261114
+    paths:
+      - '.github/workflows/cycle-force-attribution.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    name: force seed ${{ matrix.seed }} / ${{ matrix.cells }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - seed: 777
+            cells: 20000
+          - seed: 777
+            cells: 40000
+          - seed: 12345
+            cells: 20000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/tectonic-baseline-20261114
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ocean-age-return-20261114
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: |
+          (cd baseline && npm install --no-save --no-package-lock delaunator)
+          (cd candidate && npm install --no-save --no-package-lock delaunator)
+      - name: Validate observer and use identical version
+        run: |
+          mkdir -p results
+          cp candidate/v2/tools/audit-cycle-polarity.mjs baseline/v2/tools/audit-cycle-polarity.mjs
+          node --check candidate/v2/tools/audit-cycle-polarity.mjs
+      - name: Simulate initial 50 Myr with force records
+        run: |
+          (cd baseline && node v2/tools/audit-cycle-polarity.mjs --seed=${{ matrix.seed }} --cells=${{ matrix.cells }} --until=50 --every=2 --out=../results/baseline) > results/baseline.log
+          (cd candidate && node v2/tools/audit-cycle-polarity.mjs --seed=${{ matrix.seed }} --cells=${{ matrix.cells }} --until=50 --every=2 --out=../results/candidate) > results/candidate.log
+      - name: Attribute earliest force, motion, polarity and geometry changes
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('results/baseline.json','utf8')),b=JSON.parse(fs.readFileSync('results/candidate.json','utf8'));
+          if(a.rows.length!==b.rows.length)throw Error('Unmatched snapshots');
+          const fields=['ageHash','forceDigest','plateMotionDigest','polarityHash','boundaryHash','ownerHash','crustTypeHash'];
+          const first={};
+          for(const field of fields){
+            const i=a.rows.findIndex((r,j)=>r[field]!==b.rows[j][field]);
+            first[field]=i<0?null:a.rows[i].timeMyr;
+          }
+          let forceDifferences=[];
+          if(first.forceDigest!==null){
+            const i=a.rows.findIndex(r=>r.timeMyr===first.forceDigest);
+            for(const [p,q] of a.rows[i].loads.map((p,k)=>[p,b.rows[i].loads[k]])){
+              if(!q||p.id!==q.id){forceDifferences.push({plate:p.id,issue:'plate list diverged'});continue;}
+              for(const x of p.forces){
+                const y=q.forces.find(v=>v.name===x.name);
+                if(!y||JSON.stringify(x)!==JSON.stringify(y))forceDifferences.push({plate:p.id,name:p.name,force:x.name,baseline:x,candidate:y??null});
+              }
+            }
+          }
+          const out={seed:a.seed,meshCells:a.meshCells,first,firstForceComponentDifferences:forceDifferences.slice(0,25),
+            atFirstMotion:(()=>{
+              if(first.plateMotionDigest===null)return null;
+              const i=a.rows.findIndex(r=>r.timeMyr===first.plateMotionDigest);
+              const l=a.rows[i].plates,r=b.rows[i].plates;
+              return l.map((p,k)=>({baseline:p,candidate:r[k]})).filter(x=>JSON.stringify(x.baseline)!==JSON.stringify(x.candidate)).slice(0,8);
+            })()};
+          fs.writeFileSync('results/comparison.json',JSON.stringify(out,null,2)+'\n');
+          console.log('FIRST '+JSON.stringify({seed:out.seed,meshCells:out.meshCells,first:out.first}));
+          console.log('FORCES '+JSON.stringify(out.firstForceComponentDifferences));
+          console.log('MOTION '+JSON.stringify(out.atFirstMotion));
+          EOF
+      - name: Archive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: force-seed${{ matrix.seed }}-cells${{ matrix.cells }}
+          path: |
+            results/baseline.json
+            results/candidate.json
+            results/comparison.json
+          if-no-files-found: warn
