@@ -20,6 +20,14 @@ import { freeCellBeside } from './tidy-plates.js';
 export function accreteTerrane(world, host, donor, terrane, rateCmYr) {
     const { mesh, config, time } = world, { xyz, index, numCells, adjOffset, adjList } = mesh;
     const H = host.crust, D = donor.crust;
+    // Diagnostic native-raster ARC count, separated from world-frame visible area.
+    const countArc = c => {
+        let n=0;
+        for (let i=0;i<c.mask.length;i++) if(c.mask[i]&&c.type[i]===CrustType.ARC)n++;
+        return n;
+    };
+    const arcBefore = countArc(H)+countArc(D);
+    let arcTransferred=0,arcAbsorbed=0;
     const origin = new Int8Array(numCells);
     for (let q = 0; q < numCells; q++) if (H.mask[q] && H.type[q] !== CrustType.OCEAN) origin[q] = 1;
 
@@ -49,9 +57,13 @@ export function accreteTerrane(world, host, donor, terrane, rateCmYr) {
         const land = isTerrane[c] === 1;
         if (land && origin[q]) {                                          // land (the host's, or terrane already placed) is here
             q = freeCellBeside(host, mesh, q, P, n => origin[n] !== 0);
-            if (q < 0) { absorbed++; D.remove(c); continue; }
+            if (q < 0) {
+                if (D.type[c]===CrustType.ARC) arcAbsorbed++;
+                absorbed++; D.remove(c); continue;
+            }
         }
         if (origin[q] !== 1 && (land || !H.mask[q])) {                   // the host keeps its own land, and its own crust over the fore-arc
+            if (land && D.type[c]===CrustType.ARC) arcTransferred++;
             H.copyFrom(q, D, c);
             if (land) H.flags[q] &= ~CrustFlag.TRENCH;                     // on land the polarity rule re-establishes the trench where it belongs
             if (land) origin[q] = 2;
@@ -59,13 +71,20 @@ export function accreteTerrane(world, host, donor, terrane, rateCmYr) {
         }
         D.remove(c);
     }
+    const arcAfterTransfer = countArc(H)+countArc(D);
+    world.budget.arcAccreteEvents = (world.budget.arcAccreteEvents ?? 0)+1;
+    world.budget.arcAccreteTransferredCells = (world.budget.arcAccreteTransferredCells ?? 0)+arcTransferred;
+    world.budget.arcAccreteAbsorbedCells = (world.budget.arcAccreteAbsorbedCells ?? 0)+arcAbsorbed;
+    world.budget.arcAccreteTransferNetCells = (world.budget.arcAccreteTransferNetCells ?? 0)+arcAfterTransfer-arcBefore;
     donor.markReshaped();
     host.markReshaped();
     if (D.count === 0) { donor.alive = false; donor.omega = [0, 0, 0]; donor.dynamics = null; }
     if (terrane.length * mesh.cellAreaKm2 < config.terraneMinAreaKm2) { host.refreshExtent(xyz); donor.refreshExtent(xyz); return { cells: moved, sealed: 0, absorbed, scrap: true }; }
 
     // the strait between terrane and host closes; the seam is a suture; a short belt on both sides
+    const arcBeforeSeaFill = countArc(H);
     const sealed = closeSeasBetween(H, origin, mesh, host, config, time);
+    world.budget.arcAccreteSeaFillDeltaCells = (world.budget.arcAccreteSeaFillDeltaCells ?? 0)+countArc(H)-arcBeforeSeaFill;
     const seam = [];
     for (let q = 0; q < numCells; q++) {
         if (!H.mask[q] || H.type[q] === CrustType.OCEAN) continue;
