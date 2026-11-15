@@ -89,7 +89,8 @@ jobs:
       - name: Check for unexpected drainage regressions
         shell: bash
         run: |
-          set -uo pipefail
+          set +e
+          set -o pipefail
           node --max-old-space-size=5500 tuning/evolution/drainage.mjs --cells 160000,640000 2>&1 | tee evolution.log
           result=$?
           set -e
