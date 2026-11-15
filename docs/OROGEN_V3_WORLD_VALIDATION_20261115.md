@@ -48,6 +48,32 @@ Execução: [GitHub Actions — baseline fork original](https://github.com/oWils
 
 **Resultado de revisão:** o merge não deve ser promovido. Diagnosticar com IDs e coordenadas dos trechos de subida e do lago inacessível; repetir os testes com os mesmos terrenos de entrada, se possível, para atribuir a causa. Não flexibilizar os limiares só para passar os testes.
 
+## Localização das anomalias — diagnóstico instrumentado
+
+Código do diagnóstico: `tuning/evolution/drainage.mjs --cells 160000,640000 --diagnose`. Evidência executada em [Actions 43751694917](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43751694917); o job `evolution-drainage` registra `OROGEN_DRAINAGE_DIAG` por resolução. **Não são coordenadas de Orogen:** são posições do mundo de ensaio do Evolution, semente `10673275`, com relevo diferente do atlas canônico.
+
+### Trechos de rios que sobem na malha de 160.000 células
+
+| Célula de origem (lat, lon) | Origem m | Receptor (lat, lon) | Receptor m | Subida | Vazão |
+|---|---:|---|---:|---:|---:|
+| `60166` (14,24640° N, 132,08106° E) | 70,10 | `60543` (13,99479° N, 132,67905° E) | 177,25 | **107,15 m** | 4.094,665 m³/s |
+| `19158` (49,51615° N, 106,26513° O) | 29,59 | `18925` (49,79667° N, 105,55921° O) | 123,69 | 94,10 m | 7.593,194 m³/s |
+
+No primeiro caso, existem dois vizinhos a ~70,1 m (`59789`, `59933`), mais baixos do que o receptor indicado, mas isso **não prova** que a troca direta do receptor preserve uma rede acíclica. O mesmo ocorre no segundo caso (vizinhos `19535` e `19391`). Averiguar como a etapa de corte e preenchimento da bacia mantém receptores antigos ou produz redirecionamento insuficiente.
+
+### Lago de água doce com exutório inacessível na malha de 640.000 células
+
+- Corpo `266`: **3 células**, ~2.390,9 km², água a **139,00 m**; células `633044` (−77,98819°, 104,80826°), `632667` e `632434`.
+- Exutório `633654` (−78,56063°, 104,34225°), terreno a **143,36 m** — **4,36 m acima da superfície do lago**; distante 64,5 km da célula de lago mais próxima.
+- Vizinhos do exutório `633277` a **140,81 m**, `633798` a **139,00 m**; o receptor do exutório é `633798`. A verificação não achou caminho conectado ao exutório cujas cotas permaneçam abaixo da superfície (+1 m de tolerância).
+- Necessário rastrear o desfiladeiro e a alteração de cota após o estabelecimento do lago; nenhuma redução artificial de cotas foi aplicada.
+
+### Instabilidade de lagos grandes entre 160K e 640K
+
+Limiar físico comparado pelo teste: lagos ≥ **12.752 km²**; a fração da terra ocupada cai de 0,27% (11 corpos) a 0,05% (5 corpos). O maior corpo detectado a 160K está perto de **15,109° N, 82,058° E**, tem **73 células = 232.715,5 km²**, superfície a **3 m**, saída `59663`. Não há corpo acima do limiar identificado na mesma região entre os três maiores lagos do diagnóstico a 640K; deve-se rastrear a origem desse corpo, que pode representar um remanescente marinho artificial em baixa resolução.
+
+O controle do fork `c10969c` **não** apresenta os três erros nas mesmas verificações, mas sua geografia difere: nenhum deles deve ser atribuído exclusivamente ao algoritmo antes de separar efeitos de relevo, depressão fechada e discretização. Não reduzir os padrões de aprovação para ocultar falhas.
+
 ## Portões ainda abertos
 
 1. **Evolution drainage: 3 de 32 verificações falharam** no cenário de regressão (semente 10673275): a 160K, 2 trechos de rios sobem até **107 m** (acima do máximo 100 m); a 640K, 1 lago de água doce tem saída inalcançável pelas células de lago; entre 160K e 640K, a proporção de lagos >12.752 km² muda **0,27% → 0,05%** (11 → 5), fora da tolerância de 30%. Os demais 29 checks passaram. **Não declarar aprovação física da hidrologia.**
