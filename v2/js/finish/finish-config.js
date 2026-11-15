@@ -140,6 +140,7 @@ export const FINISH = {
                                 // developer, 2026-10-27: fresh lakes "should be lower like < 10%"; 0: on the finished mesh)
     breachKm: 0.6,              // an old basin that overflows has cut a gorge this deep through its rim (at most)…
     breachQ: [10, 1000],        // …by what spills over (m³/s): none below the first, full from the second…
+    requireContinuousGorgeDrainage: false, // experimental; check full exit path when deciding if an adjacent cut drains a lake
     glacialBreachShare: 0.5,    // …half as deep in the ice age's own (young) hollows, and only by big rivers (glacialBreachQ, m³/s):
     glacialBreachQ: [500, 5000], // a big river breaks through its lakes, a small one keeps its lake district
     // which lakes stay (developer: "every river needs to end at ocean not lake"): a lake on a river is cut through to its

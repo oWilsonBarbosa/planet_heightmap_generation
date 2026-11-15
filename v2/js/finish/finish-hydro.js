@@ -570,11 +570,34 @@ export function hydrology(ctx, F) {
             // (a gorge cut from a basin upstream already runs through it below its rim: its water has a lower way out and
             // drains by it — no lake strung along the gorge)
             let crossed = Infinity;
+            // Opt-in geomorphic hypothesis: a low incised point only drains a lake
+            // if its entire downstream channel lies below the supposed new spill.
+            // This prevents treating a cut to 96m as a 96m exit when the receiver
+            // route still climbs to a 109m sill. Baseline behavior remains unchanged.
+            const continuousCut = !!F.requireContinuousGorgeDrainage;
+            const pathSpill = (start, limit) => {
+                let x=start, max=-Infinity, guard=0;
+                const visited=new Set();
+                while(x>=0 && x<n && !visited.has(x) && guard++<n) {
+                    visited.add(x);max=Math.max(max,z[x]);
+                    const y=recv[x];
+                    if(y<0 || y>=n) return rank[x]<0 ? max : Infinity;
+                    if(ocean[y] || rank[y]<0) return max;
+                    if(max >= limit) return max;
+                    x=y;
+                }
+                return Infinity;
+            };
+            const cutSpill = x => continuousCut ? pathSpill(x,h.level-0.01) : cutAt[x];
             // (and one cut along its shore or through its way out below its level: a lake does not stand above a gorge
             // beside it — at 640K one stood 205 m above its own way out, cut by its tributary's gorge)
             if (!h.sea) for (const x of h.cells) {
-                if (cutAt[x] < crossed) crossed = cutAt[x];
-                for (let k = adjOffset[x]; k < adjOffset[x + 1]; k++) { const nb = adjList[k]; if (hollow[nb] !== hollow[c] && rank[nb] >= 0 && cutAt[nb] < crossed) crossed = cutAt[nb]; }
+                if (cutAt[x] < crossed) crossed = Math.min(crossed,cutSpill(x));
+                for (let k = adjOffset[x]; k < adjOffset[x + 1]; k++) {
+                    const nb=adjList[k];
+                    if (hollow[nb] !== hollow[c] && rank[nb]>=0 && cutAt[nb] < crossed)
+                        crossed=Math.min(crossed,cutSpill(nb));
+                }
             }
             const drained = crossed < h.level - 0.01;
             if(siteRecords?.has(hollow[c])){
