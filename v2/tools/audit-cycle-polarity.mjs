@@ -14,10 +14,13 @@ import { contactAt } from '../js/tectonics/step/contact.js';
 const opt=(key,def)=>process.argv.find(v=>v.startsWith('--'+key+'='))?.slice(key.length+3)??def;
 const seed=Number(opt('seed','777')),cells=Number(opt('cells','20000')),until=Number(opt('until','120')),every=Number(opt('every','2'));
 const out=opt('out','reports/polarity-'+cells+'-'+seed);
+const ridge=opt('ridge','normal');
 if(![seed,cells,until,every].every(Number.isInteger)||cells<2000||until<2||every<1||until%every!==0)throw Error('Invalid arguments');
+if(!['normal','off'].includes(ridge))throw Error('Invalid --ridge (normal or off)');
 const mesh=labMesh(cells),scene=TERRAIN_SCENES.find(x=>x.id==='cycle');
 if(!scene)throw Error('cycle scene missing');
 const world=scene.build(mesh,seed),rows=[],normal=[0,0,0,0];
+if(ridge==='off')world.config.ridgePush=0;
 const hash=a=>createHash('sha256').update(Buffer.from(a.buffer,a.byteOffset,a.byteLength)).digest('hex').slice(0,20);
 let seenEvents=0;
 
@@ -92,6 +95,6 @@ simulate(world,{
     }
 });
 fs.mkdirSync(path.dirname(out),{recursive:true});
-fs.writeFileSync(out+'.json',JSON.stringify({seed,meshCells:mesh.numCells,until,every,
+fs.writeFileSync(out+'.json',JSON.stringify({seed,meshCells:mesh.numCells,until,every,ridge,
     note:'Observational fields: ocean polarityVotes sample ocean-on-ocean segment votes; overridingPairs count exposed overriding boundary cells, not continuous trench length.',rows},null,2)+'\n');
 console.log('Saved '+out+'.json: '+rows.length+' snapshots');
