@@ -37,6 +37,13 @@ import { centroidOfCells } from '../../core/sphere-geom.js';
 export function mergePlates(world, upper, lower, overlapWorldCells, collision) {
     const { mesh, config, time } = world, { xyz, numCells, index, adjOffset, adjList, edgeKm } = mesh;
     const U = upper.crust, L = lower.crust;
+    // Audit-only: ARC cell counts in native plate rasters, not unique world area.
+    const countArc = c => {
+        let n = 0;
+        for (let i = 0; i < c.mask.length; i++) if (c.mask[i] && c.type[i] === CrustType.ARC) n++;
+        return n;
+    };
+    const arcBeforeUpper = countArc(U), arcBeforeLower = countArc(L);
     const landBefore = upper.stats.continentalCells + lower.stats.continentalCells;
     const hue = (lower.stats.cells > upper.stats.cells ? lower : upper).hue;     // (the welded plate is drawn in the larger one's colour)
 
@@ -123,6 +130,7 @@ export function mergePlates(world, upper, lower, overlapWorldCells, collision) {
         if (U.type[s] === CrustType.CRATON) out.type[q] = CrustType.CONTINENT;             // cratons are stamped back rigidly below
     }
     stampCratonsRigidly(out, U, disp, mesh);
+    const arcAfterUpperWarp = countArc(out);
 
     for (let q = 0; q < numCells; q++) {
         const c = fromL[q];
@@ -134,6 +142,7 @@ export function mergePlates(world, upper, lower, overlapWorldCells, collision) {
         origin[q] = 2;
     }
 
+    const arcAfterLowerOverlay = countArc(out);
     // ── holes the warp left inside the merged crust (a destination whose source fell outside both plates): each takes a
     // neighbour's crust — land where most of its neighbours are land. Left empty, the next step would grow new ocean in
     // them: slivers of sea along the seam (Phase 11) ──
@@ -156,7 +165,19 @@ export function mergePlates(world, upper, lower, overlapWorldCells, collision) {
     }
 
     // ── sea caught between the two plates closes: narrow straits, and small enclosed seas ──
+    const arcAfterHoleFill = countArc(out);
     const sealed = closeSeasBetween(out, origin, mesh, upper, config, time);
+    const arcAfterSeaFill = countArc(out);
+    // Native-raster accounting; overlap and inverse sampling are not physical
+    // volcanic ARC production. The additive stages telescope to net change.
+    world.budget.arcMergeEvents = (world.budget.arcMergeEvents ?? 0) + 1;
+    world.budget.arcMergeInputCells = (world.budget.arcMergeInputCells ?? 0) + arcBeforeUpper + arcBeforeLower;
+    world.budget.arcMergeOutputCells = (world.budget.arcMergeOutputCells ?? 0) + arcAfterSeaFill;
+    world.budget.arcMergeNetCells = (world.budget.arcMergeNetCells ?? 0) + arcAfterSeaFill - arcBeforeUpper - arcBeforeLower;
+    world.budget.arcMergeUpperWarpDeltaCells = (world.budget.arcMergeUpperWarpDeltaCells ?? 0) + arcAfterUpperWarp - arcBeforeUpper;
+    world.budget.arcMergeLowerOverlayDeltaCells = (world.budget.arcMergeLowerOverlayDeltaCells ?? 0) + arcAfterLowerOverlay - arcAfterUpperWarp - arcBeforeLower;
+    world.budget.arcMergeHoleFillDeltaCells = (world.budget.arcMergeHoleFillDeltaCells ?? 0) + arcAfterHoleFill - arcAfterLowerOverlay;
+    world.budget.arcMergeSeaFillDeltaCells = (world.budget.arcMergeSeaFillDeltaCells ?? 0) + arcAfterSeaFill - arcAfterHoleFill;
 
     // ── the seam becomes a suture belt ──
     const seam = [];
