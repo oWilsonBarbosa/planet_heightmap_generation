@@ -1,0 +1,94 @@
+name: Active arc gate geological regression
+
+on:
+  push:
+    branches: [audit/arc-active-trench-gate-20261115]
+    paths:
+      - '.github/workflows/arc-active-gate-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  suites:
+    name: ${{ matrix.suite }} (GPE1 default)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [check-invariants.mjs,check-scale.mjs,check-phase13.mjs]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --no-package-lock delaunator
+      - name: Run exact suite and preserve exit code
+        shell: bash
+        run: |
+          mkdir -p results
+          set +e
+          node v2/tools/${{ matrix.suite }} > results/suite.log 2>&1
+          code=$?
+          echo "$code" > results/suite.exit
+          set -e
+          tail -45 results/suite.log
+          echo "Actual suite exit code: $code"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: active-gate-regression-${{ matrix.suite }}
+          path: results/
+          if-no-files-found: warn
+
+  global:
+    name: GPE2 cycle ${{ matrix.cells }} cells, 3 seeds
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        cells: [20000,40000]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --no-package-lock delaunator
+      - name: Run 3 identical 1200-Myr histories for global geology
+        run: |
+          node v2/tools/audit-geography.mjs \
+            --cells=${{ matrix.cells }} \
+            --seeds=12345,777,4242 \
+            --until=1200 --every=100 \
+            --gpe-strength=2.0 --gpe-age-scale=80 \
+            --out=reports/active-gate-geography-${{ matrix.cells }}
+      - name: Summarize planetary metrics in all seeds
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const p='reports/active-gate-geography-${{ matrix.cells }}.json';
+          const d=JSON.parse(fs.readFileSync(p,'utf8'));
+          const keys=['continentalCrustPct','arcCrustPct','oceanMeanAgeMyr','oceanOver200Pct','largestPlatePct','largestBlockSharePct','plateCount'];
+          const rows=[];
+          for(const seed of d.parameters.seeds){
+            const history=d.rows.filter(r=>r.seed===seed);
+            const start=history[0],end=history.at(-1);
+            const result={seed,cells:end.cells,continentalGrowthPctPoints:end.continentalCrustPct-start.continentalCrustPct};
+            for(const k of keys)result[k]=end[k];
+            rows.push(result);
+          }
+          fs.writeFileSync('reports/active-gate-summary-${{ matrix.cells }}.json',JSON.stringify(rows,null,2)+'\n');
+          rows.forEach(row=>console.log('GATE_GLOBAL '+JSON.stringify(row)));
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: active-gate-geography-${{ matrix.cells }}
+          path: |
+            reports/active-gate-geography-${{ matrix.cells }}.json
+            reports/active-gate-geography-${{ matrix.cells }}.csv
+            reports/active-gate-summary-${{ matrix.cells }}.json
+          if-no-files-found: warn
