@@ -255,8 +255,12 @@ export function closeSeasBetween(out, origin, mesh, upper, config, time) {
     for (const q of toFill) {
         const s = nearestLand.source[q] >= 0 ? nearestLand.source[q] : land1[0];
         out.copyFrom(q, out, s);
+        // Isolated A/B hypothesis: a copied ARC terrane is not new magmatic
+        // crust. Do not reset its geological formation timestamp merely
+        // because the strait closes and a source ARC cell was duplicated.
+        const copiedArc = out.type[q] === CrustType.ARC;
         if (out.type[q] === CrustType.CRATON) out.type[q] = CrustType.CONTINENT;      // fill takes the kind of land it joins (arc stays arc)
-        out.formedAt[q] = time;
+        if (!copiedArc) out.formedAt[q] = time;
         out.flags[q] = CrustFlag.SUTURE;
         out.slabKm[q] = 0;
         origin[q] = 3;
