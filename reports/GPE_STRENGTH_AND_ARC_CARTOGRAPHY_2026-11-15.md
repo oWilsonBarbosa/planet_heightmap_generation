@@ -53,7 +53,7 @@ Os registros acumulados de `arcMaturedCells` e `recycledArcCells` do caso 4242/2
 
 ## Próxima etapa já instrumentada
 
-`v2/tools/audit-arc-clusters.mjs` foi ampliado para discriminar o atributo `CrustFlag.MARGIN_ISLE` dentro do maior componente ARC, idade mediana de seus elementos, número de placas que contribuem ao grupo e seus terrenos identificados. O observador NÃO modifica o motor. O [workflow de nova medição #43680772889](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43680772889) foi iniciado para força 1,0 e 2,0 na mesma semente 4242. **Resultados dessa nova classificação ainda não estavam disponíveis no momento inicial do registro**.
+`v2/tools/audit-arc-clusters.mjs` foi ampliado para discriminar o atributo `CrustFlag.MARGIN_ISLE` dentro do maior componente ARC, idade mediana de seus elementos, número de placas que contribuem ao grupo e seus terrenos identificados. O observador NÃO modifica o motor. A [nova classificação por flags de crosta — Actions #43680772889](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43680772889) foi **concluída com sucesso** em dois jobs. O observador verifica o bit `CrustFlag.MARGIN_ISLE`, a placa responsável e a idade mediana do maior agrupamento ARC.
 
 Critérios: medir quanto do grupo grande vem de ilhas de antearco, quanto de ARC oceânica, quantas placas/terrenos contribuem, conexão com costa e duração do estoque. Somente depois propor alterações em produção, maturação, acreção, colisão ou reciclagem de arcos. Evitar correção por simples corte artificial de área.
 
@@ -66,3 +66,33 @@ Critérios: medir quanto do grupo grande vem de ilhas de antearco, quanto de ARC
 5. Preservar `main` e comparar sempre com o histórico de idade oceânica correta.
 
 Arquivos pertinentes: `v2/tools/audit-arc-clusters.mjs`, `v2/tools/audit-geography.mjs`, `reports/GPE_STRENGTH_SENSITIVITY_2026-11-15.md` e `reports/DISTRIBUTED_RIDGE_FULL_VALIDATION_2026-11-15.md`.
+
+
+## Classificação confirmada: formação do agrupamento gigante (seed 4242, 20K)
+
+A segunda medição separa **ARC marcada como ilha de antearco costeiro** (`CrustFlag.MARGIN_ISLE`) da restante crosta do tipo ARC. Um agrupamento ARC pode tocar continentes ou estar próximo deles sem se converter automaticamente em continente; o teste de maturação depende também de idade, pertencimento à placa e adjacência no raster da própria placa.
+
+| Tempo (Ma) | Maior grupo ARC no teste GPE 2,0 (Mkm²) | Porção sinalizada como MARGIN_ISLE no maior grupo (Mkm²) | Número de placas no grupo | Idade mediana da crosta do grupo (Ma) |
+|---|---:|---:|---:|---:|
+| 900 | 9,59 | 0 | 1 | 248 |
+| 1000 | 16,42 | 0 | 1 | 168 |
+| 1100 | 26,98 | 0 | 3 | 164 |
+| 1200 | **28,18** | **0,05** | 3 | **220** |
+
+No último quadro, a maior placa contribui **27,03 Mkm²** dos 28,18 Mkm² conectados (**95,9%**); outras placas contribuem ~1,15 Mkm². Em contraste, no quadro GPE 1,0 o grupo maior tem **1,20 Mkm²** de ARC, dos quais **0,05 Mkm²** marcados como MARGIN_ISLE, e a idade mediana do grupo é **112 Ma**.
+
+**Conclusão sustentada:** a anomalia gigante não foi causada principalmente pela formação de ilhas de antearco. Trata-se de ARC não marcada como antearco, acumulada/conectada ao longo de um histórico de reorganização de placas, com crosta relativamente antiga. A classificação de proximidade continental sozinha não distingue crosta de arco oceânica, fragmentos de terreno acrecionados ou crosta adjacente a continente em outra placa.
+
+Dentre os terrenos tectônicos no grupo ao final estão os IDs 63 (~8,14 Mkm²), 45 (~5,99 Mkm²), 29 (~2,07 Mkm²) e 82 (~1,73 Mkm²). O maior grupo é **multiterreno**, embora quase inteiramente hospedado por uma única placa naquele instante.
+
+### Investigação seguinte
+
+Antes de alterar o gerador, medir para as células ARC com mais de 100 Ma:
+- fração adjacente a crosta CONTINENT/CRATON **na mesma placa e na mesma malha de placa**, distinguindo os contatos apenas geográficos;
+- largura e conectividade dos grupos de ARC, crescimento por criação versus acreção de terrenos, e episódios de perda por reciclagem;
+- distribuição de idades ARC por grupo e participação de subducção/colisão nos últimos 300 Myr;
+- presença efetiva de terra emersa nos mapas finais de terreno, que ainda não foi medida.
+
+O objetivo é verificar se o grande estoque de ARC antigo é uma falha de **maturação/reciclagem** ou uma consequência de **formação e soldagem de terrenos** antes de ajustar parâmetros. A hipótese não deve ser confundida com a origem da crosta de antearco costeiro.
+
+**Decisão adicional:** manter força 1,0 como controle experimental; direcionar a próxima auditoria à conservação e destino da crosta ARC. Evitar calibrar mais intensidades sem novos critérios geológicos.
