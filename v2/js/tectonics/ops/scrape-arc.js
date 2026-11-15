@@ -32,6 +32,9 @@ export function scrapeArc(world, host, donor, cells) {
         }
         D.remove(c);
     }
+    // Audit only: ARC moved between plates does not increase total ARC stock; ARC over existing land is absorbed.
+    world.budget.arcScrapedMovedCells = (world.budget.arcScrapedMovedCells ?? 0) + moved;
+    world.budget.arcScrapedAbsorbedCells = (world.budget.arcScrapedAbsorbedCells ?? 0) + absorbed;
     donor.markReshaped(); host.markReshaped();
     if (D.count === 0) { donor.alive = false; donor.omega = [0, 0, 0]; donor.dynamics = null; }
     host.refreshExtent(xyz); donor.refreshExtent(xyz);
