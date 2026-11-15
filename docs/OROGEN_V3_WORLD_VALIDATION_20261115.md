@@ -95,6 +95,35 @@ Novo controle sem mudar a geometria ou os limiares: [43754480772](https://github
 
 **Estado de publicação:** a correção dos rios ascendentes e do exutório está operacional e validada na regressão; o experimento de conexão de estreitos permanece **desligado**; o problema da convergência de lagos demanda rastreamento individualizado de corpos entre resoluções e avaliação da produção lacustre por origem (tectônica, glacial, remanescente marinho). Não reduzir limiares nem declarar hidrologia aprovada. Nenhum cânone foi migrado.
 
+## 15/11/2026 — correspondência geográfica dos lagos entre resoluções
+
+**Metodologia:** `tuning/evolution/lib/lake-lineage.mjs`, com testes sintéticos em `tests/lake-lineage.test.mjs`. As células da malha fina são associadas ao centro da célula mais próxima da malha grossa. Cada corpo tem origem identificada a partir da depressão no próprio algoritmo (`marine`, `young-glacial`, `ancient-tectonic`, `other`), área, centroide, exutório, classificação ao refinar (lago, oceano ou terra seca), e até cinco correspondências. **Sobreposição aproximada, não geometria exata de polígonos; área não equivale a conservação da forma.** A saída adicional `lakeOrigin` é exclusivamente diagnóstica (`network=true`) e não afeta a geração normal.
+
+Evidência: [comparação de linhagem individual, Actions 43755752195](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43755752195); o helper e os três testes sintéticos foram aprovados, mas os dois jobs permanecem em falha porque a antiga condição física de convergência dos grandes lagos ainda não passa.
+
+### 160.001 → 640.001 células (lagos ≥12.752 km²)
+
+| Origem | Corpos grossos | Área grossa km² | Área projetada em oceano km² | Área projetada em terra seca km² | Área ainda lacustre km² |
+|---|---:|---:|---:|---:|---:|
+| Remanescente marinho | 3 | 267.782 | **227.138** | 24.706 | 14.346 |
+| Glacial recente | 7 | 143.455 | 0 | **117.952** | 19.127 |
+| Antigo/tectônico | 1 | 15.939 | 0 | **15.143** | 0 |
+
+A maior massa marinha da malha grossa (~232.716 km², 15,118° N / 82,060° E) vira **93,1% oceano** a 640K, confirmando a anomalia de conectividade costeira já identificada. O lago antigo/tectônico de ~15.939 km² próximo de 52,233° N / 3,771° E vira completamente terra seca. Lagos glaciais extensos nas altas latitudes sul também desaparecem ou se fragmentam na malha fina.
+
+### 640.001 → 1.280.001 células (lagos ≥3.188 km²)
+
+| Origem | Corpos grossos | Área grossa km² | Área projetada em oceano km² | Área projetada em terra seca km² | Área ainda lacustre km² |
+|---|---:|---:|---:|---:|---:|
+| Glacial recente | **141** | **666.271** | 5.977 | **542.342** | **115.561** |
+| Remanescente marinho | 3 | 41.443 | 0 | 9.962 | 30.285 |
+
+Os corpos do limiar passam de **144 a 77**. A perda glacial responde pela maior parte da redução, e não pela transformação em oceano: aproximadamente **81%** da superfície bruta dos grandes lagos glaciais da malha de 640K é classificada como **terra seca** na malha de 1,28M. A hipótese de estreitos costeiros pode corrigir o grande falso lago marinho, mas **não resolve** a sensibilidade lacustre glacial.
+
+Exemplos rastreados: lago glacial da malha 640K próximo de −76,139° / 108,984° (12.752 km²) desaparece integralmente na malha 1,28M; outro em −85,651° / −69,952° (12.752 km²) conserva apenas ~39% como lago, dividido em múltiplos corpos de menor extensão. Lagos marinhos perto de −37,709° / 133,205° e 49,789° / 37,024° permanecem majoritariamente em água na resolução fina.
+
+**Conclusão física:** há ao menos dois mecanismos diferentes: (1) falta de conectividade oceânica na malha grossa, que cria falso lago marinho; (2) forte sensibilidade de lagos glaciais ao refinamento, potencialmente ligada à discretização de depressões, critérios de preservação e dinâmica de drenagem. Não atribuir automaticamente a um único parâmetro. É necessária comparação das mesmas depressões glaciais desde o relevo anterior ao acabamento, incluindo cotas, área de bacia, vazão, evidência glacial, decisão de manter lago e abertura de desfiladeiro. Nenhum limiar foi relaxado.
+
 ## Portões ainda abertos
 
 1. **Evolution drainage: 3 de 32 verificações falharam** no cenário de regressão (semente 10673275): a 160K, 2 trechos de rios sobem até **107 m** (acima do máximo 100 m); a 640K, 1 lago de água doce tem saída inalcançável pelas células de lago; entre 160K e 640K, a proporção de lagos >12.752 km² muda **0,27% → 0,05%** (11 → 5), fora da tolerância de 30%. Os demais 29 checks passaram. **Não declarar aprovação física da hidrologia.**
