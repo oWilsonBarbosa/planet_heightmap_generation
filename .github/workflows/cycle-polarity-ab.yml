@@ -1,0 +1,101 @@
+name: Early cycle polarity and motion A-B
+
+on:
+  push:
+    branches:
+      - audit/ocean-age-return-20261114
+    paths:
+      - '.github/workflows/cycle-polarity-ab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    name: seed ${{ matrix.seed }} / ${{ matrix.cells }} cells
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - seed: 777
+            cells: 20000
+          - seed: 777
+            cells: 40000
+          - seed: 12345
+            cells: 20000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/tectonic-baseline-20261114
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ocean-age-return-20261114
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: |
+          (cd baseline && npm install --no-save --no-package-lock delaunator)
+          (cd candidate && npm install --no-save --no-package-lock delaunator)
+      - name: Copy identical observer to baseline, without changing its engine
+        run: |
+          mkdir -p results
+          cp candidate/v2/tools/audit-cycle-polarity.mjs baseline/v2/tools/audit-cycle-polarity.mjs
+          node --check candidate/v2/tools/audit-cycle-polarity.mjs
+      - name: Run matched tectonic histories to 120 Myr
+        run: |
+          (cd baseline && node v2/tools/audit-cycle-polarity.mjs --seed=${{ matrix.seed }} --cells=${{ matrix.cells }} --until=120 --every=2 --out=../results/baseline) > results/baseline.log
+          (cd candidate && node v2/tools/audit-cycle-polarity.mjs --seed=${{ matrix.seed }} --cells=${{ matrix.cells }} --until=120 --every=2 --out=../results/candidate) > results/candidate.log
+      - name: Locate first age, polarity, force and ownership differences
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const b=JSON.parse(fs.readFileSync('results/baseline.json','utf8'));
+          const c=JSON.parse(fs.readFileSync('results/candidate.json','utf8'));
+          if(b.rows.length!==c.rows.length)throw Error('Different number of snapshots');
+          const fields=['ageHash','polarityHash','boundaryHash','plateMotionDigest','ownerHash','crustTypeHash','activePlates','inheritedOceanMkm2','passiveOceanMkm2'];
+          const first={};
+          for (const field of fields){
+            const i=b.rows.findIndex((row,j)=>row[field]!==c.rows[j][field]);
+            first[field]=i<0?null:{timeMyr:b.rows[i].timeMyr,baseline:b.rows[i][field],candidate:c.rows[i][field]};
+          }
+          const firstArrays = {
+            oceanPairVotes: ['polarityVotes','pair'],
+            overridingDirections: ['overridingPairs','direction'],
+            plateOmegas: ['plates','id'],
+            newEvents: ['events','kind'],
+          };
+          const firstDetailed={};
+          for(const [label,[field,id]] of Object.entries(firstArrays)){
+            const i=b.rows.findIndex((row,j)=>JSON.stringify(row[field])!==JSON.stringify(c.rows[j][field]));
+            if(i<0){firstDetailed[label]=null;continue;}
+            const left=b.rows[i][field],right=c.rows[i][field];
+            const l=new Map(left.map((x,k)=>[String(x[id])+(id==='kind'?':'+k:''),x]));
+            const r=new Map(right.map((x,k)=>[String(x[id])+(id==='kind'?':'+k:''),x]));
+            const changed=[...new Set([...l.keys(),...r.keys()])].filter(k=>JSON.stringify(l.get(k))!==JSON.stringify(r.get(k))).slice(0,12).map(k=>({key:k,baseline:l.get(k)??null,candidate:r.get(k)??null}));
+            firstDetailed[label]={timeMyr:b.rows[i].timeMyr,changed};
+          }
+          const out={seed:b.seed,meshCells:b.meshCells,until:b.until,every:b.every,first,firstDetailed,
+            baselineEnd:{timeMyr:b.rows.at(-1).timeMyr,plates:b.rows.at(-1).activePlates,counts:b.rows.at(-1).counts},
+            candidateEnd:{timeMyr:c.rows.at(-1).timeMyr,plates:c.rows.at(-1).activePlates,counts:c.rows.at(-1).counts}};
+          fs.writeFileSync('results/comparison.json',JSON.stringify(out,null,2)+'\n');
+          console.log('SUMMARY '+JSON.stringify({seed:out.seed,meshCells:out.meshCells,first:out.first,detailTimes:Object.fromEntries(Object.entries(firstDetailed).map(([k,v])=>[k,v?.timeMyr??null]))}));
+          console.log('DETAILS '+JSON.stringify(firstDetailed));
+          EOF
+      - name: Upload paired histories
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: polarity-seed${{ matrix.seed }}-cells${{ matrix.cells }}
+          path: |
+            results/baseline.json
+            results/candidate.json
+            results/comparison.json
+            results/baseline.log
+            results/candidate.log
+          if-no-files-found: warn
