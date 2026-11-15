@@ -1,0 +1,87 @@
+name: Ridge push controlled ablation
+
+on:
+  push:
+    branches:
+      - audit/ocean-age-return-20261114
+    paths:
+      - '.github/workflows/ridge-push-ablation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    name: no ridge push seed ${{ matrix.seed }} / ${{ matrix.cells }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - seed: 777
+            cells: 20000
+          - seed: 777
+            cells: 40000
+          - seed: 12345
+            cells: 20000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/tectonic-baseline-20261114
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ocean-age-return-20261114
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: |
+          (cd baseline && npm install --no-save --no-package-lock delaunator)
+          (cd candidate && npm install --no-save --no-package-lock delaunator)
+      - name: Run matched histories with ridge push disabled in each world's config
+        run: |
+          mkdir -p results
+          cp candidate/v2/tools/audit-cycle-polarity.mjs baseline/v2/tools/audit-cycle-polarity.mjs
+          node --check candidate/v2/tools/audit-cycle-polarity.mjs
+          (cd baseline && node v2/tools/audit-cycle-polarity.mjs --ridge=off --seed=${{ matrix.seed }} --cells=${{ matrix.cells }} --until=80 --every=2 --out=../results/baseline) > results/baseline.log
+          (cd candidate && node v2/tools/audit-cycle-polarity.mjs --ridge=off --seed=${{ matrix.seed }} --cells=${{ matrix.cells }} --until=80 --every=2 --out=../results/candidate) > results/candidate.log
+      - name: Locate first history divergence with ridge push disabled
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('results/baseline.json','utf8'));
+          const b=JSON.parse(fs.readFileSync('results/candidate.json','utf8'));
+          if(a.rows.length!==b.rows.length)throw Error('Unmatched samples');
+          const fields=['ageHash','forceDigest','plateMotionDigest','polarityHash','boundaryHash','ownerHash','crustTypeHash','activePlates'];
+          const first={};
+          for(const field of fields){
+            const i=a.rows.findIndex((r,j)=>r[field]!==b.rows[j][field]);
+            first[field]=i<0?null:a.rows[i].timeMyr;
+          }
+          const changes=[];
+          if(first.forceDigest!==null){
+            const i=a.rows.findIndex(r=>r.timeMyr===first.forceDigest);
+            const left=a.rows[i].loads,right=b.rows[i].loads;
+            for(const p of left){
+              const q=right.find(x=>x.id===p.id);
+              for(const f of p.forces){
+                const g=q?.forces.find(x=>x.name===f.name);
+                if(JSON.stringify(f)!==JSON.stringify(g))changes.push({plate:p.id,force:f.name,baseline:f,candidate:g??null});
+              }
+            }
+          }
+          const result={seed:a.seed,meshCells:a.meshCells,ridge:'off',first,firstForceDifferences:changes.slice(0,12)};
+          fs.writeFileSync('results/comparison.json',JSON.stringify(result,null,2)+'\n');
+          console.log('ABLATED '+JSON.stringify(result));
+          EOF
+      - name: Archive logs and metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: no-ridge-seed${{ matrix.seed }}-cells${{ matrix.cells }}
+          path: results/
+          if-no-files-found: warn
