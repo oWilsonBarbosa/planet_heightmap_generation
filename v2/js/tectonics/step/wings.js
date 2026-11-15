@@ -152,6 +152,10 @@ export function buildArcs(world) {
             }
             if (!edge || continentWithin(plate, mesh, c, noLandHops)) continue;
             if (arcBeside(plate, mesh, c)) {
+                // Experimental physical guard: only a currently overriding
+                // plate boundary may continue widening a pre-existing arc.
+                plate.toWorld(xyz[3*c],xyz[3*c+1],xyz[3*c+2],P);
+                if(boundaryKind[index.nearest(P[0],P[1],P[2])]!==BoundaryKind.OVERRIDING)continue;
                 const w = widenArc(plate, mesh, c, slab, nx, ny, nz, config, widthCapKm(c));
                 if (w >= 0) {
                     born.push(w);
