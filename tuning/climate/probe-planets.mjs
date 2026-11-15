@@ -2,7 +2,9 @@
  * Which settings dry or wet the generated planets, and what do they cost Earth? Each setting is moved a quarter of its
  * literature range (PARAM_PRIORS) up and down from its default, one at a time; printed: Earth's Köppen (continents
  * equal), Earth's arid share, and the arid share of a few generated planets (lib/gen-planets.mjs). A setting that wets
- * the planets while Earth holds is a candidate for the tune; one that only moves Earth is where Earth gets fitted.
+ * the planets while Earth holds is a candidate for the tune; one that only moves Earth is where Earth gets fitted. Also
+ * the planets' mean glance error (lib/glance.mjs: how unlike Earth's observed map they look), and the settings that
+ * make them look most like Earth for what Earth loses.
  *
  *   node tuning/climate/probe-planets.mjs [--prefix RAIN_,CIRC_] [--keys A,B] [--planets gen-2,gen-6,gen-10,evo-101,evo-202]
  */
@@ -16,6 +18,7 @@ import { elevToHeightKm } from '../../js/color-map.js';
 import { planetClimate } from '../../v2/js/climate/climate.js';
 import { PARAMS_DEFAULTS, PARAM_PRIORS, setParams, resetParams } from '../../v2/js/climate/config.js';
 import { loadGenPlanets, dryness } from './lib/gen-planets.mjs';
+import { pixelToCell, glanceOfCells, glanceError } from './lib/glance.mjs';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const PREFIX = arg('--prefix', 'RAIN_,CIRC_,OCEAN_COAST,OCEAN_UPWELL').split(',');
@@ -35,19 +38,30 @@ for (let r = 0; r < n; r++) {
     const c = continentOf(lat, lon); if (masks[c]) masks[c][r] = 1;
 }
 const planets = await loadGenPlanets({ only: PLANETS, log: () => {} });
+for (const p of planets) p.pix = pixelToCell(p.xyz, p.axes);
+const earthPix = pixelToCell(e.r_xyz, 'y-up');
+let glanceRef = null;                       // Earth's observed map (Beck; the model's class where Beck has none)
+const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
 
 function measure() {
     const res = planetClimate({ xyz: e.r_xyz, elevKm, axes: 'y-up' });
+    if (!glanceRef) { const o = new Uint8Array(n); for (let r = 0; r < n; r++) o[r] = res.cell.koppen[r] ? (truth[r] || res.cell.koppen[r]) : 0; glanceRef = glanceOfCells(o, earthPix); }
     let cont = 0; for (const k of TUNED_CONTINENTS) cont += compareClasses(truth, res.cell.koppen, null, masks[k]).exact / TUNED_CONTINENTS.length;
-    const arid = planets.map(p => dryness(planetClimate({ xyz: p.xyz, elevKm: p.elevKm, axes: p.axes })).aridShare);
-    return { cont, earthArid: dryness(res).aridShare, arid, aridMean: arid.reduce((a, b) => a + b, 0) / arid.length };
+    const arid = [], glance = [];
+    for (const p of planets) {
+        const r = planetClimate({ xyz: p.xyz, elevKm: p.elevKm, axes: p.axes });
+        arid.push(dryness(r).aridShare); glance.push(glanceError(glanceOfCells(r.cell.koppen, p.pix), glanceRef).err);
+    }
+    return { cont, earthArid: dryness(res).aridShare, earthGlance: glanceError(glanceOfCells(res.cell.koppen, earthPix), glanceRef).err,
+        arid, aridMean: avg(arid), glanceMean: avg(glance) };
 }
 
 const pt = (x) => (100 * x).toFixed(1).padStart(5);
 const sg = (x) => `${x >= 0 ? '+' : '−'}${Math.abs(100 * x).toFixed(1)}`.padStart(6);
 const base = measure();
-console.log(`defaults: Earth continents ${pt(base.cont)} %, Earth arid ${pt(base.earthArid)} %, planets arid ${pt(base.aridMean)} % (${PLANETS.map((k, i) => `${k} ${pt(base.arid[i])}`).join(', ')})`);
-console.log('setting (value)                     Δ Earth continents   Δ Earth arid   Δ planets arid   (each planet)');
+console.log(`defaults: Earth continents ${pt(base.cont)} %, Earth arid ${pt(base.earthArid)} %, planets arid ${pt(base.aridMean)} % (${PLANETS.map((k, i) => `${k} ${pt(base.arid[i])}`).join(', ')}); `
+    + `glance error Earth ${pt(base.earthGlance)}, planets ${pt(base.glanceMean)} pt`);
+console.log('setting (value)                     Δ Earth continents   Δ Earth arid   Δ planets arid   Δ glance Earth / planets   (each planet arid)');
 const rows = [];
 for (const k of KEYS) {
     const pr = PARAM_PRIORS[k]; if (!pr) continue;
@@ -56,12 +70,16 @@ for (const k of KEYS) {
         if (v === PARAMS_DEFAULTS[k]) continue;
         resetParams(); setParams({ [k]: v });
         const m = measure();
-        const row = { k, v, dCont: m.cont - base.cont, dEarth: m.earthArid - base.earthArid, dPlan: m.aridMean - base.aridMean, each: m.arid.map((a, i) => a - base.arid[i]) };
+        const row = { k, v, dCont: m.cont - base.cont, dEarth: m.earthArid - base.earthArid, dPlan: m.aridMean - base.aridMean, each: m.arid.map((a, i) => a - base.arid[i]),
+            dGlanceE: m.earthGlance - base.earthGlance, dGlance: m.glanceMean - base.glanceMean };
         rows.push(row);
-        console.log(`${`${k} (${+v.toPrecision(3)})`.padEnd(36)} ${sg(row.dCont)}               ${sg(row.dEarth)}         ${sg(row.dPlan)}       ${row.each.map(sg).join(' ')}`);
+        console.log(`${`${k} (${+v.toPrecision(3)})`.padEnd(36)} ${sg(row.dCont)}               ${sg(row.dEarth)}         ${sg(row.dPlan)}       ${sg(row.dGlanceE)} / ${sg(row.dGlance)}        ${row.each.map(sg).join(' ')}`);
     }
 }
 resetParams();
+console.log('\nmaking the planets look most like Earth (glance error ≥ 0.3 pt lower), per point of Earth\'s continents lost:');
+for (const r of rows.filter(r => r.dGlance <= -0.003).sort((a, b) => (a.dGlance / Math.max(0.002, -a.dCont)) - (b.dGlance / Math.max(0.002, -b.dCont))).slice(0, 12))
+    console.log(`  ${`${r.k} (${+r.v.toPrecision(3)})`.padEnd(36)} planets' glance ${sg(r.dGlance)}, Earth's ${sg(r.dGlanceE)}, Earth continents ${sg(r.dCont)}, planets arid ${sg(r.dPlan)}`);
 console.log('\nwetting the planets most per point of Earth\'s continents lost (planets ≥ 1 pt wetter):');
 for (const r of rows.filter(r => r.dPlan <= -0.01).sort((a, b) => (a.dPlan / Math.max(0.002, -a.dCont)) - (b.dPlan / Math.max(0.002, -b.dCont))).slice(0, 12))
     console.log(`  ${`${r.k} (${+r.v.toPrecision(3)})`.padEnd(36)} planets ${sg(r.dPlan)}, Earth continents ${sg(r.dCont)}, Earth arid ${sg(r.dEarth)}`);
