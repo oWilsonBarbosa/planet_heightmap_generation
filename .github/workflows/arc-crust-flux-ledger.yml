@@ -1,0 +1,112 @@
+name: ARC crust flux budget and model invariance
+
+on:
+  push:
+    branches:
+      - audit/arc-crust-flux-ledger-20261115
+    paths:
+      - '.github/workflows/arc-crust-flux-ledger.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ledger:
+    name: ARC ledger GPE ${{ matrix.strength }} / ${{ matrix.cells }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - strength: '1.0'
+            cells: 20000
+          - strength: '2.0'
+            cells: 20000
+          - strength: '2.0'
+            cells: 40000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/arc-maturation-front-20261115
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/arc-crust-flux-ledger-20261115
+          path: ledger
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Dependencies
+        run: |
+          (cd baseline && npm install --no-save --no-package-lock delaunator)
+          (cd ledger && npm install --no-save --no-package-lock delaunator)
+      - name: Syntax
+        run: |
+          node --check ledger/v2/js/tectonics/step/wings.js
+          node --check ledger/v2/js/tectonics/step/resolve.js
+          node --check ledger/v2/js/tectonics/step/margin-isles.js
+          node --check ledger/v2/tools/audit-arc-fate.mjs
+      - name: Run identical tectonic histories with and without budget instrumentation
+        run: |
+          mkdir -p results
+          cp ledger/v2/tools/audit-arc-fate.mjs baseline/v2/tools/audit-arc-fate.mjs
+          (cd baseline && node v2/tools/audit-arc-fate.mjs \
+            --seed=4242 --cells=${{ matrix.cells }} --strength=${{ matrix.strength }} \
+            --maturation-rate=3 --until=1200 --every=100 --targets=900,1000,1100,1200 \
+            --out=../results/baseline) > results/baseline.log
+          (cd ledger && node v2/tools/audit-arc-fate.mjs \
+            --seed=4242 --cells=${{ matrix.cells }} --strength=${{ matrix.strength }} \
+            --maturation-rate=3 --until=1200 --every=100 --targets=900,1000,1100,1200 \
+            --out=../results/ledger) > results/ledger.log
+      - name: Assert no physical metric differs
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('results/baseline.json','utf8'));
+          const b=JSON.parse(fs.readFileSync('results/ledger.json','utf8'));
+          const metrics=['visibleContinentalAreaMkm2','visibleArcAreaMkm2',
+            'largestVisibleArcAreaMkm2','largestArcOldAge100Mkm2',
+            'largestArcSamePlateLandReachableMkm2','totalNativeArcMkm2',
+            'totalNativeReachableMatureArcMkm2','cumulativeArcMaturedCellOps','cumulativeArcRecycledCellOps'];
+          if(a.rows.length!==b.rows.length)throw Error('Frame mismatch');
+          for(let i=0;i<a.rows.length;i++){
+            for(const k of metrics)if(a.rows[i][k]!==b.rows[i][k])
+              throw Error('Instrumentation changed physical metric at time '+a.rows[i].timeMyr+': '+k);
+          }
+          console.log('PASS physical metrics identical with diagnostic counters');
+          for(const r of b.rows){
+            const k=['timeMyr','visibleArcAreaMkm2','largestVisibleArcAreaMkm2',
+            'cumulativeIslandArcBuiltCellOps','cumulativeForearcBornCellOps',
+            'cumulativeForearcMergedCellOps','cumulativeArcMaturedCellOps',
+            'cumulativeArcSubductedCellOps','cumulativeArcErodedCellOps',
+            'cumulativeArcScrapedAbsorbedCellOps','cumulativeArcRecycledCellOps'];
+            console.log('ARC_FLOW '+JSON.stringify(Object.fromEntries(k.map(x=>[x,r[x]]))));
+          }
+          EOF
+      - name: Archive identical baselines and cumulative ledger
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arc-flux-gpe-${{ matrix.strength }}-${{ matrix.cells }}
+          path: |
+            results/baseline.json
+            results/ledger.json
+            results/ledger.csv
+            results/baseline.log
+            results/ledger.log
+          if-no-files-found: warn
+
+  invariants:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Dependencies
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Check invariants after instrumentation
+        run: node v2/tools/check-invariants.mjs
