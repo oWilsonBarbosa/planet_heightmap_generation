@@ -28,6 +28,7 @@ import { worldFrame, finishWorld } from './lib/world.mjs';
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const SEED = Number(arg('--seed', 10673275)), CONT = Number(arg('--cont', 30)), SIM = Number(arg('--sim', 40000)), TIME = Number(arg('--time', 300));
 const CELLS = arg('--cells', '160000,640000').split(',').map(Number);
+const DIAGNOSE = process.argv.includes('--diagnose');
 const SET = Object.fromEntries((arg('--set', '') || '').split(',').filter(Boolean).map(kv => { const [k, v] = kv.split('='); return [k, v === 'true' ? true : v === 'false' ? false : Number(v)]; }));
 for (const k of Object.keys(SET)) if (!(k in FINISH)) throw new Error(`--set: no constant ${k} in FINISH`);
 const F = { ...FINISH, ...SET }, SEC = 3.15576e7, R = 6371;
@@ -47,6 +48,8 @@ for (const cells of CELLS) {
     const { mesh, z, lake, lakeLevel, rivers, stats } = fin, { recv, lakeOutlet, q, area, runoff, sea, cellKm2 } = fin.network;
     const n = mesh.numCells, { adjOffset, adjList, xyz } = mesh, w = stats.water;
     const own = c => Math.max(0, runoff[c]) * cellKm2 * 1e3 / SEC;
+    const locate = c => ({ id: c, lat: +(Math.asin(Math.max(-1, Math.min(1, xyz[3*c+2]))) * 180/Math.PI).toFixed(5), lon: +(Math.atan2(xyz[3*c+1], xyz[3*c]) * 180/Math.PI).toFixed(5), zM: +(z[c]*1000).toFixed(2) });
+    const diag = DIAGNOSE ? { cells, riverClimbs: [], outletProblems: [], largeLakes: [] } : null;
     const isNb = (a, b) => { for (let k = adjOffset[a]; k < adjOffset[a + 1]; k++) if (adjList[k] === b) return true; return false; };
     const closedKind = k => k === Water.SALT || k === Water.PAN;
     let landN = 0;
@@ -142,7 +145,9 @@ for (const cells of CELLS) {
         const r = recv[c];
         if (r < 0) continue;
         const to = sea[r] ? Math.min(0, z[r]) : lake[r] && lake[r] !== Water.PAN ? lakeLevel[r] : z[r], up = to - z[c];
-        if (up > CLIMB_KM) { climbs++; climbWorst = Math.max(climbWorst, up); if (q[c] >= F.riverMinM3s) { riverClimbs++; riverClimbWorst = Math.max(riverClimbWorst, up); } }
+        if (up > CLIMB_KM) { climbs++; climbWorst = Math.max(climbWorst, up); if (q[c] >= F.riverMinM3s) { riverClimbs++; riverClimbWorst = Math.max(riverClimbWorst, up); }
+            if (diag) diag.riverClimbs.push({ from: locate(c), to: locate(r), uphillM: +(1000*up).toFixed(2), dischargeM3s: +q[c].toFixed(3), toLake: lake[r], toSea: sea[r], toLevelM: +(1000*to).toFixed(2), adjacent: Array.from(adjList.subarray(adjOffset[c], adjOffset[c+1])).map(k => ({ id:k, zM:+(1000*z[k]).toFixed(1), kind:lake[k], sea:sea[k], recv:k===r })).sort((a,b)=>a.zM-b.zM).slice(0,10) });
+        }
     }
     // (a climb is a pit the water cannot leave. A few single cells remain — on 2026-10-29 at most 8 m at 640K, 97 m at
     // 2.56M in 19 cells; before the fixes of that day, 1.1–1.3 % of the land, up to 1,384 m: docs/DRAINAGE_20261029.md)
@@ -177,7 +182,14 @@ for (const cells of CELLS) {
             const L = lakeLevel[b.cells[0]] + CLIMB_KM, seen = new Set(b.cells), st = [...b.cells];
             let reached = false;
             while (st.length && !reached) { const x = st.pop(); for (let k = adjOffset[x]; k < adjOffset[x + 1]; k++) { const nb = adjList[k]; if (seen.has(nb) || sea[nb] || z[nb] > L) continue; if (nb === o) { reached = true; break; } seen.add(nb); st.push(nb); } }
-            if (!reached) farOutlet++;
+            if (!reached) { farOutlet++;
+                if (diag) {
+                    const oX = xyz[3*o], oY = xyz[3*o+1], oZ = xyz[3*o+2];
+                    const nearby = b.cells.map(c => ({ c, km: R*Math.acos(Math.max(-1,Math.min(1,xyz[3*c]*oX+xyz[3*c+1]*oY+xyz[3*c+2]*oZ))) })).sort((a,b)=>a.km-b.km).slice(0,5);
+                    const dry = Array.from(adjList.subarray(adjOffset[o],adjOffset[o+1])).map(c => ({ ...locate(c), lake: lake[c], outlet:lakeOutlet[c], receiver:recv[c] }));
+                    diag.outletProblems.push({ bodyIndex:i, lakeCells:b.cells.length, lakeAreaKm2:+(b.cells.length*cellKm2).toFixed(1), lakeLevelM:+(1000*lakeLevel[b.cells[0]]).toFixed(2), outlet:{ ...locate(o), receiver:recv[o], body:body[o] }, closestLakeCells:nearby.map(v => ({ ...locate(v.c), distanceKm:+v.km.toFixed(2), lake: lake[v.c] })), outletNeighbors:dry });
+                }
+            }
         }
         const inflow = inflowOf[i] + own(o);
         if (q[o] > inflow * (1 + 1e-3) + 1e-6) { overflow++; overWorst = Math.max(overWorst, q[o] / Math.max(1e-9, inflow)); }
@@ -211,6 +223,12 @@ for (const cells of CELLS) {
         steady: drawnPts[Regime.STEADY] / drawnN, flood: drawnPts[Regime.FLOOD] / drawnN, seasonal: (drawnPts[Regime.SEASONAL] + drawnPts[Regime.EPHEMERAL]) / drawnN,
         lakeShare: w.lakeShare, fresh: w.freshLakes, closed: w.saltLakes + w.pans, total, cellKm2, lakeKm2: bodies.map(b => b.cells.length * cellKm2) });
     log(`${cells.toLocaleString()} cells: ${w.freshLakes} fresh lakes, ${w.saltLakes} salt, ${w.pans} pans; climbs on dry land ${climbs}`);
+    if (diag) {
+        const largeThresholdKm2 = 4 * (4*Math.PI*R*R / 160000);
+        diag.riverClimbs.sort((a,b)=>b.uphillM-a.uphillM);
+        diag.largeLakes = bodies.filter(b => b.kind !== Water.PAN && b.cells.length*cellKm2 >= largeThresholdKm2).map(b => { const lat=b.cells.reduce((t,c)=>t+locate(c).lat,0)/b.cells.length, lon=b.cells.reduce((t,c)=>t+locate(c).lon,0)/b.cells.length; return { cells:b.cells.length, km2:+(b.cells.length*cellKm2).toFixed(1), lat:+lat.toFixed(3), lon:+lon.toFixed(3), levelM:+(lakeLevel[b.cells[0]]*1000).toFixed(1), outlet:b.outlet, kind:b.kind }; }).sort((a,b)=>b.km2-a.km2);
+        console.log('OROGEN_DRAINAGE_DIAG ' + JSON.stringify(diag));
+    }
 }
 
 if (measures.length > 1) {
