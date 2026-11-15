@@ -216,6 +216,14 @@ js/
   color-map.js          Generate's elevation scale ↔ km (an imported image's grey is read through it)
   climate-layers.js     The climate's colour scales, legends and words (shared with Evolution's climate views)
   climate-new.js        The new climate on a V1 mesh (the climate's tuning tools)
+  water-new.js          Rivers and lakes for a planet of the old pipeline, run headless in Node (the fork's exports): the
+                        finish's hydrology (v2/js/finish/finish-hydro.js) fed by the climate's twelve months, with the
+                        closed basins and the remnants of the sea kept as the old pages drew them (its WATER constants),
+                        and the land first shaped by the Evolution's last ice age — not run by the pages, which get the
+                        same hydrology through the finish
+  earth-relief.js       Earth-like heights for a planet of the old pipeline (its elevation mapped, every region's order
+                        kept, onto Earth's hypsometry: ETOPO 2022), and the climate's parameters for such heights
+                        (EARTH_RELIEF_CLIMATE) — headless exports only
   elevation.js, super-plates.js, koppen.js, climate-config.js, climate-util.js, wind.js … temperature.js
                         The old pipeline (terrain and climate) — no longer run by the pages; kept as the climate's tuning
                         tools' synthetic planets (tuning/climate/lib/gen-planets.mjs) and the climate lab

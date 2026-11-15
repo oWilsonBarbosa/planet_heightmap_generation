@@ -65,7 +65,7 @@ export function surfaceConfig(F, cfg) {
  *   surfaceConfig's cfg (Generate: v2/js/present/world.js presentSynthesize's `surface`); no pool is needed then
  * @returns {Promise<{mesh: Object, z: Float32Array, ocean: Uint8Array, ms: Object, stats: Object}>}
  */
-export async function finishPlanet({ frame, simMesh, seed, cells, pool = null, closePool = false, onStage = () => {}, F = FINISH, cfg = terrainConfig(), debug = false, climateOptions = {}, driversWidth = cells >= 1.5e6 ? 2048 : 1024, inspect = null, mesh: givenMesh = null, surface = null }) {
+export async function finishPlanet({ frame, simMesh, seed, cells, pool = null, closePool = false, onStage = () => {}, F = FINISH, cfg = terrainConfig(), debug = false, network = false, climateOptions = {}, driversWidth = cells >= 1.5e6 ? 2048 : 1024, inspect = null, mesh: givenMesh = null, surface = null }) {
     const ms = {}, stats = {};
     let t0 = performance.now();
     const lap = name => { const t = performance.now(); ms[name] = t - t0; t0 = t; };
@@ -269,8 +269,11 @@ export async function finishPlanet({ frame, simMesh, seed, cells, pool = null, c
     const months = { at: (c, m0, M, share, arid) => { corners(climGrid, lat[c], lon[c], bi, bw); for (let j = 0; j < M; j++) { share[j] = at(monthly.share[m0 + j], c); arid[j] = at(monthly.arid[m0 + j], c); } } };
     // (across a flat, the rivers wander as the carving's did: the same meander, read where the water needs it)
     const wander = meanderV ? c => meanderV[c] : meanderAt(mesh, seed, F, fade);
-    const Hy = hydrology({ mesh, z: C.z, ocean, runoff, pet, rain: pAnn, wetMonths, ice, glaciated: I.ice, tectonic: B.tectonic, seaBasin, fillHollows: true, lat, lon, months, wander, debug }, F);
+    const Hy = hydrology({ mesh, z: C.z, ocean, runoff, pet, rain: pAnn, wetMonths, ice, glaciated: I.ice, tectonic: B.tectonic, seaBasin, fillHollows: true, lat, lon, months, wander, network, debug }, F);
     Object.assign(stats, { water: Hy.stats });
+    // (for the checks, on request: the drainage network as the hydrology left it — each cell's receiver, each lake cell's
+    // outlet, discharge and drainage area, the runoff, and the sea it drained to, before the gorges were cut)
+    const net = network ? { recv: Hy.recv, lakeOutlet: Hy.lakeOutlet, q: Hy.q, area: Hy.area, runoff, pet, rain: pAnn, sea: ocean, cellKm2 } : null;
     // (the sea again, after the rivers' gorges)
     ocean = oceanMask(mesh, C.z);
     lap('water');
@@ -377,7 +380,7 @@ export async function finishPlanet({ frame, simMesh, seed, cells, pool = null, c
     lap('farming');
     const flow = new Float32Array(n);
     for (let c = 0; c < n; c++) flow[c] = Math.log10(Math.max(1, Hy.area[c]));
-    return { mesh, z: C.z, ocean, lake: Hy.lake, lakeLevel: Hy.lakeLevel, rivers: Hy.rivers, drivers, ms, stats, geology, farming,
+    return { mesh, z: C.z, ocean, lake: Hy.lake, lakeLevel: Hy.lakeLevel, rivers: Hy.rivers, drivers, ms, stats, geology, farming, ...(net ? { network: net } : {}),
         climate: { page: pageC, cell: { koppen: cellsClimate.koppen, tAnnual: cellsClimate.tAnnual, pAnnual: cellsClimate.pAnnual, sat, cover, stats: cellStats.stats, mottleSeed: ((seed | 0) * 0x2f71 + 0x6d) >>> 0,
             flow, young, rivers: Hy.rivers, ripSat, families: famGrid.done() } },
         layers: debug ? { ice: I.ice, sink: B.sink, erg: W.erg, loess: W.loess, basalt, koppen, before, rain: pAnn, lat, lon, q: Hy.q, terminal: Hy.terminal } : null };
@@ -455,7 +458,7 @@ function roughen(mesh, z, seed, F, fade, lava = null) {
  *  rain, and snow kept until it melts — less a share of its potential evaporation; a share of that (more where it is
  *  humid) seeps into the ground, which drains back into the rivers slowly (baseflowMonths: a dry season's flow dwindles
  *  month by month). Three years, from dry ground: the store and the snow settle to their yearly round. */
-function runoffMonths(months, G, F) {
+export function runoffMonths(months, G, F) {
     const out = Array.from({ length: 12 }, () => new Float32Array(G)), arid = Array.from({ length: 12 }, () => new Float32Array(G));
     const liquid = new Float64Array(12), flow = new Float64Array(12);
     const drain = 1 - Math.exp(-1 / F.baseflowMonths);
@@ -482,7 +485,7 @@ function runoffMonths(months, G, F) {
 }
 
 /** The four grid points around (lat, lon) and their bilinear weights (as bilinear). */
-function corners(g, lat, lon, bi, bw) {
+export function corners(g, lat, lon, bi, bw) {
     const { w, h } = g, step = 180 / h;
     const x = (lon + 180) / step - 0.5, y = Math.max(0, Math.min(h - 1, (90 - lat) / step - 0.5));
     const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
@@ -491,7 +494,8 @@ function corners(g, lat, lon, bi, bw) {
     bw[0] = (1 - fx) * (1 - fy); bw[1] = fx * (1 - fy); bw[2] = (1 - fx) * fy; bw[3] = fx * fy;
 }
 
-function bilinear(g, field, lat, lon) {
+/** A field on the climate grid ({w, h}: rows north → south, columns from −180°) at (lat, lon), bilinear. */
+export function bilinear(g, field, lat, lon) {
     const { w, h } = g, step = 180 / h;
     const x = (lon + 180) / step - 0.5, y = Math.max(0, Math.min(h - 1, (90 - lat) / step - 0.5));
     const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;

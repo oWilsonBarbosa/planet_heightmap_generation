@@ -127,7 +127,36 @@ tuning/
   geology/              earth-deposits.mjs — Evolution's deposit climate tests (bauxite,
                         peat, salt, enriched copper, opal, turquoise) run on observed Earth climate beside
                         where those deposits really are
+  water/                The rivers check — scores js/water-new.js's rivers on an imported Earth heightmap against
+                        the measured flows of ~130 great rivers (Dai & Trenberth, NCAR), with the simulated and the
+                        observed climate, and its closed basins against Earth's; explicit sample counts, zero-flow cases
+                        and per-gauge JSON reports (--json), the network's consistency, the Evolution's rules
+                        (--evolution) and a river's trace from source to end (--trace, --from); see tuning/water/README.md
+  relief/               Earth's hypsometry for js/earth-relief.js — downloads a sample of ETOPO 2022 (NOAA NCEI) and
+                        computes how much of Earth's land lies below each height, and of its sea floor above each depth
+                        (see tuning/relief/README.md)
+  evolution/            The Evolution's checks, each on one Evolution world built and finished headless (lib/world.mjs):
+                        the regression check (regress.mjs) hashes every output, to show a change to the code it shares
+                        leaves it as it was; the drainage check (drainage.mjs) checks its drainage network — connectivity,
+                        levels, lake outlets, the network the same at every detail (see tuning/evolution/README.md)
 ```
+
+The river travel calculation in `v2/js/finish/river-travel.js` follows the final redirected network in physical km,
+including lake outlets; its Node regression checks are `node tests/river-transport.test.mjs`. Benchmark scoring and
+coverage checks are `node tests/river-metrics.test.mjs`. Historical river scores and the correction's limits are
+recorded in `docs/FIXES_CLIMATE_RIVERS_20261026.md`; the zero-flow gauges and the closed basins' outlets in
+`docs/ZERO_FLOWS_20261028.md`. These are internal/developer tools; site controls are unchanged.
+
+## This fork
+
+This repository is a fork of [raguilar011095/planet_heightmap_generation](https://github.com/raguilar011095/planet_heightmap_generation)
+that adds to the climate (snow on the ground, frozen ground, a polar sea's summer pack, the spring's inversion, the
+cold season's fronts, a bound on the rain, ice sheets on land only) and to the finish's hydrology (closed basins on
+land at their water balance, lakes drained by gorges, each river's months and the time its water takes to come down),
+with the checks that measured them against real Earth (`tuning/water/`, `tuning/relief/`, `tuning/evolution/`) and two
+modules for headless exports (`js/water-new.js`, `js/earth-relief.js`). Since 2026-11-15 that work sits on upstream's
+v3.0.1; [docs/FORK_STATUS.md](docs/FORK_STATUS.md) tracks what was checked and what is still open, and
+[plans/FORK_HANDOFF.md](plans/FORK_HANDOFF.md) keeps the climate and water history.
 
 ## Dependencies
 

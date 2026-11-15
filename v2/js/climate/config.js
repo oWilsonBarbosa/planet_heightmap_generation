@@ -38,6 +38,9 @@ export const PARAMS_DEFAULTS = Object.freeze({
     TEMP_ICE_START_C: -30,      // °C         a fresh start begins with ice sheets on land the first guess (sunlight by
                                 //            latitude, no heat carried) makes colder than this (~60° and poleward on an
                                 //            Earth-like planet): sheets that hold themselves stay; −Infinity = bare start
+    TEMP_ICE_START_KM: 0,       // km         … and at least this high (its mean on the grid): 0 = any such land. A sheet
+                                //            started on lowland beside a sea frozen all year holds itself where Earth's
+                                //            coasts are tundra; js/earth-relief.js EARTH_RELIEF_CLIMATE sets 0.6
     TEMP_ICE_DOME_KM: 1.5,      // km         an ice sheet's surface stands at least this high, whatever its bedrock (its
                                 //            own height keeps it cold); 0 = the bedrock's height
     TEMP_ICE_FORM: [0.8, 1],    // –          an ice sheet grows where its ground is snowy this share of the year (none
@@ -50,6 +53,21 @@ export const PARAMS_DEFAULTS = Object.freeze({
     TEMP_SEA_ICE_H0: 0.5,       // m          the sea is covered once its ice is this thick (and holds at most 6× this)
     TEMP_SEA_ICE_SPREAD_KM: 700,// km         the ice follows the sea's temperature averaged within this (a warm current's
                                 //            water spreads well out from its coast; the pack drifts)
+    TEMP_SEA_ICE_PIN: 20,       // W/m²/K     an enclosed polar sea's summer pack holds its air near freezing: its melt takes this
+                                //            much per °C above 0, given back as the sea freezes (0 = off: the pack warms like land) …
+    TEMP_SEA_ICE_PACK_ALBEDO: 0.6, // –       … and stays this share as white as winter's sea ice (TEMP_ALBEDO_ICE; melt ponds
+                                //            darken it; 0 = the month's cold alone, dark once above freezing)
+    TEMP_SNOW_MELT_MM: 90,      // mm/°C      snow on the ground melts this much water a month per °C above freezing, its
+                                //            latent heat taken from the air (spring late where the snow is deep; with the
+                                //            rain stage's rain; 0 = off) …
+    TEMP_SNOW_COVER_MM: 60,     // mm         … and covers the ground for the albedo as 1 − e^{−water/this} (0 = the month's
+                                //            cold alone, TEMP_ICE_WARM_C … TEMP_ICE_COLD_C) …
+    TEMP_SNOW_ALBEDO: 0.45,     // –          … reflecting this much (the snow itself; TEMP_ALBEDO_SNOW where the cold alone
+                                //            stands for it, counting dry frozen ground as snowy)
+    TEMP_SNOW_ALBEDO_OPEN: 0,   // –          dry snow on open land beyond the tree line reflects this, darkening as it melts
+                                //            (0 = off: the forest's TEMP_SNOW_ALBEDO everywhere; see docs/SPRING_ARCTIC_20261101.md)
+    TEMP_SNOW_SUN_CUT: 0.8,     // –          snow on open land and sea ice reflects this share of the sun: the ground stays
+                                //            colder than the air into the spring, the winter's inversion with it (0 = off)
     TEMP_BLOCK_KM: 1.5,           // km         mountains block the low air's heat exchange: e^{−(ridge above the lower side)/this}; 0 = off
     TEMP_LOCAL_K: 11,            // W/m²/K     land's own seasons below the grid: a column's exchange with its surroundings (0 = off)
     TEMP_LOCAL_KM: 1925,        // km         … its departure from the region within this (Gaussian σ) is added over land
@@ -75,8 +93,9 @@ export const PARAMS_DEFAULTS = Object.freeze({
     // Tuned 2026-09-28 (tuning/climate/circulation-check.mjs --tune: open loop, continents and ocean basins weighted
     // equally, none worse than with the literature values). Ferrel width, sea friction angle and Hadley scale ended
     // at or near the edge of their ranges — a hint of the simple structure's limits.
-    CIRC_HADLEY_SCALE: 1.44,  // –          Hadley-cell width relative to Held & Hou's estimate (1.5, the range's
-                                //            edge, until 2026-10-25: polar air too warm then narrowed the contrast)
+    CIRC_HADLEY_SCALE: 1.47,  // –          Hadley-cell width relative to Held & Hou's estimate (1.5, the range's
+                                //            edge, until 2026-10-25: polar air too warm then narrowed the contrast;
+                                //            1.44 until 2026-10-29, while frozen seas carried an ice sheet's dome)
     CIRC_HADLEY_SEASONAL: 0.5, // –          share of each month's own equator-to-pole contrast in the Hadley cells' width
     CIRC_FERREL_DEG: 35,        // °          from the subtropical high to the subpolar low (the Ferrel cell)
     CIRC_TROPICAL_HPA: 10.13,    // hPa        how much lower the tropical rain belt is than the subtropical highs
@@ -90,6 +109,10 @@ export const PARAMS_DEFAULTS = Object.freeze({
     CIRC_HEAT_LOW_HOT: 1,       // –          … and over hot, dry land (≥ 35 °C, outside the rainy tropics) × (1 + this): a deep boundary layer
     CIRC_COLD_HIGH_BOOST: 0.685,  // –          … a cold high over very cold land (≤ −25 °C) × (1 + this)
     CIRC_ROSSBY_KM: 812,        // km         scale the pressure responds to heating on (the Rossby radius)
+    CIRC_DESCENT_HPA_PER_K: { value: 1, min: 0, max: 2.5, source: 'Rodwell & Hoskins 1996, 2001: monsoon heating forces descent and a surface high to its west (the Mediterranean and Sahara, the eastern North Pacific and Atlantic highs in summer), of the order of the heat low itself' },
+    CIRC_DESCENT_SHIFT_DEG: { value: 25, min: 15, max: 35, source: 'the descent lies a Rossby-wave half-wavelength west of the heating, ≈ 20–30° of longitude (Rodwell & Hoskins 1996)' },
+    CIRC_DESCENT_HPA_PER_K: 0,  // hPa/K      the monsoon–desert descent: the sea west of a summer heat low higher by this per degree (0 = off) …
+    CIRC_DESCENT_SHIFT_DEG: 25, // °          … the heat low this far east of it
     CIRC_TROUGH_MAX_LAT: 35,    // °          the tropical trough follows each longitude's warmest latitude as far as this (into the
                                 //            summer heat lows: Tibet, the Sahara, Mexico, inland Australia) …
     CIRC_TROUGH_HIGH_DEG: 6,    // °          … and that longitude's subtropical high stands at least this far beyond it (one trough
@@ -147,6 +170,7 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_TROPICAL_RH: 0.3,      // day        … and by tropical disturbances (monsoon depressions, easterly waves), per unit of the
     RAIN_TROPICAL_KM: 600,      // km         low-level winds' cyclonic vorticity (1/day), smoothed over this, within the tropics
                                 //            (the derived winds are smooth: their vorticity is ≈ ¼ of a real monsoon trough's)
+    RAIN_EADY_SMOOTH_DEG: 8,    // °          the storms grow on the zonal-mean temperature gradient smoothed over ± this
     RAIN_WIND_ROT: 0.757,       // –          rotational wind carrying the column's water, as a share of the wind above the friction layer …
     RAIN_WIND_DIV_DRY: 0.3,     // –          … and the divergent (converging / spreading) part, as a share of the near-surface
     RAIN_WIND_DIV_MOIST: 0.6,   //            wind: under dry air (a shallow layer), and in moist convecting air (a deep one)
@@ -161,7 +185,15 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_FRONT_POS: 0.5,        // –          … the front this share of the way from each hemisphere's subtropical high to its subpolar low …
     RAIN_FRONT_DEG: 10,         // °          … its band (Gaussian σ) …
     RAIN_FRONT_HIGH_HPA: 4,     // hPa        … faded by e per this much pressure above the latitude's mean (the highs)
+    RAIN_FRONT_RATE: 2,         // –          fronts over a cold air mass: rain-out added to the storms', at full local baroclinicity …
+    RAIN_FRONT_SMOOTH_KM: 600,  // km         … the surface temperature's gradient taken over this (Gaussian σ) …
+    RAIN_FRONT_RATE_HPA: 2,     // hPa        … faded by e per this much pressure above the latitude's mean (the winter monsoon's highs)
     RAIN_SOIL_MM: 87.5,         // mm         water the soil holds for evaporation in dry months
+    RAIN_ROOT_MAX_MM: 0,        // mm         deep roots in warm climates: up to this much more, sized by the dry season's deficit (0 = off)
+    RAIN_MELT_SOAK: 0.5,        // –          share of the melting snow the ground takes in (the rest runs off over the frozen soil)
+    RAIN_FROZEN_EVAP: 0.2,      // –          land's evaporation while its ground is frozen, as a share of the thawed rate …
+    RAIN_THAW_FROM_C: -2,       // °C         … the ground (the air a month before) thawing from this …
+    RAIN_THAW_FULL_C: 4,        // °C         … to this
     RAIN_LAND_CONVECTION: 0.065, // –         spread of the column's relative humidity by afternoon storms over sunlit, wet land
     RAIN_COLUMN_LOCAL: 0.2,     // –          share of the surface's departure from its latitude's temperature felt through the air column
     RAIN_OROG_STORM: 1,         // –          share of the storms' wind speed (Eady rate × their size) in the lift over mountains
@@ -172,7 +204,15 @@ export const PARAMS_DEFAULTS = Object.freeze({
     RAIN_OROG_SPREAD_KM: 600,   // km         windward / lee rain is moved within this distance, not made
     RAIN_SLOPE_FACTOR: 1.2,     // –          windward / lee rain on the 1° grid: × e^{β·(upslope speed / 0.1 m/s)}
     RAIN_OROGRAPHIC: 0.6,       // –          share of the water lifted by winds blowing up rising ground that rains out
-    RAIN_NEWTON: 30,            //            at most this many Newton steps per point in the year …
+    RAIN_OROG_MULT_MAX: 3,      // –          … and at most this many times its rain on any one 1° cell from the windward / lee step
+    RAIN_CELL_FACTOR_MAX: 1.5,  // –          a terrain cell's rain for its height above or below its surroundings: within × / ÷ this
+    RAIN_SUPPLY_START_MM: 5000, // mm/yr      the air brings only so much water: a 1° cell's year of rain above this is drawn toward …
+    RAIN_SUPPLY_MAX_MM: 0,      // mm/yr      … this, at most, every month alike. 0: no bound — the pages' climate; js/earth-relief.js
+                                //            EARTH_RELIEF_CLIMATE sets 7,500 for a planet on Earth's heights
+    RAIN_COLUMN_FREE_AIR: 0.35, // –          the column holds its water this share of the way to the free air above the
+                                //            inversion by the ground (0 = the air by the ground)
+    RAIN_COLUMN_LAPSE_MAX: 6.5, // °C/km      the air column holds its water as if cooled with height by at most this (over ice sheets)
+    RAIN_NEWTON: 30,          //            at most this many Newton steps per point in the year …
     RAIN_TOL: 2e-3,             //            … stopping when the column water changes less than this (relative)
     RAIN_CYCLES: 4,             //            multigrid cycles per Newton step
     RAIN_POISSON_CYCLES: 6,     //            … for the wind's divergent part (each point starting from the last) …
@@ -222,8 +262,16 @@ export const PARAM_PRIORS = Object.freeze({
     TEMP_SEA_ICE_MELT:  { value: 0.003, min: 0.002, max: 0.006, source: 'summer surface melt ≈ 0.5–1.5 m over a season of a few hundred positive degree-days (Perovich et al. 2003)' },
     TEMP_SEA_ICE_H0:    { value: 0.5, min: 0.3, max: 1, source: 'ice ≈ 0.3–1 m thick closes the sea (consolidated pack vs new ice and leads)' },
     TEMP_SEA_ICE_SPREAD_KM: { value: 700, min: 300, max: 1200, source: 'sea-ice drift ≈ 5–10 km/day — a few hundred to a thousand km over a season (IABP buoys)' },
+    TEMP_SEA_ICE_PIN:   { value: 20, min: 10, max: 40, source: 'over melting sea ice the surface air stays within ≈ 1 °C of freezing all summer (Rigor et al. 2000; SHEBA, Persson et al. 2002): the surface\'s heat exchange with the air, ≈ 15–30 W m⁻² K⁻¹ (turbulent ≈ 10, longwave ≈ 5), goes into melt' },
+    TEMP_SEA_ICE_PACK_ALBEDO: { value: 0.6, min: 0.4, max: 1, source: 'summer sea ice under melt ponds reflects ≈ 0.5–0.6 against ≈ 0.8 for dry snow on ice (Perovich et al. 2002, SHEBA): ≈ 0.5–0.75 of the winter brightening' },
     TEMP_POLAR_SUMMER_DAMP: { value: 0.5, min: 0.2, max: 0.7, source: 'Arctic summers: the surface stays near 0 °C while snow and sea ice melt, and the July 10 °C isotherm (the tree line) lies near 65–72°N on every continent; land poleward of 75° is tundra or ice everywhere on Earth (Beck et al. 2023). No direct value — set so the model\'s 66–80°N summers match, winters untouched' },
+    TEMP_SNOW_MELT_MM:  { value: 90, min: 45, max: 150, source: 'degree-day factors for snow ≈ 1.5–5 mm/°C/day (Hock 2003; Braithwaite 2008): ≈ 45–150 mm/°C a month; the latent heat of fusion 334 kJ/kg' },
+    TEMP_SNOW_COVER_MM: { value: 30, min: 10, max: 80, source: 'snow depletion curves: open ground fully covered from ≈ 10–40 mm of snow water, patchy below; forests and rough ground need more (Liston 2004; Niu & Yang 2007)' },
+    TEMP_SNOW_ALBEDO:   { value: 0.45, min: 0.35, max: 0.6, source: 'planetary (top-of-atmosphere) albedo over snow-covered land ≈ 0.35–0.45 over boreal forest, 0.5–0.65 over open land, against ≈ 0.25–0.35 snow-free (CERES, MODIS; Qu & Hall 2007)' },
+    TEMP_SNOW_ALBEDO_OPEN: { value: 0.6, min: 0.45, max: 0.7, source: 'planetary albedo over snow-covered open land ≈ 0.5–0.65, against ≈ 0.35–0.45 over boreal forest (CERES, MODIS; Qu & Hall 2007); dry snow is brighter than melting snow (Warren 1982)' },
+    TEMP_SNOW_SUN_CUT:  { value: 0.8, min: 0.5, max: 0.9, source: 'dry snow reflects ≈ 0.8–0.9 of the sun, old and wet snow ≈ 0.6–0.7 (Warren 1982); surface-based inversions persist over the Arctic\'s snow into April and May (Serreze et al. 1992)' },
     TEMP_ICE_START_C:   { value: -30, min: -40, max: -20, source: 'ice-sheet hysteresis: once grown, polar ice sheets persist under climates that would not grow them (e.g. DeConto & Pollard 2003; Abe-Ouchi et al. 2013)' },
+    TEMP_ICE_START_KM:  { value: 0, min: 0, max: 1, source: 'ice sheets start on highlands and plateaus and spread to the lowland (Laurentide: Baffin and Labrador; Fennoscandian: the Scandinavian mountains); 0 starts them on any cold land' },
 
     CIRC_HADLEY_SCALE:  { value: 1.2, min: 0.9, max: 1.5, source: 'Held & Hou 1980 underestimates the observed Hadley edge by ~20 % (e.g. Frierson et al. 2007)' },
     CIRC_HADLEY_SEASONAL: { value: 0.5, min: 0, max: 1, source: 'observed subtropical highs migrate ≈ 10° with the rain belt (NCEP); Held & Hou per month would cancel it; seasonal Hadley cells are not in equilibrium with each month (Lindzen & Hou 1988)' },
@@ -289,8 +337,17 @@ export const PARAM_PRIORS = Object.freeze({
     RAIN_FRONT_POS:     { value: 0.5, min: 0.4, max: 0.7, source: 'the polar-front jet and storm track ≈ 40°N in winter and 50–55°N in summer, about midway between the subtropical high and the subpolar low' },
     RAIN_FRONT_DEG:     { value: 10, min: 6, max: 14, source: 'the storm track ≈ 15–25° of latitude wide' },
     RAIN_FRONT_HIGH_HPA: { value: 4, min: 2, max: 8, source: 'fronts steer around blocking and subtropical highs (a few hPa above the zonal mean)' },
+    RAIN_FRONT_RATE:    { value: 2, min: 0, max: 4, source: 'warm-conveyor-belt rain over the cold sector: in winter the extratropical cyclones of the east-coast storm tracks give the subtropical east coasts 60–120 mm/month (Florida to the Carolinas, southern China, Uruguay); the rate a share of a saturated column\'s rain-out, no direct literature value' },
+    RAIN_FRONT_SMOOTH_KM: { value: 600, min: 400, max: 1000, source: 'the width of a frontal zone and its baroclinic band, a few hundred km (the Rossby radius ≈ 1000 km bounds it)' },
+    RAIN_FRONT_RATE_HPA: { value: 2, min: 1, max: 4, source: 'fronts steer around blocking and the winter continental highs (the Siberian high keeps northeast China\'s winter dry); a few hPa above the zonal mean' },
     RAIN_SOIL_MM:       { value: 150, min: 50, max: 300, source: 'plant-available soil water capacity ≈ 100–200 mm (e.g. Manabe 1969 bucket: 150 mm)' },
+    RAIN_ROOT_MAX_MM:   { value: 300, min: 0, max: 600, source: 'root zone storage capacity sized by the dry season\'s deficit (Gao et al. 2014); tropical forests draw water from 8 m and deeper through the dry season (Nepstad et al. 1994; Canadell et al. 1996: tropical maximum rooting depths 7–15 m)' },
     RAIN_LAND_CONVECTION: { value: 0.08, min: 0, max: 0.12, source: 'daytime convection over wet land: rain over land peaks in the afternoon and picks up at ≈ 5–10 % lower column humidity than over the sea (Schiro et al. 2016; Bergemann & Jakob 2016); soil-moisture–precipitation coupling in monsoon regions (Koster et al. 2004)' },
+    RAIN_MELT_SOAK:     { value: 0.5, min: 0.2, max: 1, source: 'little snowmelt soaks into frozen ground (Woo 1986): the spring flood carries much of the year\'s flow of rivers on frozen soils — the Lena\'s May–June flood about half (Yang et al. 2002)' },
+    RAIN_FROZEN_EVAP:   { value: 0.25, min: 0.1, max: 0.5, source: 'eddy-covariance records over boreal forest and tundra: evapotranspiration stays low through the snowmelt and rises only as the soil thaws, weeks later — a few tenths of a millimetre a day against 2–3 in midsummer; no single value' },
+    RAIN_THAW_FROM_C:   { value: -2, min: -5, max: 0, source: 'the active layer thaws as the air warms through freezing, about a month behind it (soil temperature lags the air by weeks)' },
+    RAIN_THAW_FULL_C:   { value: 4, min: 1, max: 8, source: 'as RAIN_THAW_FROM_C: soils thawed and transpiring once the month before averaged a few degrees above freezing' },
+    RAIN_EADY_SMOOTH_DEG: { value: 8, min: 6, max: 16, source: 'the storm tracks\' baroclinic zones are ≈ 15–25° of latitude wide in the free troposphere; the surface\'s sharpest gradients (sea-ice edges, the Arctic coast in summer) are shallow and grow storms less than in proportion' },
     RAIN_COLUMN_LOCAL:  { value: 0.5, min: 0.2, max: 0.9, source: 'lower-tropospheric temperature anomalies over continents are ≈ 40–60 % of the surface anomaly' },
     RAIN_OROG_STORM:    { value: 1, min: 0.5, max: 1, source: 'orographic precipitation is concentrated in storms with strong cross-barrier flow (≈ 10–20 m/s), not the weak monthly-mean wind (Roe 2005)' },
     RAIN_LEE_PER_KM:    { value: 1, min: 0.3, max: 2, source: 'lee-side rain falls ≈ ×0.2–0.5 of windward within a few hundred km behind 1–2 km of relief (Cascades, Andes, Southern Alps; Roe 2005)' },
@@ -300,6 +357,12 @@ export const PARAM_PRIORS = Object.freeze({
     RAIN_OROG_SPREAD_KM: { value: 600, min: 300, max: 1000, source: 'water wrung out on the windward side is missing downwind — the rain-shadow budget closes over a few hundred km' },
     RAIN_SLOPE_FACTOR:  { value: 1.0, min: 0.3, max: 1.5, source: 'orographic enhancement ≈ ×2–3 on windward slopes, ×0.3–0.6 in the lee at ≈ 0.1–0.2 m/s of forced ascent in storms (Roe 2005; Smith & Barstad 2004); moved within the spread distance, not made' },
     RAIN_OROGRAPHIC:    { value: 0.5, min: 0.1, max: 1.0, source: 'precipitation efficiency of orographic clouds ≈ 20–50 % (Jiang & Smith 2003)' },
+    RAIN_OROG_MULT_MAX: { value: 3, min: 2, max: 5, source: 'orographic enhancement ≈ ×2–3 on windward slopes (Roe 2005; Smith & Barstad 2004); observed 1° land rain peaks at ≈ 7,500 mm/yr (Beck et al. 2023)' },
+    RAIN_CELL_FACTOR_MAX: { value: 1.5, min: 1.25, max: 2.5, source: 'no direct literature value: windward rain grows ≈ 5–10 % per 100 m (Roe 2005), so the few hundred metres a terrain cell stands above or below its 1° surroundings make ≈ ×1.2–1.6' },
+    RAIN_SUPPLY_START_MM: { value: 5000, min: 4000, max: 7500, source: "Earth's wettest 1° land cells get ≈ 5–7.5 m a year (Beck et al. 2023 at 1°: 7.5 m) — the Chocó, Mt Cameroon, the Khasi Hills; the climate gives Earth that with or without the bound" },
+    RAIN_SUPPLY_MAX_MM: { value: 7500, min: 7000, max: 12000, source: 'no 1° land cell on Earth reaches 8 m a year (Beck et al. 2023); the wettest stations ≈ 11.9 m (Mawsynram, Cherrapunji), a terrain cell up to ×RAIN_CELL_FACTOR_MAX its 1° cell' },
+    RAIN_COLUMN_FREE_AIR: { value: 0.8, min: 0.3, max: 1, source: 'surface-based inversions over snow are ≈ 0.3–1 km deep (Serreze et al. 1992; Bradley et al. 1992) under a water-vapour scale height of ≈ 2 km: most of the column\'s water lies above them' },
+    RAIN_COLUMN_LAPSE_MAX: { value: 6.5, min: 6.5, max: 10, source: 'the free troposphere cools ≈ 6.5 K/km (standard atmosphere); the ≈ 8 K/km of an ice-sheet surface (Fortuin & Oerlemans 1990) is its near-surface inversion, which holds little of the column\'s water' },
 });
 
 export function setParams(p) { Object.assign(PARAMS, p); }
