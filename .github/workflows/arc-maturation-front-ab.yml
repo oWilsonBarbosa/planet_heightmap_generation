@@ -1,0 +1,57 @@
+name: Arc maturation front rate causal test
+
+on:
+  push:
+    branches:
+      - audit/arc-maturation-front-20261115
+    paths:
+      - '.github/workflows/arc-maturation-front-ab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  maturation:
+    name: 4242 GPE2 / ${{ matrix.cells }} / maturation ${{ matrix.rate }} km per Myr
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cells: 20000
+            rate: 3
+          - cells: 20000
+            rate: 6
+          - cells: 20000
+            rate: 12
+          - cells: 40000
+            rate: 3
+          - cells: 40000
+            rate: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install sphere mesh dependency
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Validate observer
+        run: node --check v2/tools/audit-arc-fate.mjs
+      - name: Simulate full 1200 Myr with same tectonic scenario
+        run: |
+          node v2/tools/audit-arc-fate.mjs \
+            --seed=4242 --cells=${{ matrix.cells }} --strength=2.0 \
+            --maturation-rate=${{ matrix.rate }} \
+            --until=1200 --every=100 --targets=900,1000,1100,1200 \
+            --out=reports/arc-maturation-4242-${{ matrix.cells }}-rate${{ matrix.rate }}
+      - name: Upload paired results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arc-maturation-4242-${{ matrix.cells }}-rate${{ matrix.rate }}
+          path: |
+            reports/arc-maturation-4242-${{ matrix.cells }}-rate${{ matrix.rate }}.csv
+            reports/arc-maturation-4242-${{ matrix.cells }}-rate${{ matrix.rate }}.json
+          if-no-files-found: warn
