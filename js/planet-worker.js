@@ -18,7 +18,7 @@ import { buildPresentPlates, classifyBoundaries, arrowAnchors, cellLandNow, moti
 import { presentLayout } from '../v2/js/present/layout.js';
 import { presentWorld, presentTerrainMesh, presentGroundOf, presentTerrainOverrides, uneditedLayout } from '../v2/js/present/world.js';
 import { storyFrame, finishFrame } from '../v2/js/present/layers.js';
-import { finishConfigOf, finishOverrides } from '../v2/js/present/knobs.js';
+import { finishConfigOf, finishOverrides, generateFinishOverrides } from '../v2/js/present/knobs.js';
 import { hillshade } from '../v2/js/view/terrain-shade.js';
 import { buildSimMesh } from '../v2/js/core/sim-mesh.js';
 import { plainCarveInputs } from '../v2/js/terrain/synthesize.js';
@@ -116,7 +116,7 @@ function presentMessage(present, plateIsOcean) {
  * hover's stories read (layers.js storyFrame), each region's sim cell, and the finish's job — the Frame, the sim mesh, the
  * uncarved surface and the configs it was drawn with. Copies, sent as transfers (the worker keeps its own).
  */
-function sharedPayload(present, mesh, r_xyz, seed) {
+function sharedPayload(present, mesh, r_xyz, seed, hydrologyProfile = 'v3') {
     const w = present.world, tm = presentTerrainMesh(mesh, r_xyz), sim = present.L.sim, transfer = [];
     const copy = (a) => { const c = a.slice(); transfer.push(c.buffer); return c; };
     // (the Frame on the history's clock, as Evolution's finish reads it — its `time` the history's length: v2/js/present/layers.js)
@@ -129,13 +129,13 @@ function sharedPayload(present, mesh, r_xyz, seed) {
         mesh: { numCells: tm.numCells, xyz: copy(tm.xyz), adjOffset: copy(tm.adjOffset), adjList: copy(tm.adjList) },
         heightKm: copy(w.heightKm), shade: copy(w.shade), story, regionCell: copy(present.regionCell),
         finish: { frame, simMesh: { numCells: sim.numCells, xyz: copy(sim.xyz), adjOffset: copy(sim.adjOffset), adjList: copy(sim.adjList) }, seed, surface,
-            terrain: presentTerrainOverrides({ knobs: present.knobs }), finish: finishOverrides(present.knobs ?? {}) },
+            terrain: presentTerrainOverrides({ knobs: present.knobs }), finish: generateFinishOverrides(present.knobs ?? {}, hydrologyProfile) },
     };
     return { payload, transfer };
 }
 /** A present-day world sent to the page: the plates' message, the Inspect layers, the shared payload. */
 function sendWorld(type, extra = {}) {
-    const { present, mesh, r_xyz, seed } = W, n = mesh.numRegions, shared = sharedPayload(present, mesh, r_xyz, seed), layers = pastLayers(present, n);
+    const { present, mesh, r_xyz, seed } = W, n = mesh.numRegions, shared = sharedPayload(present, mesh, r_xyz, seed, W.hydrologyProfile), layers = pastLayers(present, n);
     self.postMessage({ type, seed, present: presentMessage(present, W.plateIsOcean), debugLayers: layers, shared: shared.payload, ...extra },
         [...shared.transfer, ...Object.values(layers).map(a => a.buffer), ...(extra.r_plate ? [extra.r_plate.buffer] : [])]);
 }
@@ -166,7 +166,8 @@ function handleGenerate(data) {
     present.edit = { pieceVec, coarse, P, original: originalPlateIsOcean };   // (kept for an edit: the coarse layout, the pieces' motion — G1d — and their first land)
     progress(35, 'Raising the ground…');
     presentGround(present, plateIsOcean, mesh, r_xyz, seed, knobsOf(data, nMag));
-    W = { mesh, r_xyz, seed, nMag, plateIsOcean: new Set(plateIsOcean), present, r_plate: new Int32Array(r_plate) };
+    W = { mesh, r_xyz, seed, nMag, plateIsOcean: new Set(plateIsOcean), present, r_plate: new Int32Array(r_plate),
+        hydrologyProfile: data.hydrologyProfile === 'closed-basins' ? 'closed-basins' : 'v3' };
     present.r_plate = W.r_plate;
     progress(95, 'Done');
     sendWorld('done', { r_plate, plateSeeds: Array.from(plateSeeds), plateIsOcean: Array.from(plateIsOcean), originalPlateIsOcean: Array.from(originalPlateIsOcean), _workerTotal: performance.now() - t0 });
