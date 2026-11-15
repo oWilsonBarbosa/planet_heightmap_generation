@@ -250,8 +250,27 @@ export function hydrology(ctx, F) {
     let cutCells = 0, cutMaxKm = 0, cutKm3 = 0;
     // (and where each gorge ran, at what level: a lake further down that a gorge cut through below its rim drains by it)
     const cutAt = new Float32Array(n).fill(Infinity);
-    const lower = (y, level) => { if (z[y] > level) { const d = z[y] - level; cutCells++; cutKm3 += d * cellKm2; if (d > cutMaxKm) cutMaxKm = d; z[y] = level; if (level < cutAt[y]) cutAt[y] = level; } };
-    const cut = (x, level, ground = groundZ, exitAt = null) => {
+    // Read-only causal provenance, allocated only when the lake-site audit is enabled.
+    const provenance = F.traceLakeSite ? {
+        cause: new Uint8Array(n), source: new Int32Array(n).fill(-1),
+        before: new Float32Array(n).fill(NaN)
+    } : null;
+    // 1=early hollow cut, 2=pocket, 3=sea, 4=drained lake,
+    // 5=glacial/tectonic breach, 6=pond below keep size, 7=lake shore adjustment.
+    let activeCutCause = 0, activeSource = -1;
+    const lower = (y, level) => { if (z[y] > level) {
+        const original = z[y], d = original - level; cutCells++; cutKm3 += d * cellKm2;
+        if (d > cutMaxKm) cutMaxKm = d; z[y] = level;
+        if (level < cutAt[y]) { cutAt[y] = level;
+            if (provenance) {
+                provenance.cause[y] = activeCutCause; provenance.source[y] = activeSource;
+                provenance.before[y] = original;
+            }
+        }
+    } };
+    const cut = (x, level, ground = groundZ, exitAt = null, reason = 0) => {
+        activeCutCause = reason;
+        activeSource = hollow[x];
         // (below sea level only to open a small trapped sea into the ocean nearby — its cut through dry land at most
         // seaCutKm long; further, the sea would wind inland down the gorge: then the gorge stops at sea level)
         if (level < 0) {
@@ -373,7 +392,7 @@ export function hydrology(ctx, F) {
                         pocketSeen[nb] = innerId; cells.push(nb); if (z[nb] < z[low]) low = nb;
                     }
                 }
-                cut(low, z[low], ground, drainsAt);
+                cut(low, z[low], ground, drainsAt, 2);
                 any = true;
             }
             if (!any) break;
@@ -441,7 +460,7 @@ export function hydrology(ctx, F) {
     traceStage('before-pits');
     for (const id of pits) { const h = hollows[id]; for (const c of h.cells) if (z[c] < h.level) z[c] = h.level; }
     traceStage('after-pits');
-    for (const id of laterCuts) { const h = hollows[id]; cut(h.deepCell, h.floor); cutPockets(h, id, h.outlet); }
+    for (const id of laterCuts) { const h = hollows[id]; cut(h.deepCell, h.floor, groundZ, null, 1); cutPockets(h, id, h.outlet); }
     traceStage('after-early-gorges');
     // (and its water runs down to its outlet on the ground as the gorges left it, not the flood's way across the floor that
     // was: each cell's receiver the steepest way down to a cell reached before by a flood over the hollow from its outlet,
@@ -558,6 +577,29 @@ export function hydrology(ctx, F) {
                 for (let k = adjOffset[x]; k < adjOffset[x + 1]; k++) { const nb = adjList[k]; if (hollow[nb] !== hollow[c] && rank[nb] >= 0 && cutAt[nb] < crossed) crossed = cutAt[nb]; }
             }
             const drained = crossed < h.level - 0.01;
+            if(siteRecords?.has(hollow[c])){
+                const target=siteRecords.get(hollow[c]);
+                const cuts=[];
+                if(Number.isFinite(crossed)){
+                    for(const x of h.cells){
+                        if(cutAt[x]<Infinity)cuts.push(x);
+                        for(let k=adjOffset[x];k<adjOffset[x+1];k++){
+                            const nb=adjList[k];
+                            if(hollow[nb]!==hollow[c]&&rank[nb]>=0&&cutAt[nb]<Infinity)cuts.push(nb);
+                        }
+                    }
+                }
+                const unique=[...new Set(cuts)];
+                unique.sort((a,b)=>cutAt[a]-cutAt[b]);
+                target.incisions=unique.slice(0,12).map(x=>({
+                    cell:x,cutElevationM:round(1000*cutAt[x]),
+                    currentTerrainM:round(1000*z[x]),prevTerrainM:round(1000*provenance.before[x]),
+                    sourceHollow:provenance.source[x],cause:provenance.cause[x],
+                    insideHollow:hollow[x]===hollow[c],
+                    lat:round(Math.asin(xyz[3*x+2])*180/Math.PI,5),
+                    lon:round(Math.atan2(xyz[3*x+1],xyz[3*x])*180/Math.PI,5)
+                }));
+            }
             // (and a major river only a huge one — developer, 2026-10-27: major rivers ending in a lake "< 1% unless the lake
             // is huge": from lakeHugeQ[0] m³/s, by lakeHugeQ[1], a lake of lakeHugeKm2)
             const huge = F.lakeHugeKm2 > 0 ? F.lakeHugeKm2 * smooth(Math.log(F.lakeHugeQ[0]), Math.log(F.lakeHugeQ[1]), Math.log(Math.max(1, h.inflow))) : 0;
@@ -590,11 +632,11 @@ export function hydrology(ctx, F) {
             } else if (h.sea) {
                 // full, it fills its hole to the brim and spills: its outflow has cut its way down to it (a gorge just above
                 // sea level), and the lowland round it drains as land does (below)
-                level = cut(h.deepCell, F.seaCutFloorKm); from = h.deepCell;
+                level = cut(h.deepCell, F.seaCutFloorKm, groundZ, null, 3); from = h.deepCell;
             } else if (drained || areaKm2 < keepKm2 || h.inflow < full) {
                 // (drained by a gorge that runs through it — down to its own floor, or, where F.drainBelowFloor, below
                 // it: the gorge's cells under the floor are its bed, not a lake strung along it)
-                cut(h.deepCell, h.floor); level = F.drainBelowFloor ? Math.min(h.floor, crossed) : h.floor;
+                cut(h.deepCell, h.floor, groundZ, null, 4); level = F.drainBelowFloor ? Math.min(h.floor, crossed) : h.floor;
             }
             else if (F.breachKm > 0) {
                 // an old basin that overflows has cut its outlet down (developer: the erosion should "break these basins
@@ -607,7 +649,7 @@ export function hydrology(ctx, F) {
                 if (B > 0) {
                     let floor = Infinity;
                     for (const x of h.cells) if (z[x] < floor) floor = z[x];
-                    level = cut(c, Math.max(floor, h.level - B));
+                    level = cut(c, Math.max(floor, h.level - B), groundZ, null, 5);
                 }
             }
             // the water: what is connected to the outlet below the level. Pockets below it but cut off from it (a breached
@@ -631,7 +673,7 @@ export function hydrology(ctx, F) {
             // counts is the water left, not the basin's)
             // (a remnant of the sea keeps its water whatever its size: no gorge could drain it)
             // (and one breached down to a pond too small to draw: no pond, no dry pit at its floor below its way out — it drains)
-            if (!h.sea && !closed && (water.length || level > h.floor + EPS) && water.length * cellKm2 < keepKm2) { cut(h.deepCell, h.floor); level = h.floor; water.length = 0; }
+            if (!h.sea && !closed && (water.length || level > h.floor + EPS) && water.length * cellKm2 < keepKm2) { cut(h.deepCell, h.floor, groundZ, null, 6); level = h.floor; water.length = 0; }
             // (a remnant of the sea full to its brim keeps the water of each part of its hole — often pits scattered over a
             // lowland that spills just above sea level, and the basin's rivers run to the nearest (below). Each part is a
             // lake of its own, kept only where it is big for the basin's river, as any lake (a great river's only a huge
@@ -725,7 +767,7 @@ export function hydrology(ctx, F) {
         } else {
             for (const x of h.cells) if (lakeKind[x]) { lakeKind[x] = Water.NONE; lakeLevel[x] = NaN; }
             h.kind = Water.NONE;
-            cut(h.deepCell, h.floor); cutPockets(h, id, h.outlet); h.levelNow = h.floor;
+            cut(h.deepCell, h.floor, groundZ, null, 7); cutPockets(h, id, h.outlet); h.levelNow = h.floor;
         }
       }
     }
