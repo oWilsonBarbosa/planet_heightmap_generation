@@ -335,8 +335,30 @@ export function hydrology(ctx, F) {
     };
     // (the finishing's hollows cut through once every hollow is found — a cell cut below the flood's surface mid-search
     // read as a hollow of its own: spurious lakes the size of plains — each drained whole, its pockets too)
+    // Opt-in tracing of known regression cells. Read-only: no effect on the routing or world defaults.
+    const traceIds = Array.isArray(F.traceCells) ? F.traceCells : [];
+    const traceStage = stage => {
+        if (!traceIds.length) return;
+        const samples = traceIds.filter(c => c >= 0 && c < n).map(c => {
+            const hId = hollow[c], h = hId >= 0 ? hollows[hId] : null;
+            const outletH = hollows.findIndex(v => v.outlet === c);
+            return {
+                id:c, z:+(z[c]*1000).toFixed(3), receiver:recv[c], rank:rank[c],
+                fill:+(fill[c]*1000).toFixed(3), parent:parent[c],
+                hollow:hId, hLake:h?.lake, hKind:h?.kind, hFloor:h ? +(1000*h.floor).toFixed(2) : null,
+                hSpill:h ? +(1000*h.level).toFixed(2) : null, hOutlet:h?.outlet,
+                cutAt: Number.isFinite(cutAt[c]) ? +(1000*cutAt[c]).toFixed(3) : null,
+                lakeKind:lakeKind[c], lakeLevel:Number.isFinite(lakeLevel[c]) ? +(1000*lakeLevel[c]).toFixed(3) : null,
+                q:+q[c].toFixed(2), isHollowOutlet:outletH >= 0 ? outletH : null
+            };
+        });
+        console.log('OROGEN_HYDRO_TRACE ' + JSON.stringify({ stage, n, samples }));
+    };
+    traceStage('before-pits');
     for (const id of pits) { const h = hollows[id]; for (const c of h.cells) if (z[c] < h.level) z[c] = h.level; }
+    traceStage('after-pits');
     for (const id of laterCuts) { const h = hollows[id]; cut(h.deepCell, h.floor); cutPockets(h, id, h.outlet); }
+    traceStage('after-early-gorges');
     // (and its water runs down to its outlet on the ground as the gorges left it, not the flood's way across the floor that
     // was: each cell's receiver the steepest way down to a cell reached before by a flood over the hollow from its outlet,
     // and the cells' places in the order rearranged among their own — the outlet first, then as that flood reached them —
@@ -418,6 +440,7 @@ export function hydrology(ctx, F) {
             for (let j = undoOrder.length - 2; j >= 0; j -= 2) { const c = undoOrder[j]; rank[c] = undoOrder[j + 1]; order[rank[c]] = c; }
         }
     }
+    traceStage('after-receiver-reorder');
     const lakeDeficit = c => Math.max(0, F.lakeEvapShare * pet[c] - Math.max(0, rain[c]));     // (mm/yr off open water)
     let toSea = 0, toBasins = 0, lost = 0, total = 0;
     for (let i = count - 1; i >= 0; i--) {
@@ -576,6 +599,7 @@ export function hydrology(ctx, F) {
     // a gorge beside it: it drains by it, cut to its floor as a basin a gorge crossed. What it passes on is the same — a
     // fresh lake passes on all that flows in. At 640K one stood 76 m above its own way out. Again while one drained cuts
     // another's shore)
+    traceStage('after-lake-water-balance');
     for (let round = 0, changed = true; changed && round < 3; round++) {
       changed = false;
       for (const h of hollows) {
@@ -602,6 +626,7 @@ export function hydrology(ctx, F) {
         }
       }
     }
+    traceStage('after-lake-level-adjust');
     // (no deep dry holes, no dry land below sea level: a remnant of the sea left without water — a salt pan, the pockets a
     // breach left — is filled with its own sediment and salts toward a flat at most about panDepthKm below its rim (depth
     // d → panDepthKm × tanh(d / panDepthKm): the Qattara's scale, not a hole the size of the sea that was there — developer,
@@ -626,6 +651,7 @@ export function hydrology(ctx, F) {
     // water does not cover the basin — a lake shrunk to its balance, a basin breached and drained — the rivers still
     // cross the dry ground: down to the shore (a priority flood from the water over the basin's dry cells), or, with
     // no water left, down to the gorge the basin drains by (from its outlet) ──
+    traceStage('after-sea-floor-sediment');
     const lr = new Int32Array(n).fill(-1), lp = new Int32Array(n).fill(-1), lfill = new Float32Array(n), lorder = [];
     let pocketCells = 0, pocketMaxKm = 0;
     for (const h of hollows) {
@@ -688,6 +714,7 @@ export function hydrology(ctx, F) {
         for (const c of cells) lp[c] = -1;
     }
 
+    traceStage('after-dry-lake-routing');
     // ── the rivers: reaches carrying at least riverMinM3s, not on lakes, not on ice caps ──
     const on = c => rank[c] >= 0 && q[c] >= F.riverMinM3s && !lakeKind[c] && !(ctx.ice && ctx.ice[c]);
     const upCount = new Uint8Array(n);
@@ -739,6 +766,7 @@ export function hydrology(ctx, F) {
         // (a closed lake's outlet too, when its water stands there: it goes no further — not over the rim)
         for (const x of h.cells) if (lakeKind[x]) { lakeOutlet[x] = to; if (x !== h.outlet || to < 0) { recv[x] = to; stepKm[x] = to >= 0 ? edgeKmOf(xyz, x, to) : 0; } }
     }
+    traceStage('after-network-export');
     return {
         lake: lakeKind, lakeLevel, q, area, recv, order: order.subarray(0, count),
         // (the network, on request: the cell each land cell drains into — a lake's water its outlet; −1 on the sea and

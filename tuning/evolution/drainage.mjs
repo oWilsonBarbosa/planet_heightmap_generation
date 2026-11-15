@@ -43,7 +43,8 @@ console.log(`Evolution world: seed ${SEED}, ${CONT} % continental, ${SIM.toLocal
 const measures = [];
 
 for (const cells of CELLS) {
-    const fin = await finishWorld({ frame, seed: SEED, sim: SIM, cells, F, network: true });
+    const traceCells = cells === 160000 ? [60166, 60543, 59789, 59933, 19158, 18925, 19535, 19391] : cells === 640000 ? [633654, 633277, 633798, 633044, 632667, 632434, 633510, 633421] : [];
+    const fin = await finishWorld({ frame, seed: SEED, sim: SIM, cells, F: DIAGNOSE ? { ...F, traceCells } : F, network: true });
     log(`finished at ${cells.toLocaleString()} cells`);
     const { mesh, z, lake, lakeLevel, rivers, stats } = fin, { recv, lakeOutlet, q, area, runoff, sea, cellKm2 } = fin.network;
     const n = mesh.numCells, { adjOffset, adjList, xyz } = mesh, w = stats.water;
