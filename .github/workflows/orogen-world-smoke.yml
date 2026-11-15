@@ -1,0 +1,40 @@
+name: Orogen small-world physical smoke test
+
+on:
+  pull_request:
+    paths:
+      - 'tuning/orogen/**'
+      - '.github/workflows/orogen-world-smoke.yml'
+      - 'v2/js/finish/**'
+      - 'v2/js/climate/**'
+      - 'v2/js/present/knobs.js'
+      - 'js/planet-worker.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  world:
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ['v3', 'closed-basins']
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install generator's existing Delaunator dependency
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Run headless Generate plus Evolution finish at 40,000 cells
+        run: node --max-old-space-size=5000 tuning/orogen/smoke.mjs --n 40000 --profile "${{ matrix.profile }}" --out "orogen-${{ matrix.profile }}.json"
+      - name: Publish test metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-${{ matrix.profile }}-40000
+          path: orogen-${{ matrix.profile }}.json
+          if-no-files-found: warn
