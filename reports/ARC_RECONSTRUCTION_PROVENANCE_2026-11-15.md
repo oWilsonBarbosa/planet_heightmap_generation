@@ -79,6 +79,20 @@ Branch: `audit/arc-seafill-age-provenance-20261115`. Somente para células do ti
 
 Na história GPE2/4242/20K, o maior agrupamento ARC em 1200 Ma cai **28.18→11.20 Mkm²**, e ARC total **43.07→27.34 Mkm²**. **Não é resposta monotônica ao longo do tempo:** no instante 1000 Ma o maior agrupamento cresce de 16.42 (controle) para **31.01 Mkm²** (idade preservada). O experimento demonstra real sensibilidade à data de proveniência, mas não autoriza promoção imediata da regra.
 
+### Validação em 40K e invariante falhado — rejeitar idade preservada como patch isolado
+
+O [experimento de idade copiada #43686325376](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43686325376) completou duas comparações de 1200 Ma (20K, 40K) e a suíte de invariantes. As duas comparações foram executadas; a suíte de invariantes terminou com **1/21 FAIL**: uma das histórias alcançou sobreposição equivalente a **1892 km** de uma frente continental, quando o limite testado é **500 km**. Não é aceitável relaxar o invariante apenas porque a regra melhorou um mapa isolado.
+
+| GPE2/seed 4242 em 1200 Ma | ARC controle 20K | ARC idade mantida 20K | ARC controle 40K | ARC idade mantida 40K |
+|---|---:|---:|---:|---:|
+| ARC visível total (Mkm²) | 43.07 | **27.34** | 11.63 | 10.79 |
+| Maior agrupamento ARC (Mkm²) | 28.18 | 11.20 | 1.84 | **3.98** |
+| CONTINENT+CRATON (Mkm²) | 203.68 | 199.37 | 197.13 | **172.58** |
+
+O menor grupo final em 20K não demonstra melhora real: no quadro 1000 Ma o grupo da candidata aumentou de 16.42 para **31.01 Mkm²**. A queda forte da crosta continental em 40K (−24.56 Mkm²) e a falha do invariante tornam a modificação inadequada como substituição simples. Preservar o tipo `ARC` quando se copia um preenchimento sedimentar continua sendo uma **decisão geológica questionável**; será necessário modelar proveniência e depósito do sedimento/terreno separadamente.
+
+**Decisão de rejeição técnica:** manter apenas como prova de sensibilidade causal, sem merge em `main`.
+
 ## Próximas decisões
 
 1. Avaliar os resultados **40K** das duas hipóteses e os três seeds das regressões, já submetidos à CI.
