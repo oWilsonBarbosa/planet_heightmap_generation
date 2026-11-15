@@ -1,0 +1,32 @@
+name: Distributed GPE synthetic mesh convergence
+
+on:
+  push:
+    branches:
+      - audit/distributed-ridge-gpe-20261114
+    paths:
+      - '.github/workflows/ridge-gpe-synthetic-scale.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependency
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Validate scripts
+        run: |
+          node --check v2/tools/check-ridge-gpe.mjs
+          node --check v2/tools/check-ridge-gpe-scale.mjs
+      - name: Numerical unit and mesh convergence
+        run: |
+          node v2/tools/check-ridge-gpe.mjs
+          node v2/tools/check-ridge-gpe-scale.mjs
