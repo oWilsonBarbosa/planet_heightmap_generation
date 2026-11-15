@@ -53,3 +53,13 @@ São **operações**, não km² independentes; a mesma célula pode mudar de con
 ## Coordenação com expert-spoon
 
 Os métodos de verificação independentes do mundo (isolamento por região, SHA-256, conservação, comparação entre malhas, holdout de blocos e RMSE) foram propostos no [PR #3 do expert-spoon](https://github.com/oWilsonBarbosa/expert-spoon/pull/3), integrados ao módulo `shared_cartography` usado nas outras sessões. Dados e resultados específicos do ensaio de arcologia tectônica permanecem **nesta ramificação do gerador** e foram catalogados separadamente em `studies/world-orogen-v2/planetary/arc-audit/` no branch de integração do `expert-spoon`. As regras da V2 não são parâmetros aprovados do módulo compartilhado.
+
+## Resultado do teste de invariantes — reprovação do padrão W=15
+
+A [execução #43707304121](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43707304121) concluiu o teste unitário de memória com **sucesso**, incluindo expiração da janela, isolamento por mundo, placa e célula. A suíte `check-invariants.mjs`, contudo, apresentou **1 falha em 21 critérios**: na primeira história foi observado overlap continente/continente equivalente a **839 km** sobre sua frente (1,06 Mkm², placas 5:13, t=334 Ma), acima do limite 500 km do contrato tectônico.
+
+Outras duas histórias do conjunto de invariantes apresentaram overlaps de 338 e 475 km, dentro do limite. A falha não parece uma exceção de sintaxe ou memória contaminada; é resultado dinâmico do modelo modificado.
+
+**Decisão:** W=15 reprovado como parâmetro padrão nesta fase. Não relaxar a exigência de overlap para aproveitar ganhos locais. W=30 também não é uma solução aceitável pela formação de um maior agrupamento ARC de ~11,94 Mkm² em 40K no caso 4242. W=0 funciona como restrição instantânea e já era conhecido que causa regressões multissemente/Phase13. A construção de um modelo de atividade com memória exige revisar a interação com fusões e colisões, não simplesmente escolher a janela de melhor aparência cartográfica.
+
+Os métodos de conservação e comparação do `expert-spoon` permanecem independentes e não passam a considerar essa regra uma solução física aprovada.
