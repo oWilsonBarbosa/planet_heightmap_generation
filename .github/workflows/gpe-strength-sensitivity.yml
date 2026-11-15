@@ -1,0 +1,51 @@
+name: Distributed GPE strength sensitivity
+
+on:
+  push:
+    branches:
+      - audit/gpe-strength-sensitivity-20261115
+    paths:
+      - '.github/workflows/gpe-strength-sensitivity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  strength:
+    name: GPE ${{ matrix.strength }} at ${{ matrix.cells }} cells
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        strength: ['0.5', '2.0']
+        cells: [20000, 40000]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Validate observer
+        run: node --check v2/tools/audit-geography.mjs
+      - name: Run 3 matched 1200-Myr histories
+        run: |
+          node v2/tools/audit-geography.mjs \
+            --cells=${{ matrix.cells }} \
+            --seeds=12345,777,4242 \
+            --until=1200 \
+            --every=100 \
+            --gpe-strength=${{ matrix.strength }} \
+            --gpe-age-scale=80 \
+            --out=reports/gpe-${{ matrix.cells }}-strength-${{ matrix.strength }}
+      - name: Upload reproducible age and geography outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpe-strength-${{ matrix.strength }}-${{ matrix.cells }}
+          path: |
+            reports/gpe-${{ matrix.cells }}-strength-${{ matrix.strength }}.csv
+            reports/gpe-${{ matrix.cells }}-strength-${{ matrix.strength }}.json
+          if-no-files-found: warn
