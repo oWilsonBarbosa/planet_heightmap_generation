@@ -14,6 +14,11 @@ Referências conferidas em 26/10/2026. Este documento registra o que foi feito e
 > acabamento, as opções que `js/water-new.js` ligava para a exportação antiga (`WATER`) não valem para a página: o que o
 > Generate ganha do fork por padrão é o resto (os meses, a viagem, os lagos sem desfiladeiro). A tabela de branches abaixo
 > é a de 26/10.
+>
+> O ensaio de drenagem do Evolution sobre a árvore fundida achou 3 falhas de 32; duas eram da hidrologia do fork e foram
+> corrigidas em `623043c` (o caminho de um desfiladeiro que volta à bacia fica; um lago que baixa até uma saída cortada
+> abre o canal até ela); a terceira é a escala dos lagos grandes entre 160K e 640K, um golfo que `openStraits` fecha a
+> 160K — ver `DRAINAGE_20261029.md`, seção de 15/11.
 
 ## Branches ativos
 

@@ -230,7 +230,9 @@ pocket in it (a sub-basin behind its own sill, which the gorge from the basin's 
 out from its lowest point, and its water runs down the ground as the gorges left it (2026-10-29). A pit of the tectonic
 surface or the ice age too small for a lake is filled to its spill level; a pocket in the dry ground round a lake to the
 way its water runs down to it; a lake a gorge beside it or through its way out has cut below its surface drops to that
-way out, or drains — no river climbs out of a pit, no lake stands above a gorge (`tuning/evolution/drainage.mjs`).
+way out, cutting its channel down to it, or drains; a gorge from upstream that leaves a basin by its rim and re-enters
+it lower down keeps its course through it (2026-11-15) — no river climbs out of a pit, no lake stands above a gorge
+(`tuning/evolution/drainage.mjs`; `docs/DRAINAGE_20261029.md`).
 Drawn on the Terrain view as a flow map (hairlines, stronger for bigger
 rivers, seasonal ones dashed; a River Density choice; a Rivers & Lakes toggle; Colour by Regime with a legend; the readout
 names a river's discharge, regime and flood months, and a lake's kind). Measured on a desktop: 640K ~8 s (20K plates,
