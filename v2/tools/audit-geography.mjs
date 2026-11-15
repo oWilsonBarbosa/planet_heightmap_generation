@@ -15,6 +15,12 @@ const out = opt('out','reports/geography-baseline');
 const ablate = opt('ablate','none');
 if (!['none','arcMaturation','marginIsles'].includes(ablate)) throw Error('Unknown --ablate option');
 const dose = opt('dose','control');
+const gpeStrengthArg = opt('gpe-strength', '');
+const gpeAgeScaleArg = opt('gpe-age-scale', '');
+const gpeStrength = gpeStrengthArg === '' ? null : Number(gpeStrengthArg);
+const gpeAgeScale = gpeAgeScaleArg === '' ? null : Number(gpeAgeScaleArg);
+if (gpeStrength !== null && (!Number.isFinite(gpeStrength) || gpeStrength < 0 || gpeStrength > 20)) throw Error('Invalid --gpe-strength (0..20)');
+if (gpeAgeScale !== null && (!Number.isFinite(gpeAgeScale) || gpeAgeScale <= 0 || gpeAgeScale > 10000)) throw Error('Invalid --gpe-age-scale (0..10000)');
 if (!['control','arcHalf','islesHalf','bothHalf'].includes(dose)) throw Error('Unknown --dose option');
 if (ablate !== 'none' && dose !== 'control') throw Error('Do not combine --dose and --ablate');
 if (![cells,until,every,...seeds].every(Number.isInteger) || cells < 2000 || until < 1 || every < 1 || until % every) throw Error('Invalid cells, until, every or seeds');
@@ -110,6 +116,8 @@ function measure(f,seed) {
 }
 for(const seed of seeds) {
   const started=performance.now(), world=scene.build(mesh,seed);
+  if (gpeStrength !== null) world.config.ridgeGpeStrength = gpeStrength;
+  if (gpeAgeScale !== null) world.config.ridgeGpeAgeScaleMyr = gpeAgeScale;
   // Controlled mechanism ablation: alter parameters on this run's world only.
   // Keep the baseline path identical when ablate=none.
   if (ablate === 'arcMaturation') world.config.arcContinentKmPerMyr = 0;
@@ -141,5 +149,5 @@ fs.mkdirSync(path.dirname(out),{recursive:true});
 const columns=Object.keys(rows[0]);
 const csv=v=>{const s=v==null?'':String(v);return /[,"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
 fs.writeFileSync(out+'.csv',columns.join(',')+'\n'+rows.map(r=>columns.map(k=>csv(r[k])).join(',')).join('\n')+'\n');
-fs.writeFileSync(out+'.json',JSON.stringify({baseline:'7026cc6526fa637611d05804a4cec8eed04de017',method:'coarse tectonic crust; no terrain render',parameters:{cells,seeds,until,every,ablate,dose},rows},null,2)+'\n');
+fs.writeFileSync(out+'.json',JSON.stringify({baseline:'7026cc6526fa637611d05804a4cec8eed04de017',method:'coarse tectonic crust; no terrain render',parameters:{cells,seeds,until,every,ablate,dose,gpeStrength,gpeAgeScale},rows},null,2)+'\n');
 console.log('Saved '+out+'.csv and .json ('+rows.length+' frames)');
