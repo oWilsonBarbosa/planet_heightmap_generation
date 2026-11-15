@@ -148,6 +148,13 @@ simulate(world,{untilMyr:until,drive:w=>scene.drive(w),snapshotEveryMyr:every,ke
     totalNativeUnreachableMatureArcMkm2:(sum.nativeMatureNonForeArc-sum.nativeMatureReachable)*area,
     cumulativeArcMaturedCellOps:f.budget?.arcMaturedCells??0,
     cumulativeArcRecycledCellOps:f.budget?.recycledCells??0,
+    cumulativeIslandArcBuiltCellOps:f.budget?.arcBuiltCells??0,
+    cumulativeForearcBornCellOps:f.budget?.forearcBornCells??0,
+    cumulativeForearcMergedCellOps:f.budget?.forearcMergedCells??0,
+    cumulativeArcErodedCellOps:f.budget?.arcErodedCells??0,
+    cumulativeArcSubductedCellOps:f.budget?.arcSubductedCells??0,
+    cumulativeArcScrapedMovedCellOps:f.budget?.arcScrapedMovedCells??0,
+    cumulativeArcScrapedAbsorbedCellOps:f.budget?.arcScrapedAbsorbedCells??0,
     platesWithArc:plateSummary.filter(p=>p.arcMkm2>0).length,
     largestArcGroupPlateContributions:ordered(mainByPlate),
     largestArcGroupNativeTerranes:ordered(mainByNativeTerrane),
@@ -172,6 +179,7 @@ const cols=['seed','meshCells','gpeStrength','maturationRateKmPerMyr','timeMyr',
 'largestArcOldAge100Mkm2','largestArcEligibleMkm2','largestArcSamePlateLandReachableMkm2',
 'largestArcAdjacentToSamePlateContinentMkm2','largestArcOldWithoutContinentOnNativePlateMkm2',
 'totalNativeArcMkm2','totalNativeOldArcMkm2','totalNativeReachableMatureArcMkm2','totalNativeUnreachableMatureArcMkm2',
-'cumulativeArcMaturedCellOps','cumulativeArcRecycledCellOps'];
+'cumulativeArcMaturedCellOps','cumulativeArcRecycledCellOps',
+'cumulativeIslandArcBuiltCellOps','cumulativeForearcBornCellOps','cumulativeForearcMergedCellOps','cumulativeArcErodedCellOps','cumulativeArcSubductedCellOps','cumulativeArcScrapedMovedCellOps','cumulativeArcScrapedAbsorbedCellOps'];
 fs.writeFileSync(out+'.csv',cols.join(',')+'\n'+rows.map(r=>cols.map(k=>r[k]??'').join(',')).join('\n')+'\n');
 console.log('Saved '+out+'.json and .csv');
