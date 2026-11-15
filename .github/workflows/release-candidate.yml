@@ -39,7 +39,7 @@ jobs:
           node-version: '22'
       - name: Install the existing mesh dependency
         run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
-      - name: Run 292 physical checks with a controlled performance-only retry
+      - name: Run 292 checks and retry only timing-only CI flakiness
         shell: bash
         run: |
           set +e
@@ -52,83 +52,19 @@ jobs:
             exit 0
           fi
           failures=$(grep -c '^FAIL  ' check-present.log || true)
-          timings=$(grep -Ec '^FAIL  .*: plates built in [0-9]+ ms
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: present-checks
-          path: check-present*.log
-          if-no-files-found: warn
-
-  compatibility:
-    name: Save/load and old file fixtures
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Install the existing mesh dependency
-        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
-      - name: Check saved planets, historical fixtures and maps
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --max-old-space-size=5500 v2/tools/check-save.mjs --sim 5000 --len 80 --cells 40000 --width 512 2>&1 | tee check-save.log
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: historical-files
-          path: check-save.log
-          if-no-files-found: warn
-
-  evolution-known-issue:
-    name: Evolution drainage — preserve known research limitation
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Install the existing mesh dependency
-        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
-      - name: Check for unexpected drainage regressions
-        shell: bash
-        run: |
-          set +e
-          set -o pipefail
-          node --max-old-space-size=5500 tuning/evolution/drainage.mjs --cells 160000,640000 2>&1 | tee evolution.log
-          result=$?
-          set -e
-          if [ "$result" -eq 0 ]; then
-            echo "All Evolution drainage checks passed."
-          elif [ "$result" -eq 1 ] && grep -Eq 'Evolution drainage: 1 of 32 checks FAILED\.' evolution.log && [ "$(grep -c '^FAIL ' evolution.log)" -eq 1 ] && grep -Eq '^FAIL  the lakes from ' evolution.log; then
-            echo "::warning::Documented scientific limitation: one lake scale-convergence failure; not full physical approval."
-          else
-            echo "::error::Unexpected Evolution regression."
-            exit 1
-          fi
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: evolution-baseline
-          path: evolution.log
-          if-no-files-found: warn
- check-present.log || true)
+          timings=$(grep -Ec '^FAIL  .*: plates built in [0-9]+ ms$' check-present.log || true)
           if [ "$result" -ne 1 ] || [ "$failures" -eq 0 ] || [ "$failures" -ne "$timings" ]; then
             echo "::error::Functional Generate check failed; no retry permitted."
             exit 1
           fi
-          echo "::warning::Only wall-clock speed checks exceeded 400ms on shared CI hardware. Repeating once without changing limits."
+          echo "::warning::Only runtime wall-clock speed tests exceeded 400ms; retrying once on the same host."
           node --max-old-space-size=5500 v2/tools/check-present.mjs 2>&1 | tee check-present-retry.log
           grep -Fq 'Present-day world: all 292 checks passed.' check-present-retry.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: present-checks
-          path: check-present.log
+          path: check-present*.log
           if-no-files-found: warn
 
   compatibility:
