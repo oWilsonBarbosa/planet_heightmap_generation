@@ -1,0 +1,42 @@
+name: Orogen lake lineage by geographic overlap
+
+on:
+  pull_request:
+    paths:
+      - 'tuning/evolution/**'
+      - 'v2/js/finish/**'
+      - 'tests/lake-lineage.test.mjs'
+      - '.github/workflows/orogen-lake-lineage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        pair: ['160000,640000','640000,1280000']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Test spatial lineage helper
+        run: node --test tests/lake-lineage.test.mjs
+      - name: Compare lake footprints and origins
+        run: |
+          set -o pipefail
+          node --max-old-space-size=5500 tuning/evolution/drainage.mjs --cells "${{ matrix.pair }}" --lake-match 2>&1 | tee lake-lineage-${{ matrix.pair }}.log
+      - name: Archive diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-lake-lineage-${{ matrix.pair }}
+          path: lake-lineage-${{ matrix.pair }}.log
+          if-no-files-found: warn
