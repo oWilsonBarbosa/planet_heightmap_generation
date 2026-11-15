@@ -6,7 +6,8 @@
 // Per boundary cell of plate A, facing plate B along normal n (pointing at B):
 //   slab pull      A's ocean goes down B's trench       +n × slabPull    × age factor × slab maturity  (on A)
 //   slab suction   A carries the trench, B goes down    +n × slabSuction × age factor × slab maturity  (on A)
-//   ridge push     young ocean of A meets young ocean   −n × ridgePush                                  (on A)
+//   ridge push     legacy: young ocean of A meets young ocean   −n × ridgePush                       (on A)
+//                  experimental: age-gradient GPE traction distributed across mobile ocean area (ridge-gpe.js)
 //   rift push      a fresh rift: A's rifted margin (or its young ocean) faces B's across a rift younger than
 //                  riftPushMyr                            −n × riftPush × (1 − age/riftPushMyr)             (on A)
 //                  — the uplifted shoulders of a new rift drive its sides apart along the whole line. It acts in ONE
@@ -35,6 +36,7 @@ import { areYoungRiftPartners } from './collision.js';
 import { ringsOf } from '../../core/mesh-rings.js';
 import { tangentToward } from '../../core/sphere-geom.js';
 import { mantleFlowAt, dispersalField, repelAt } from './supercontinent.js';
+import { addDistributedRidgeTraction } from './ridge-gpe.js';
 
 /** Force names, in the order of PlateLoad.byKind / forceByKind. Display code keys colours by these names. */
 export const FORCE_KINDS = ['slab pull', 'slab suction', 'ridge push', 'rift push', 'mantle flow'];
@@ -114,7 +116,7 @@ export function gatherLoads(world) {
             load.slabs.push({ r: [r0, r1, r2], n: [n[0], n[1], n[2]], other: owner[across], length });
         } else if (trenchA && oceanB && !trenchB) { kind = SUCTION; size = config.slabSuction * ageFactor(B.formedAt[cellB]) * maturity(A, cellA); }
         else if ((rAge = riftAge(plates[a], A, cellA, plates[owner[across]], B, cellB, time)) < config.riftPushMyr) { kind = RIFT; size = -config.riftPush * (1 - rAge / config.riftPushMyr); }
-        else if (oceanA && oceanB && isYoung(A, cellA) && isYoung(B, cellB)) { kind = RIDGE; size = -config.ridgePush; }
+        else if (config.ridgePushMode !== 'distributed-age-gradient' && oceanA && oceanB && isYoung(A, cellA) && isYoung(B, cellB)) { kind = RIDGE; size = -config.ridgePush; }
         if (kind < 0 || size === 0) continue;
 
         let dir = n;
@@ -129,6 +131,9 @@ export function gatherLoads(world) {
         load.torqueMagnitudeSum += Math.hypot(tx, ty, tz);
         load.cells[kind]++;
     }
+    // Experimental distributed ridge-push proxy: integrate the age gradient over
+    // mobile oceanic plate area instead of applying a binary line force.
+    if (config.ridgePushMode === 'distributed-age-gradient') addDistributedRidgeTraction(world, loads, RIDGE);
     return loads;
 }
 
