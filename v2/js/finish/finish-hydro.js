@@ -346,8 +346,11 @@ export function hydrology(ctx, F) {
     let reorder = false;
     // (every change kept, to undo should the network come out with a loop: then it stays as the flood made it)
     const undoRecv = [], undoOrder = [];
-    // (a way out that leaves the hollow for good: down the receivers to the sea or a closed lake, never back into it)
-    const leaves = (x, id) => { for (let g = 0; x >= 0 && rank[x] >= 0 && g < 1e6; g++) { if (hollow[x] === id) return false; x = recv[x]; } return true; };
+    // (a way out that leaves the hollow for good: down the receivers to the sea or a closed lake, never back into it —
+    // unless it comes back along a gorge, into a cell a gorge has cut: the river's own course, lower down, not the
+    // hollow's flooded floor. Before 2026-11-15 any way back was refused, and the river was sent over the hollow's floor
+    // instead — up to 107 m uphill at 160K, where a gorge left the hollow by a rim cell and re-entered it below)
+    const leaves = (x, id) => { for (let g = 0; x >= 0 && rank[x] >= 0 && g < 1e6; g++) { if (hollow[x] === id) return cutAt[x] < Infinity; x = recv[x]; } return true; };
     const keepMark = new Int32Array(n), keep = [];
     for (const id of laterCuts) {
         const h = hollows[id], cells = h.cells, out = h.outlet;
@@ -595,6 +598,10 @@ export function hydrology(ctx, F) {
         if (shore >= L - 1e-3) for (const x of h.cells) if (lakeKind[x] === Water.FRESH && z[x] < L) left++;
         if (left >= 2 && left * cellKm2 >= F.lakeMinKm2) {
             for (const x of h.cells) if (lakeKind[x] === Water.FRESH) { if (z[x] < L) lakeLevel[x] = L; else { lakeKind[x] = Water.NONE; lakeLevel[x] = NaN; } }
+            // (and its outflow cuts its channel down to the new level, from the water to the way out: the ground between —
+            // the old outlet, the cells to the cut sill — was above it, and the lake could not have reached its way out.
+            // Before 2026-11-15 a 3-cell lake at 640K stood at 139 m behind cells of 141–143 m, its outlet unreached)
+            if (exitZ < h.levelNow) cut(h.deepCell, L);
             h.levelNow = L;
         } else {
             for (const x of h.cells) if (lakeKind[x]) { lakeKind[x] = Water.NONE; lakeLevel[x] = NaN; }
