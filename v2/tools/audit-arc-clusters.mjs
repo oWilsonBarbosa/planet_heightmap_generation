@@ -6,7 +6,7 @@ import path from 'node:path';
 import { labMesh } from './lib/check-kit.mjs';
 import { simulate } from '../js/tectonics/simulate.js';
 import { TERRAIN_SCENES } from '../js/tectonics/scenarios/terrain-scenes.js';
-import { CrustType } from '../js/tectonics/model/crust.js';
+import { CrustType, CrustFlag } from '../js/tectonics/model/crust.js';
 
 const arg=(k,defaultValue)=>process.argv.find(v=>v.startsWith('--'+k+'='))?.slice(k.length+3)??defaultValue;
 const seed=Number(arg('seed','4242')),cells=Number(arg('cells','20000'));
@@ -98,10 +98,23 @@ simulate(world,{untilMyr:until,drive:w=>scene.drive(w),snapshotEveryMyr:every,ke
     }
     const {groups,labels}=connected(arcs),d=continentDistance(cont);
     const large=groups[0]??null,bigId=large?.id??-1;
-    let remote=0,remoteBig=0;
-    for(let w=0;w<n;w++)if(arcs[w]&&d[w]>=0&&d[w]*mesh.edgeKm>1500){
-        remote++;if(labels[w]===bigId)remoteBig++;
+    let remote=0,remoteBig=0,marginIsles=0,marginIslesBig=0;
+    const largestArcOwners=new Map(),largestArcTerranes=new Map(),agesBig=[];
+    for(let w=0;w<n;w++){
+        if(!arcs[w])continue;
+        const isMarginIsle=(f.flags[w]&CrustFlag.MARGIN_ISLE)!==0;
+        if(isMarginIsle)marginIsles++;
+        if(d[w]>=0 && d[w]*mesh.edgeKm>1500){
+            remote++;if(labels[w]===bigId)remoteBig++;
+        }
+        if(labels[w]!==bigId)continue;
+        if(isMarginIsle)marginIslesBig++;
+        largestArcOwners.set(f.owner[w],(largestArcOwners.get(f.owner[w])??0)+1);
+        largestArcTerranes.set(f.terrane[w],(largestArcTerranes.get(f.terrane[w])??0)+1);
+        agesBig.push(Math.max(0,f.time-f.formedAt[w]));
     }
+    agesBig.sort((a,b)=>a-b);
+    const topByCells=(m)=>[...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6).map(([id,cells])=>({id,cells,areaMkm2:cells*areaMkm2}));
     const row={seed,meshCells:n,strength,timeMyr:f.time,arcCrustPct:100*arcCount/n,
         arcAreaMkm2:arcCount*areaMkm2,arcComponentCount:groups.length,
         arcComponentsOver1Mkm2:groups.filter(g=>g.areaMkm2>=1).length,
@@ -112,6 +125,14 @@ simulate(world,{untilMyr:until,drive:w=>scene.drive(w),snapshotEveryMyr:every,ke
         largestArcCentroidLonLatDeg:large?.centroidLonLatDeg??null,
         remoteArcAreaMkm2:remote*areaMkm2,
         remotePartOfLargestArcMkm2:remoteBig*areaMkm2,
+        foreArcIsleTotalMkm2:marginIsles*areaMkm2,
+        nonForeArcCrustTotalMkm2:(arcCount-marginIsles)*areaMkm2,
+        foreArcIsleInLargestGroupMkm2:marginIslesBig*areaMkm2,
+        nonForeArcCrustInLargestGroupMkm2:((large?.cells??0)-marginIslesBig)*areaMkm2,
+        largestArcGroupAgeMedianMyr:agesBig.length?agesBig[Math.floor(agesBig.length/2)]:null,
+        largestArcGroupPlateCount:largestArcOwners.size,
+        topPlatesLargestArc:topByCells(largestArcOwners),
+        topTerranesLargestArc:topByCells(largestArcTerranes),
         topGroups:groups.slice(0,8)};
     results.push(row);
     const file=out+'-t'+f.time+'.svg';
@@ -123,6 +144,6 @@ if(results.length!==targets.length)throw Error('Expected '+targets.length+' sele
 fs.mkdirSync(path.dirname(out),{recursive:true});
 fs.writeFileSync(out+'.json',JSON.stringify({baseline:'7026cc6526fa637611d05804a4cec8eed04de017',seed,cells:n,strength,targets,
 note:'ARC group is type ARC crust connectivity on the coarse simulation mesh. Its area is NOT necessarily emergent land; distance-from-continent in mesh-edge steps is approximate.',rows:results},null,2)+'\n');
-const cols=['seed','meshCells','strength','timeMyr','arcCrustPct','arcAreaMkm2','arcComponentCount','arcComponentsOver1Mkm2','largestArcGroupMkm2','largestArcGroupSharePct','remoteArcAreaMkm2','remotePartOfLargestArcMkm2','largestArcLatitudeMin','largestArcLatitudeMax'];
+const cols=['seed','meshCells','strength','timeMyr','arcCrustPct','arcAreaMkm2','arcComponentCount','arcComponentsOver1Mkm2','largestArcGroupMkm2','largestArcGroupSharePct','remoteArcAreaMkm2','remotePartOfLargestArcMkm2','largestArcLatitudeMin','largestArcLatitudeMax','foreArcIsleTotalMkm2','foreArcIsleInLargestGroupMkm2','nonForeArcCrustInLargestGroupMkm2','largestArcGroupPlateCount'];
 fs.writeFileSync(out+'.csv',cols.join(',')+'\n'+results.map(r=>cols.map(k=>r[k]??'').join(',')).join('\n')+'\n');
 console.log('Saved '+out+'.json/.csv and '+results.length+' world-map SVGs');
