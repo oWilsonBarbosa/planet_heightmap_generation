@@ -114,7 +114,10 @@ export function gatherLoads(world) {
             load.slabs.push({ r: [r0, r1, r2], n: [n[0], n[1], n[2]], other: owner[across], length });
         } else if (trenchA && oceanB && !trenchB) { kind = SUCTION; size = config.slabSuction * ageFactor(B.formedAt[cellB]) * maturity(A, cellA); }
         else if ((rAge = riftAge(plates[a], A, cellA, plates[owner[across]], B, cellB, time)) < config.riftPushMyr) { kind = RIFT; size = -config.riftPush * (1 - rAge / config.riftPushMyr); }
-        else if (oceanA && oceanB && isYoung(A, cellA) && isYoung(B, cellB)) { kind = RIDGE; size = -config.ridgePush; }
+        // Experiment: a passive background ocean is a bookkeeping placeholder, not a driven plate.
+        // Suppress ridge traction only at that placeholder contact; preserve it between mobile plates.
+        // This is an A/B hypothesis, not a validated geodynamic model.
+        else if (oceanA && oceanB && !plates[owner[across]].isBackground && isYoung(A, cellA) && isYoung(B, cellB)) { kind = RIDGE; size = -config.ridgePush; }
         if (kind < 0 || size === 0) continue;
 
         let dir = n;
