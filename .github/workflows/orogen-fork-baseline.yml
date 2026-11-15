@@ -1,0 +1,37 @@
+name: Orogen fork baseline drainage comparison
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/orogen-fork-baseline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fork-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Run original fork baseline c10969c at 160K and 640K
+        run: |
+          set -o pipefail
+          git worktree add --detach /tmp/orogen-fork c10969cdba2201e22fc3529fbf61af0d6903b77f
+          ln -s "$GITHUB_WORKSPACE/node_modules" /tmp/orogen-fork/node_modules
+          node --max-old-space-size=5500 /tmp/orogen-fork/tuning/evolution/drainage.mjs --cells 160000,640000 2>&1 | tee fork-baseline-drainage.log
+      - name: Archive fork baseline checks
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-fork-c10969c-drainage
+          path: fork-baseline-drainage.log
+          if-no-files-found: warn
