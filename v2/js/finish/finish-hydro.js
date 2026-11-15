@@ -59,6 +59,15 @@ export function openStraits(mesh, z, ocean, F) {
             c = p;
         }
         const open = (1 - smooth(F.straitSillM[0], F.straitSillM[1], 1000 * sillKm)) * (1 - smooth(F.straitKm[0], F.straitKm[1], barrierKm));
+        if (F.traceCells?.length) {
+            const a=15.109*Math.PI/180,b=82.058*Math.PI/180, tx=Math.cos(a)*Math.cos(b),ty=Math.cos(a)*Math.sin(b),tz=Math.sin(a);
+            const near=c=>xyz[3*c]*tx+xyz[3*c+1]*ty+xyz[3*c+2]*tz>Math.cos(3*Math.PI/180);
+            if (cells.some(near)) console.log('OROGEN_STRAIT_TRACE '+JSON.stringify({
+                n,region:'15.109N 82.058E',cells:cells.length,first,deepM:+(1000*Math.min(...cells.map(c=>z[c]))).toFixed(1),
+                path:path.length,sillM:+(1000*sillKm).toFixed(2),barrierKm:+barrierKm.toFixed(2),score:+open.toFixed(4),opened:open>=0.5,
+                pathCells:path.slice(0,12).map(c=>({c,zM:+(1000*z[c]).toFixed(1),ocean:ocean[c]}))
+            }));
+        }
         if (open < 0.5) continue;
         for (const c of path) if (z[c] > -F.straitDepthKm) { z[c] = -F.straitDepthKm; cut++; }
         opened++;
