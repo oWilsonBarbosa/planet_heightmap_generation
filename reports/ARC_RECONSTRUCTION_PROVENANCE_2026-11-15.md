@@ -56,6 +56,23 @@ Na história global GPE2/4242/20K aos 1200 Ma:
 
 A mudança reduz o maior grupo em **~92%** e ARC total em **~80%** nessa história, sem só reclassificar tudo como CONTINENT. Contudo, as mudanças de dinâmica posteriores podem ser grandes, e as restantes sementes e resoluções ainda precisam ser aprovadas. **Não é correção aprovada**.
 
+### Resultado da guarda em 40K e comparação da crosta total
+
+O [teste causal de guarda #43686182316](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43686182316) terminou com todos os cinco jobs em sucesso, incluindo história de 1200 Ma em 20K e 40K.
+
+| Semente 4242, GPE2, quadro 1200 Ma | 20K original | 20K guarda | 40K original | 40K guarda |
+|---|---:|---:|---:|---:|
+| ARC visível (Mkm²) | 43.07 | **8.47** | 11.63 | **10.29** |
+| Maior grupo ARC (Mkm²) | 28.18 | **2.24** | 1.84 | **1.21** |
+| CONTINENT+CRATON (Mkm²) | 203.68 | 200.06 | 197.13 | **180.80** |
+| Total CONTINENT+CRATON+ARC (Mkm²) | 246.76 | **208.53** | 208.76 | **191.09** |
+
+A guarda reduz a diferença de área **não oceânica** entre 20K e 40K de ~38.00 para **~17.45 Mkm²**, mas também altera fortemente o crescimento continental da história 40K. Uma menor diferença de médias não prova que a geologia está correta; a trajetória e outros critérios da Fase 13 devem ser analisados.
+
+O teste de escala da nova guarda `check-scale.mjs` reproduziu a falha herdada Laramide (14.80 vs 16.54 Mkm², 10.5% de diferença > 10%) e teve **6/7 PASS**. A área de arcos no experimento prescrito ficou 1.39 Mkm² (40K) vs 1.12 Mkm² (80K): passou **por margem estreita** no critério de 20% e não resolveu o excesso em 20K.
+
+**Decisão provisória:** a exigência de uma margem de subducção ativa tem justificativa geológica e elimina um canal de nascimento de ARC em fronteiras dormentes, mas deve ficar em branch de teste até validação multissemente de topologia continental, atividade vulcânica, e idade do fundo oceânico.
+
 ## Experimento 2 — preservar a idade de `ARC` copiada ao fechar mares
 
 Branch: `audit/arc-seafill-age-provenance-20261115`. Somente para células do tipo ARC copiadas em `closeSeasBetween`, deixa o timestamp herdado do doador em vez de forçá-lo para `world.time`. A via para CRATON/CONTINENT permanece como antes.
