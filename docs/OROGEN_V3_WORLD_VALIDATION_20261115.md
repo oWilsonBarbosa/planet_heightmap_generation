@@ -74,6 +74,19 @@ Limiar físico comparado pelo teste: lagos ≥ **12.752 km²**; a fração da te
 
 O controle do fork `c10969c` **não** apresenta os três erros nas mesmas verificações, mas sua geografia difere: nenhum deles deve ser atribuído exclusivamente ao algoritmo antes de separar efeitos de relevo, depressão fechada e discretização. Não reduzir os padrões de aprovação para ocultar falhas.
 
+## 15/11/2026 — causalidade e correções testadas
+
+**Correção experimental de rotas e saída de lagos:** commit `9a7791b`, ensaio de regressão [43753083825](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43753083825). A revisão conserva uma saída de desfiladeiro originalmente descendente mesmo quando o caminho cruza temporariamente outras células da mesma depressão; a reordenação global mantém a verificação de ciclos. Na atualização dos lagos, a altura real do exutório entra no cálculo do nível mínimo possível; quando há um corte lateral inferior, o lago é drenado, não mantido abaixo de sua saída. **31/32 verificações passaram**, contra 29/32 antes. As falhas de subida de 107 m e do exutório inacessível deixaram de ocorrer; resta somente a comparação da área de lagos grandes entre resoluções.
+
+**Causa da maior divergência de grandes lagos:** ensaio [43753409586](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43753409586), diagnóstico `OROGEN_HYDRO_TRACE`.
+
+- Em 160.001 células, a grande massa de água em 15,109° N, 82,058° E tem ~232.716 km² em lagos. É um `h.sea = true`, isto é, uma depressão marinha separada do oceano pela resolução da malha, não um lago continental independente. Seu fundo original aproxima-se de −973 m após preenchimento sedimentar; nível de água a +3 m.
+- Em 640.001 células, o mesmo ponto é **oceano**, com −610,4 m e 242 células oceânicas dentro de 3° do centro da massa: o grande lago da malha grossa é uma **anomalia de conectividade marinha inter-resoluções**.
+- Rastreio `OROGEN_STRAIT_TRACE` no ensaio [43753684401](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43753684401): à resolução 160K, a abertura entre esta depressão de 73 células e o oceano apresenta **soleira de 27,21 m**, **barreira de 126,48 km**, e pontuação de abertura `0,0057` (limiar `0,5`). Como a regra exige ambos os fatores suavizados, a passagem permanece fechada na malha grossa apesar da ligação oceânica na fina.
+- Foi incorporada como **experimento opt-in, DESLIGADO por padrão** a opção `largeCoastalStraitReconnection: true` (commit `53ab3f3`), para testar a ligação de depressões marinhas ≥100.000 km² por barreiras ≤30 m e ≤160 km. Esses limiares são hipótese de teste, **não parâmetros físicos validados**. O pipeline padrão não muda. Antes de adotar a regra, é obrigatório comparar as demais depressões marítimas e o resultado das 32 verificações com o ensaio A/B.
+
+Riscos remanescentes: a reconexão candidata pode eliminar mares interiores reais separados por baixas barreiras; a alteração precisa de comparação geográfica e hidrológica independente, não apenas de aprovação de um teste de escala.
+
 ## Portões ainda abertos
 
 1. **Evolution drainage: 3 de 32 verificações falharam** no cenário de regressão (semente 10673275): a 160K, 2 trechos de rios sobem até **107 m** (acima do máximo 100 m); a 640K, 1 lago de água doce tem saída inalcançável pelas células de lago; entre 160K e 640K, a proporção de lagos >12.752 km² muda **0,27% → 0,05%** (11 → 5), fora da tolerância de 30%. Os demais 29 checks passaram. **Não declarar aprovação física da hidrologia.**
