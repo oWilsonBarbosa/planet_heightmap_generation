@@ -360,7 +360,37 @@ export function hydrology(ctx, F) {
                 }
                 return {start,nodes,tail:c,cycle:seen.has(c)};
             }):[];
-        console.log('OROGEN_HYDRO_TRACE ' + JSON.stringify({ stage, n, samples, chains }));
+        let target = null;
+        if (stage === 'after-network-export') {
+            // The largest coarse-grid lake (regression seed 10673275): diagnose
+            // its geological origin and the same fixed geographical footprint.
+            const La = 15.109*Math.PI/180, Lo = 82.058*Math.PI/180;
+            const x0 = Math.cos(La)*Math.cos(Lo), y0=Math.cos(La)*Math.sin(Lo), z0=Math.sin(La);
+            let nearest = -1, best=-2, window={ocean:0,fresh:0,salt:0,pan:0,dry:0}, basinIds=new Map(), candidates=[];
+            for (let c=0;c<n;c++){
+                const dot=xyz[3*c]*x0+xyz[3*c+1]*y0+xyz[3*c+2]*z0;
+                if(dot>best){best=dot;nearest=c;}
+                if(dot<Math.cos(3*Math.PI/180)) continue;
+                if(ocean[c])window.ocean++;
+                else if(lakeKind[c]===Water.FRESH)window.fresh++;
+                else if(lakeKind[c]===Water.SALT)window.salt++;
+                else if(lakeKind[c]===Water.PAN)window.pan++;
+                else window.dry++;
+                const h=hollow[c];
+                if(h>=0) basinIds.set(h,(basinIds.get(h)??0)+1);
+                if(lakeKind[c]) candidates.push({c,z:+(z[c]*1000).toFixed(1),kind:lakeKind[c],lev:+(lakeLevel[c]*1000).toFixed(1),h});
+            }
+            const relevant=[...basinIds.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8).map(([id,within])=>{
+                const h=hollows[id];
+                return {id,within,cells:h.cells.length,outlet:h.outlet,outletZ:+(z[h.outlet]*1000).toFixed(1),
+                    sea:h.sea,lake:h.lake,glacial:h.glacial,old:h.old,kind:h.kind,
+                    floor:+(h.floor*1000).toFixed(1),spill:+(h.level*1000).toFixed(1),
+                    now:+(h.levelNow*1000).toFixed(1),inflow:+h.inflow.toFixed(2),
+                    outflow:+(h.outflow??0).toFixed(2)};
+            });
+            target={nearest,nearestZ:+(z[nearest]*1000).toFixed(1),nearestKind:lakeKind[nearest],nearestOcean:ocean[nearest],window,relevant,candidates:candidates.slice(0,16)};
+        }
+        console.log('OROGEN_HYDRO_TRACE ' + JSON.stringify({ stage, n, samples, chains, target }));
     };
     traceStage('before-pits');
     for (const id of pits) { const h = hollows[id]; for (const c of h.cells) if (z[c] < h.level) z[c] = h.level; }
