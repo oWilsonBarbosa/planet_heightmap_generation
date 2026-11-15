@@ -94,3 +94,15 @@ Os dois cortes estão fora da `912`. O código de decisão percorre cada célula
 **Próximo portão técnico:** construir teste observacional que percorra o grafo até o oceano e avalie a soleira efetiva entre o corpo lacustre candidato e os trechos incisos. Comparar malha 640K e 1,28M em unidades físicas, sem forçar conservação artificial de lagos.
 
 **Contribuição para outros projetos:** [E2-OG1 no catálogo compartilhado expert-spoon](https://github.com/oWilsonBarbosa/expert-spoon/blob/main/biblioteca_tecnica/casos/orogen_lagos_glaciais_v3_20261115.md) contém a lição transferível e as evidências reproduzíveis.
+
+
+## Conectividade efetiva e experimento fatorial: falha de convergência permanece
+
+- [Rota hidráulica medida — Actions 43763106547](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43763106547): os cortes externos `1264061` (96,06 m) e `1264849` (100,91 m) estão conectados ao interior da depressão `912`, mas suas rotas até o oceano têm **cota máxima de 109,28 m**, idêntica à soleira original. Ambas apresentam subida local de até 73,62 m. Inferir o nível de drenagem exclusivamente do menor `cutAt` é potencialmente incorreto.
+- [Experimento `requireContinuousGorgeDrainage=true` — Actions 43763537389](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43763537389): esta opção continua **false por padrão**. Verificar a maior cota do caminho evita a classificação inicial `drainedByGorge` em `912`, porém não produz o lago final: a brecha do próprio hollow o drena. O resultado físico global continua **31/32**, convergência de grandes lagos **0,45%→0,28%** fora do limite.
+- [Fatorial — Actions 43763799019](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43763799019): rota contínua + `glacialBreachShare=0.1` passa **31/32**, participação dos grandes lagos 0,69%→0,37%; com `glacialBreachShare=0`, passa **30/32**, 1,32%→0,86%, e introduz exutório inacessível. Ambas permanecem não convergentes.
+- Com `glacialBreachShare=0` e caminho contínuo, `912` é **inicialmente retido com 338 células**, mas o ajuste posterior de margens/exutório o remove integralmente. Logo, a ausência final não deriva exclusivamente do critério de canal cruzando ou da brecha; uma terceira etapa atua depois da decisão inicial.
+
+**Interpretação:** o processo de formação e eliminação dos lagos é multiestágio e dependente da malha. A regra experimental não deve ser promovida para `FINISH` padrão. Para avaliar um algoritmo alternativo Fill–Spill–Merge, congelar o mesmo relevo entre variantes, rastrear cada etapa de retenção e comparar volume, soleira e topologia com critérios físicos independentes. Não baixar a tolerância de convergência nem forçar preservação de lagos.
+
+**Biblioteca compartilhada:** [expert-spoon E2-OG1](https://github.com/oWilsonBarbosa/expert-spoon/blob/main/biblioteca_tecnica/casos/orogen_lagos_glaciais_v3_20261115.md) foi atualizada com a metodologia e os resultados, sem copiar código externo.
