@@ -176,6 +176,8 @@ export function buildArcs(world) {
         }
         plate.dirty = true;
     }
+    // Audit-only counter: actual OCEAN -> ARC conversions by island-arc volcanism.
+    world.budget.arcBuiltCells = (world.budget.arcBuiltCells ?? 0) + built;
     return built;
 }
 
