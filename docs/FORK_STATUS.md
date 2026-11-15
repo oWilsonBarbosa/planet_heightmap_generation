@@ -11,9 +11,11 @@ Referências conferidas em 26/10/2026. Este documento registra o que foi feito e
 > (`lakeHugeKm2`), as partes de um resto de mar cheio e os `recv`/`order` que as jazidas leem; do fork, as bacias
 > fechadas (`closedBasins`, desligado por padrão como no Evolution), `drainBelowFloor`, `seaRemnantAnySize`, os meses dos
 > rios e a viagem da água (`riverSpeedKmDay`), e a rede de drenagem a pedido (`network`). Como o Generate agora roda o
-> acabamento, as opções que `js/water-new.js` ligava para a exportação antiga (`WATER`) não valem para a página: o que o
-> Generate ganha do fork por padrão é o resto (os meses, a viagem, os lagos sem desfiladeiro). A tabela de branches abaixo
-> é a de 26/10.
+> acabamento, as opções que `js/water-new.js` ligava para a exportação antiga (`WATER`) não passam por ele: o dono
+> decidiu em 15/11 ligar `closedBasins` para o Generate e o Import (`v2/js/present/knobs.js` `finishOverrides`: uma
+> bacia em terra que os rios não enchem é onde eles acabam, num lago salgado ou numa salina), deixar `seaRemnantAnySize`
+> só na exportação antiga, e manter a regra do estreito (`openStraits`) como está. O Evolution não muda. A tabela de
+> branches abaixo é a de 26/10.
 >
 > O ensaio de drenagem do Evolution sobre a árvore fundida achou 3 falhas de 32; duas eram da hidrologia do fork e foram
 > corrigidas em `623043c` (o caminho de um desfiladeiro que volta à bacia fica; um lago que baixa até uma saída cortada

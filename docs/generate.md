@@ -146,7 +146,10 @@ finish (plans/GENERATE_REDESIGN_PLAN.md, plans/SHARED_CORE_PLAN.md):
   the first picture, in seconds.
 - **Evolution's finish**, in the background (a few seconds more): the climate, the rivers carved again by its runoff with
   closed basins and sediment, lakes, the last ice age, dunes and loess, the rocks and their deposits, the land's cover
-  (the Satellite view, with clouds), and its food.
+  (the Satellite view, with clouds), and its food. One rule of its own for the rivers (`v2/js/present/knobs.js`
+  `finishOverrides`, the finish's `closedBasins`): a basin on land its rivers cannot fill — what flows in less than its
+  lake would evaporate, even with twice the water — is where they end, a salt lake at its water balance or a salt pan,
+  as Earth's Tarim, Great Basin and Lake Eyre; on Evolution every river reaches the sea.
 
 ## How It Works
 

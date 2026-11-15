@@ -162,7 +162,9 @@ export const FINISH = {
     seaRemnantAnySize: false,
     // a basin on land its rivers cannot fill — what flows in less than what it would evaporate full — is where they end: a
     // salt lake at its balance, or a salt pan where that keeps less than a lake the map can show (off: the developer's
-    // rule, "every river needs to end at ocean not lake" — it is cut through. On for Generate, js/water-new.js)
+    // rule, "every river needs to end at ocean not lake" — it is cut through. On for Generate and Import — the pages'
+    // finish, v2/js/present/knobs.js finishOverrides, the owner's choice of 2026-11-15 — and for js/water-new.js's
+    // headless exports; off for the Evolution)
     closedBasins: false,
     closedBasinPluvial: 2,      // …where its rivers would not fill it with this many times what they bring either: wetter
                                 // times (the ice ages' pluvials) overfilled the basins a little short of full, and they cut

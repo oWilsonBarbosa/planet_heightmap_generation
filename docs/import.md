@@ -24,7 +24,8 @@ see [shared.md](shared.md). Back to the [README](../README.md).
    (Terrain warp, Smoothing, Ridge sharpening): the first picture.
 2. Evolution's finish then runs on it in the background (`v2/js/finish/finish.js`; plans/SHARED_CORE_PLAN.md U4): the
    climate, the rivers routed — and carved as deep as the erosion sliders ask, by the climate's runoff (at their
-   defaults, 0, not at all: the map as drawn) — lakes, the last ice age, dunes and loess, the land's cover (the Satellite
+   defaults, 0, not at all: the map as drawn); as on Generate, a basin on land its rivers cannot fill is where they end,
+   a salt lake or a salt pan (the finish's `closedBasins`) — lakes, the last ice age, dunes and loess, the land's cover (the Satellite
    view, with clouds) and its food. An imported map has no plates and no history, so no Plates or Geology view.
 
 ## Controls

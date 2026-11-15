@@ -216,7 +216,10 @@ it, unless a shortcut is enough less work — the rock cut and a little for the 
 only `riverDirectness` of the work (0.1), so a bend is cut through only where the way round is over ten times the
 shortcut's (the worst hooks and tangles across drained basins — developer, rivers "that go back and forth", but "some
 windyness is good"; 0 keeps every course, 1 takes the way of least work); no closed basins, no dry land below sea level (a sunk basin's pit is
-filled in to sea level); only the real oceans are sea. **Inland seas** (2026-10-15): a sea behind a low, short barrier
+filled in to sea level); only the real oceans are sea. (Generate and Import turn closed basins on — `closedBasins`, through
+`v2/js/present/knobs.js` `finishOverrides`: a basin on land its rivers cannot fill, not with `closedBasinPluvial` times
+what they bring, ends them in a salt lake at its water balance or a salt pan — the owner's choice of 2026-11-15, as the
+fork's headless exports had it; the Evolution keeps every river reaching the sea.) **Inland seas** (2026-10-15): a sea behind a low, short barrier
 (sill ≲ 30 m, ≲ 160 km of dry land — a strait narrower than the cells) is opened into the ocean; a remnant of the sea cut
 off in a basin (≳ 5 000–20 000 km² and 50–200 m below sea level) has its floor filled with sediment toward ≤ ~1 km below its
 rim. It is its hole — the basin's cells below sea level — and its water stays in it (developer: lakes over trapped

@@ -26,8 +26,9 @@ world's history is cached under `tuning/evolution/data/` (gitignored): about 30 
 runs of the same code give identical hashes (116 outputs).
 
 Generate's own options in the finish (`FINISH` in `v2/js/finish/finish-config.js`: `seaRemnantAnySize`,
-`closedBasins`) are off for the Evolution; `js/water-new.js` `WATER` turns them on for Generate. This check shows they
-stay off. `--set key=value,…` turns one on (any `FINISH` constant), to see what it would change in the Evolution:
+`closedBasins`) are off for the Evolution; Generate's and Import's pages turn `closedBasins` on
+(`v2/js/present/knobs.js` `finishOverrides`, the owner's choice of 2026-11-15), and `js/water-new.js` `WATER` turns both
+on for the headless exports. This check shows they stay off for the Evolution. `--set key=value,…` turns one on (any `FINISH` constant), to see what it would change in the Evolution:
 `--compare` against a run without it, and the lakes and the rivers' regimes each run prints.
 
 ```bash
