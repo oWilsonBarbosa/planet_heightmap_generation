@@ -14,6 +14,7 @@ Planeta: `06cy8w6z6a89kow6psje93`. O script `tuning/orogen/smoke.mjs` executa o 
 | 160.001 | closed-basins | 14 | 12 | 28 | 0,8481% | 0,589% | 36.690 | ~100% | 7,18 | 18,47 |
 | 640.001 | v3 | 103 | 0 | 1 | 0,0136% | 0,567% | 96.086 | ~100% | 7,37 | 18,48 |
 | 640.001 | closed-basins | 102 | 23 | 18 | 0,5994% | 0,634% | 95.816 | ~100% | 7,37 | 18,48 |
+| 2.560.001 | v3 | 275 | 1 | 0 | 0,0106% | 0,573% | 159.149 | ~100% | 8,11 | 18,42 |
 | 2.560.001 | closed-basins | 275 | 22 | 23 | 1,2328% | 0,819% | 158.240 | ~100% | 8,11 | 18,42 |
 
 Os números de lagos e salinas são os **corpos relatados em `stats.water`**, não o número de células. Na resolução integral, 1.099 células têm água salgada e 66 células são marcadas como salina. Áreas de corpos devem ser auditadas antes da migração. A área continental, o relevo máximo e o clima em alta latitude são principalmente determinados pelo novo motor tectônico e não pela opção de bacias fechadas.
@@ -26,20 +27,21 @@ Os números de lagos e salinas são os **corpos relatados em `stats.water`**, n�
 - Os 22 lagos salgados e as 23 salinas do cenário integral não reproduzem o cânone (3 lagos salgados e 91 salinas em terra no conjunto anterior). **Não inferir regressão nem melhoria física apenas da contagem**: a topografia e as bacias são diferentes.
 - A diferença entre 160K e 640K no número de salinas (28 → 18) pede verificação de convergência e conectividade. A linha integral indica 23 salinas.
 - A resolução integral fez Generate em 31,94 s, Finish em 44,49 s e RSS de ~2.323 MB no runner. Não demonstra comportamento equivalente em navegador móvel.
-- O teste de 2.560.001 células foi feito apenas em `closed-basins`, não no perfil v3. Comparações A/B nesta resolução ainda faltam.
+- Ambos os perfis foram executados em 2.560.001 células. O perfil v3 padrão apresentou 1 lago salgado e nenhuma salina; o perfil experimental apresentou 22 lagos salgados e 23 salinas. A mudança é hidrológica, não uma recuperação do cânone antigo.
 
 ## Evidências
 
 - [40K, perfis v3 e closed-basins](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43749884165).
 - [160K, perfis v3 e closed-basins](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43750005131).
 - [640K, dois perfis; 2.56M, closed-basins](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43750125147).
+- [Controle integral v3 e auditoria do Evolution (3 verificações reprovadas)](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43750436871).
 - [Baseline e auditoria do cânone](https://github.com/oWilsonBarbosa/0r063N/blob/ccr-3c4ab8a1-olrlvi/reports/generator-v3/README.md).
 - Testes de unidade: `.github/workflows/orogen-hydrology-checks.yml`; scripts em `tuning/orogen/`.
 
 ## Portões ainda abertos
 
-1. Rodar `tuning/evolution/drainage.mjs` em 160K/640K (integridade do grafo, cotas, lagos, exutórios, escala); o smoke atual não substitui esse teste.
-2. Gerar 2.56M também no perfil v3 para comparação controlada, com mesmos parâmetros.
-3. Auditar salinas, alturas dos lagos, salinidade e distribuição nas bacias dos quatro continentes; revisar o norte gelado e a hipsometria marinha.
-4. Adaptar o exportador de 0r063N ao novo worker e confirmar os mapas e gazetteers; comparar com as 2.560.001 regiões canônicas.
-5. Manter o PR em rascunho e os dois `main` inalterados até a decisão de migração.
+1. **Evolution drainage: 3 de 32 verificações falharam** no cenário de regressão (semente 10673275): a 160K, 2 trechos de rios sobem até **107 m** (acima do máximo 100 m); a 640K, 1 lago de água doce tem saída inalcançável pelas células de lago; entre 160K e 640K, a proporção de lagos >12.752 km² muda **0,27% → 0,05%** (11 → 5), fora da tolerância de 30%. Os demais 29 checks passaram. **Não declarar aprovação física da hidrologia.**
+2. Comparar a versão integrada com o fork antigo na **mesma semente do Evolution** para distinguir regressão de diferenças herdadas e da nova geomorfologia. O relatório histórico `docs/DRAINAGE_20261029.md` já apontava sensibilidade de grandes lagos à resolução e poços residuais, mas não garante que estas falhas específicas fossem pré-existentes.
+3. Auditar salinas, altura dos lagos, salinidade e distribuição nos quatro continentes; revisar o norte gelado e a hipsometria marinha.
+4. Adaptar o exportador de 0r063N ao novo worker e confirmar mapas e gazetteers; comparar com as 2.560.001 regiões canônicas.
+5. Manter PR em rascunho e ambos os `main` inalterados até a decisão de migração.
