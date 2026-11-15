@@ -405,7 +405,11 @@ export function hydrology(ctx, F) {
             if (!(cutAt[c] < Infinity) || keepMark[c] === id + 1) continue;
             let x = c, len = 0;
             while (x >= 0 && hollow[x] === id && len < cells.length) { const r = recv[x]; if (r < 0 || z[r] > z[x]) break; x = r; len++; }
-            if (x >= 0 && hollow[x] !== id && rank[x] >= 0 && leaves(x, id)) for (let y = c; hollow[y] === id; y = recv[y]) { if (keepMark[y] === id + 1) break; keepMark[y] = id + 1; keep.push(y); }
+            // A carved gorge may leave this hollow and re-enter it downstream. Its already-cut
+            // downhill edge is still a valid watercourse: do not replace it with a path
+            // climbing up the uncut interior floor. The global reorder below checks cycles.
+            const cutsOutDownhill = cutAt[c] < Infinity && recv[c] >= 0 && hollow[recv[c]] !== id && z[recv[c]] <= z[c] + EPS;
+            if (x >= 0 && hollow[x] !== id && rank[x] >= 0 && (leaves(x, id) || cutsOutDownhill)) for (let y = c; hollow[y] === id; y = recv[y]) { if (keepMark[y] === id + 1) break; keepMark[y] = id + 1; keep.push(y); }
         }
         if (keep.length) ok = false;
         for (let i = 1; i < rOrder.length; i++) {
@@ -621,7 +625,10 @@ export function hydrology(ctx, F) {
         const low = Math.min(shore, exitZ);
         if (!(low < h.levelNow - 1e-3)) continue;
         changed = true;
-        const L = Math.max(h.floor, exitZ);
+        // A surviving freshwater body must not stand below its own outlet's bed.
+        // If a side gorge cuts lower than that outlet, the body drains instead
+        // of retaining an impossible uphill spill. Do not raise lake water here.
+        const L = Math.max(h.floor, exitZ, z[h.outlet]);
         let left = 0;
         if (shore >= L - 1e-3) for (const x of h.cells) if (lakeKind[x] === Water.FRESH && z[x] < L) left++;
         if (left >= 2 && left * cellKm2 >= F.lakeMinKm2) {
