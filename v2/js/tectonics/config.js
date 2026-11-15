@@ -193,6 +193,7 @@ export const TECTONICS = {
     arcMatureConsumedKm: 1000,  // subducted length needed before arc crust forms behind an ocean–ocean trench (a mature trench starts with slabMatureKm;
                                 // developer: arcs at sea and along wings should be common — 1400 made them too rare)
     arcWidenSlabKm: 500,        // every further this much slab, the arc behind a trench gains a row: a chain of islets → a Philippines → an Indonesia
+    arcWidenTrenchMemoryMyr: 15, // EXPERIMENT: allow widening only at current or recently active overriding trenches; -1 = legacy
     arcNoLandWithinKm: 400,     // a trench with land closer than this is a continental margin: no island arc, an Andean belt instead
     arcRowWidthKm: 121,         // an island arc is this wide when it forms, and this much wider with every arcWidenSlabKm more slab
     arcNearMaxKm: 360,          // an arc near a continent grows at most this wide (Japan ~250 km, the Philippines ~500)…
