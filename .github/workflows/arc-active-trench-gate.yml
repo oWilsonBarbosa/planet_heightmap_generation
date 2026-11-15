@@ -1,0 +1,106 @@
+name: Active trench guard causal A-B
+
+on:
+  push:
+    branches: [audit/arc-active-trench-gate-20261115]
+    paths:
+      - '.github/workflows/arc-active-trench-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prescribed:
+    name: Wings physical-margin control / ${{ matrix.cells }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        cells: [20000,40000,80000]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/arc-reconstruction-provenance-20261115
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/arc-active-trench-gate-20261115
+          path: guarded
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          (cd baseline && npm install --no-save --no-package-lock delaunator)
+          (cd guarded && npm install --no-save --no-package-lock delaunator)
+      - name: Run A-B with same mesh, seed and scripted tectonic motion
+        run: |
+          mkdir -p results
+          (cd baseline && node v2/tools/audit-arc-production-scale.mjs --cells=${{ matrix.cells }} --until=110 --every=10 --out=../results/baseline) > results/baseline.log
+          (cd guarded && node v2/tools/audit-arc-production-scale.mjs --cells=${{ matrix.cells }} --until=110 --every=10 --out=../results/guarded) > results/guarded.log
+      - name: Compare at 110 Myr and assert guard prevents non-overriding growth
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('results/baseline.json','utf8')), b=JSON.parse(fs.readFileSync('results/guarded.json','utf8'));
+          const finalA=a.rows.at(-1),finalB=b.rows.at(-1);
+          if(finalB.nonOverridingWidenedCellOps!==0)throw Error('Guarded world has non-active widening');
+          const report={cells:a.cells,baseline:finalA,guarded:finalB,
+            changeArcAreaMkm2:finalB.arcAreaMkm2-finalA.arcAreaMkm2};
+          fs.writeFileSync('results/comparison.json',JSON.stringify(report,null,2)+'\n');
+          console.log('GATE_CONTROL '+JSON.stringify(report));
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: active-gate-wings-${{ matrix.cells }}
+          path: results/
+          if-no-files-found: warn
+
+  history:
+    name: Seed 4242 GPE2 1200 Myr / ${{ matrix.cells }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        cells: [20000,40000]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/arc-reconstruction-provenance-20261115
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/arc-active-trench-gate-20261115
+          path: guarded
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          (cd baseline && npm install --no-save --no-package-lock delaunator)
+          (cd guarded && npm install --no-save --no-package-lock delaunator)
+      - name: Run matched tectonic histories
+        run: |
+          mkdir -p results
+          (cd baseline && node v2/tools/audit-arc-fate.mjs --seed=4242 --cells=${{ matrix.cells }} --strength=2 --maturation-rate=3 --until=1200 --every=100 --targets=900,1000,1100,1200 --out=../results/baseline) > results/baseline.log
+          (cd guarded && node v2/tools/audit-arc-fate.mjs --seed=4242 --cells=${{ matrix.cells }} --strength=2 --maturation-rate=3 --until=1200 --every=100 --targets=900,1000,1100,1200 --out=../results/guarded) > results/guarded.log
+      - name: Quantify long-history arc growth and age/continental tradeoffs
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('results/baseline.json','utf8')),b=JSON.parse(fs.readFileSync('results/guarded.json','utf8'));
+          const fields=['timeMyr','visibleArcAreaMkm2','visibleContinentalAreaMkm2','largestVisibleArcAreaMkm2','totalNativeArcMkm2','cumulativeIslandArcBuiltCellOps','cumulativeArcWidenedAtNonOverridingCells'];
+          const rows=a.rows.map((r,i)=>({timeMyr:r.timeMyr,baseline:Object.fromEntries(fields.map(k=>[k,a.rows[i][k]])),
+            guarded:Object.fromEntries(fields.map(k=>[k,b.rows[i][k]]))}));
+          const report={cells:a.meshCells,seed:a.seed,gpeStrength:a.strength,rows};
+          fs.writeFileSync('results/comparison.json',JSON.stringify(report,null,2)+'\n');
+          for(const row of rows)console.log('GATE_HISTORY '+JSON.stringify({cells:a.meshCells,...row}));
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: active-gate-cycle-${{ matrix.cells }}
+          path: results/
+          if-no-files-found: warn
