@@ -75,8 +75,7 @@ function checkNativePlate(plate,time,threshold){
     }
   }
   return {plateId:plate.id,name:plate.name,continent,arc,matureArc,matureNonForeArc,
-    foreArc,youngArc,reachableMature:tail-continent,adjacentMature,eligible,reach:reached,
-    maxReachHops:tail>continent?Math.max(...[]):-1};
+    foreArc,youngArc,reachableMature:tail-continent,adjacentMature,eligible,reach:reached};
 }
 
 simulate(world,{untilMyr:until,drive:w=>scene.drive(w),snapshotEveryMyr:every,keepFrames:false,onFrame:f=>{
