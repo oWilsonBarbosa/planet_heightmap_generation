@@ -1,0 +1,81 @@
+name: Ridge push contact localization
+
+on:
+  push:
+    branches:
+      - audit/ocean-age-return-20261114
+    paths:
+      - '.github/workflows/ridge-contact-localization.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trace:
+    name: locate seed ${{ matrix.seed }} / ${{ matrix.cells }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - seed: 777
+            cells: 20000
+            target: 30
+          - seed: 777
+            cells: 40000
+            target: 24
+          - seed: 12345
+            cells: 20000
+            target: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/tectonic-baseline-20261114
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ocean-age-return-20261114
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Setup
+        run: |
+          (cd baseline && npm install --no-save --no-package-lock delaunator)
+          (cd candidate && npm install --no-save --no-package-lock delaunator)
+          mkdir -p results
+          cp candidate/v2/tools/audit-ridge-contact-location.mjs baseline/v2/tools/audit-ridge-contact-location.mjs
+          node --check candidate/v2/tools/audit-ridge-contact-location.mjs
+      - name: Reconstruct force contacts at 2 Myr resolution
+        run: |
+          (cd baseline && node v2/tools/audit-ridge-contact-location.mjs --seed=${{ matrix.seed }} --cells=${{ matrix.cells }} --until=44 --every=2 --out=../results/baseline) > results/baseline.log
+          (cd candidate && node v2/tools/audit-ridge-contact-location.mjs --seed=${{ matrix.seed }} --cells=${{ matrix.cells }} --until=44 --every=2 --out=../results/candidate) > results/candidate.log
+      - name: Compare extra contacts at first force divergence
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('results/baseline.json','utf8'));
+          const b=JSON.parse(fs.readFileSync('results/candidate.json','utf8'));
+          const t=${{ matrix.target }};
+          const left=a.rows.find(r=>r.timeMyr===t),right=b.rows.find(r=>r.timeMyr===t);
+          if(!left||!right)throw Error('Target snapshot missing');
+          const bl=new Map(left.contacts.map(c=>[c.worldCell,c]));
+          const cr=new Map(right.contacts.map(c=>[c.worldCell,c]));
+          const added=right.contacts.filter(c=>!bl.has(c.worldCell)||JSON.stringify(bl.get(c.worldCell))!==JSON.stringify(c));
+          const removed=left.contacts.filter(c=>!cr.has(c.worldCell)||JSON.stringify(cr.get(c.worldCell))!==JSON.stringify(c));
+          const measured=o=>Object.fromEntries(o.engineRidgeByPlate.map(p=>[p.plate,p.ridgePushForceCells]));
+          const report={seed:b.seed,meshCells:b.meshCells,timeMyr:t,baselineBoundary:left.byBoundary,candidateBoundary:right.byBoundary,
+            baselineCount:left.contacts.length,candidateCount:right.contacts.length,baselineRidgeForceCount:measured(left),
+            candidateRidgeForceCount:measured(right),addedContacts:added.slice(0,15),removedContacts:removed.slice(0,15)};
+          fs.writeFileSync('results/comparison.json',JSON.stringify(report,null,2)+'\n');
+          console.log('CONTACT_DIFF '+JSON.stringify(report));
+          EOF
+      - name: Upload contact records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ridge-contact-seed${{ matrix.seed }}-cells${{ matrix.cells }}
+          path: results/
+          if-no-files-found: warn
