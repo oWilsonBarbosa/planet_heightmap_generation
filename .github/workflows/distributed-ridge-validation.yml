@@ -1,0 +1,123 @@
+name: Distributed ridge GPE realism validation
+
+on:
+  push:
+    branches: [audit/distributed-ridge-gpe-20261114]
+    paths:
+      - '.github/workflows/distributed-ridge-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  suites:
+    name: ${{ matrix.suite }} baseline vs gradient
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [check-invariants.mjs, check-scale.mjs, check-phase13.mjs]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ocean-age-return-20261114
+          path: agefix
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/distributed-ridge-gpe-20261114
+          path: gradient
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: |
+          (cd agefix && npm install --no-save --no-package-lock delaunator)
+          (cd gradient && npm install --no-save --no-package-lock delaunator)
+      - name: Run both suites and capture exit codes
+        shell: bash
+        run: |
+          mkdir -p results
+          set +e
+          (cd agefix && node v2/tools/${{ matrix.suite }}) > results/agefix.log 2>&1
+          echo "$?" > results/agefix.exit
+          (cd gradient && node v2/tools/${{ matrix.suite }}) > results/gradient.log 2>&1
+          echo "$?" > results/gradient.exit
+          set -e
+          echo "AGEFIX STATUS $(cat results/agefix.exit)"
+          grep -E '^(PASS|FAIL|.*checks passed|.*checks FAILED)' results/agefix.log | tail -30 || true
+          echo "GRADIENT STATUS $(cat results/gradient.exit)"
+          grep -E '^(PASS|FAIL|.*checks passed|.*checks FAILED)' results/gradient.log | tail -30 || true
+      - name: Archive baseline and candidate outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ridge-gpe-regression-${{ matrix.suite }}
+          path: results/
+          if-no-files-found: warn
+
+  long:
+    name: 1200 Myr / ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: 20K four seeds
+            cells: 20000
+            seeds: '12345,777,4242,31337'
+            suffix: 20k
+          - label: 40K three seeds
+            cells: 40000
+            seeds: '12345,777,4242'
+            suffix: 40k
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ocean-age-return-20261114
+          path: agefix
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/distributed-ridge-gpe-20261114
+          path: gradient
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: |
+          (cd agefix && npm install --no-save --no-package-lock delaunator)
+          (cd gradient && npm install --no-save --no-package-lock delaunator)
+      - name: Simulate 1200 Myr, original agefix force and gradient force
+        shell: bash
+        run: |
+          mkdir -p results
+          (cd agefix && node v2/tools/audit-geography.mjs --cells=${{ matrix.cells }} --seeds=${{ matrix.seeds }} --until=1200 --every=100 --out=../results/agefix) > results/agefix.log
+          (cd gradient && node v2/tools/audit-geography.mjs --cells=${{ matrix.cells }} --seeds=${{ matrix.seeds }} --until=1200 --every=100 --out=../results/gradient) > results/gradient.log
+      - name: Compare final tectonic measures per seed
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('results/agefix.json','utf8'));
+          const b=JSON.parse(fs.readFileSync('results/gradient.json','utf8'));
+          const metrics=['continentalCrustPct','arcCrustPct','oceanMeanAgeMyr','oceanOver200Pct','prehistoryOceanPct','largestPlatePct','largestBlockSharePct','plateCount'];
+          const results=[];
+          for(const seed of a.parameters.seeds){
+            const aa=a.rows.filter(x=>x.seed===seed),bb=b.rows.filter(x=>x.seed===seed);
+            if(!aa.length||aa.length!==bb.length)throw Error('Incomplete seed series '+seed);
+            const old=aa.at(-1),now=bb.at(-1);
+            const o={seed,cells:old.cells,continentalGainAgefix:old.continentalCrustPct-aa[0].continentalCrustPct,continentalGainGradient:now.continentalCrustPct-bb[0].continentalCrustPct};
+            for(const m of metrics){o[m+'Agefix']=old[m];o[m+'Gradient']=now[m];}
+            results.push(o);
+          }
+          fs.writeFileSync('results/comparison.json',JSON.stringify(results,null,2)+'\n');
+          for(const r of results) console.log('RESULT '+JSON.stringify(r));
+          EOF
+      - name: Archive measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ridge-gpe-1200myr-${{ matrix.suffix }}
+          path: results/
+          if-no-files-found: warn
