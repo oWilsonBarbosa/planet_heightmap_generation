@@ -1,0 +1,34 @@
+name: Orogen hydrology integration checks
+
+on:
+  pull_request:
+    paths:
+      - 'v2/js/finish/**'
+      - 'v2/js/climate/**'
+      - 'v2/js/present/knobs.js'
+      - 'js/planet-worker.js'
+      - 'tests/**'
+      - '.github/workflows/orogen-hydrology-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check integration file syntax
+        run: |
+          node --check js/planet-worker.js
+          node --check v2/js/present/knobs.js
+          node --check v2/js/finish/finish-config.js
+          node --check v2/js/finish/finish-hydro.js
+          node --check v2/js/finish/finish.js
+      - name: Test river transport, metrics and Generate hydrology profile
+        run: node --test tests/river-transport.test.mjs tests/river-metrics.test.mjs tests/generate-hydrology-profile.test.mjs

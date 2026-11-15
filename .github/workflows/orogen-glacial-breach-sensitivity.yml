@@ -1,0 +1,43 @@
+name: Orogen glacial breach sensitivity controls
+
+on:
+  pull_request:
+    paths:
+      - 'tuning/evolution/**'
+      - 'v2/js/finish/**'
+      - '.github/workflows/orogen-glacial-breach-sensitivity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sensitivity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: no-glacial-breach
+            share: '0'
+          - label: shallow-glacial-breach
+            share: '0.1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Check glacial breach sensitivity at same seed and two resolutions
+        run: |
+          set -o pipefail
+          node --max-old-space-size=5500 tuning/evolution/drainage.mjs --cells 640000,1280000 --glacial-site --lake-match --set glacialBreachShare=${{ matrix.share }} 2>&1 | tee "glacial-breach-${{ matrix.label }}.log"
+      - name: Archive controlled experiment
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-glacial-breach-${{ matrix.label }}
+          path: glacial-breach-${{ matrix.label }}.log
+          if-no-files-found: warn

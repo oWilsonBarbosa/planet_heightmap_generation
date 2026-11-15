@@ -1,0 +1,44 @@
+name: Orogen high-resolution hydrology validation
+
+on:
+  pull_request:
+    paths:
+      - 'tuning/orogen/**'
+      - '.github/workflows/orogen-world-high.yml'
+      - 'v2/js/finish/**'
+      - 'js/planet-worker.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  world:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cells: 640000
+            profile: v3
+          - cells: 640000
+            profile: closed-basins
+          - cells: 2560000
+            profile: closed-basins
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Generate and finish Orogen at target detail
+        run: node --max-old-space-size=5500 tuning/orogen/smoke.mjs --n "${{ matrix.cells }}" --profile "${{ matrix.profile }}" --out "orogen-${{ matrix.cells }}-${{ matrix.profile }}.json"
+      - name: Archive world metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-${{ matrix.cells }}-${{ matrix.profile }}
+          path: orogen-${{ matrix.cells }}-${{ matrix.profile }}.json
+          if-no-files-found: warn

@@ -1,0 +1,38 @@
+name: Orogen 160K world hydrology validation
+
+on:
+  pull_request:
+    paths:
+      - 'tuning/orogen/**'
+      - '.github/workflows/orogen-world-medium.yml'
+      - 'v2/js/finish/**'
+      - 'js/planet-worker.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  world-160k:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: ['v3', 'closed-basins']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Generate and finish Orogen at 160000 cells
+        run: node --max-old-space-size=5000 tuning/orogen/smoke.mjs --n 160000 --profile "${{ matrix.profile }}" --out "orogen-160k-${{ matrix.profile }}.json"
+      - name: Archive world metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-160k-${{ matrix.profile }}
+          path: orogen-160k-${{ matrix.profile }}.json
+          if-no-files-found: warn

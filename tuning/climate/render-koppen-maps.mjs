@@ -17,6 +17,7 @@ import { loadReferences, truthAt01 } from './lib/ref.mjs';
 import { elevToHeightKm } from '../../js/color-map.js';
 import { KOPPEN_CLASSES } from '../../v2/js/climate/koppen.js';
 import { GEN_PLANETS, loadGenPlanets, dryness, cellLatDeg } from './lib/gen-planets.mjs';
+import { pixelToCell as pixelMap } from './lib/glance.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
@@ -27,38 +28,9 @@ const argSet = arg('--set', null);
 if (argSet) setParams(Object.fromEntries(argSet.split(',').map(kv => { const [k, v] = kv.split('='); return [k, +v]; })));
 const TAG = arg('--tag', 'now'), W = +arg('--width', 1200), H = W / 2;
 const ONLY = arg('--only', null)?.split(',') ?? null;
+const pixelToCell = (xyz, axes) => pixelMap(xyz, axes, W, H);
 const OUT = path.join(__dirname, '..', 'results', 'climate', 'maps', TAG);
 fs.mkdirSync(OUT, { recursive: true });
-
-/** Each pixel's nearest cell: cells hashed into a 3D grid over the unit cube, each pixel searching its voxel and the
- *  26 around it (a voxel is wider than the gap between neighbouring cells at any detail used here). */
-function pixelToCell(xyz, axes) {
-    const n = xyz.length / 3, G = 96, vox = (v) => Math.min(G - 1, Math.max(0, Math.floor((v + 1) / 2 * G)));
-    const head = new Int32Array(G * G * G).fill(-1), next = new Int32Array(n);
-    for (let r = 0; r < n; r++) { const k = (vox(xyz[3 * r]) * G + vox(xyz[3 * r + 1])) * G + vox(xyz[3 * r + 2]); next[r] = head[k]; head[k] = r; }
-    const map = new Int32Array(W * H), D = Math.PI / 180;
-    for (let py = 0; py < H; py++) {
-        const lat = (90 - (py + 0.5) * 180 / H) * D;
-        for (let px = 0; px < W; px++) {
-            const lon = (-180 + (px + 0.5) * 360 / W) * D;
-            // the planet's own frame: V1's y north with lon = atan2(x, z); Evolution's z north with lon = atan2(y, x)
-            let x, y, z;
-            if (axes === 'z-up') { x = Math.cos(lat) * Math.cos(lon); y = Math.cos(lat) * Math.sin(lon); z = Math.sin(lat); }
-            else { x = Math.cos(lat) * Math.sin(lon); y = Math.sin(lat); z = Math.cos(lat) * Math.cos(lon); }
-            const vx = vox(x), vy = vox(y), vz = vox(z);
-            let best = -1, bd = Infinity;
-            for (let a = Math.max(0, vx - 1); a <= Math.min(G - 1, vx + 1); a++)
-                for (let b = Math.max(0, vy - 1); b <= Math.min(G - 1, vy + 1); b++)
-                    for (let c = Math.max(0, vz - 1); c <= Math.min(G - 1, vz + 1); c++)
-                        for (let r = head[(a * G + b) * G + c]; r >= 0; r = next[r]) {
-                            const dx = xyz[3 * r] - x, dy = xyz[3 * r + 1] - y, dz = xyz[3 * r + 2] - z, d = dx * dx + dy * dy + dz * dz;
-                            if (d < bd) { bd = d; best = r; }
-                        }
-            map[py * W + px] = best;
-        }
-    }
-    return map;
-}
 
 function writeMap(file, cellClass, pix) {
     const png = new PNG({ width: W, height: H });

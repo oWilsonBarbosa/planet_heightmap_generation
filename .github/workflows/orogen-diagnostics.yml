@@ -1,0 +1,101 @@
+name: Orogen full control and Evolution drainage audit
+
+on:
+  pull_request:
+    paths:
+      - 'tuning/orogen/**'
+      - 'tuning/evolution/**'
+      - '.github/workflows/orogen-diagnostics.yml'
+      - 'v2/js/finish/**'
+      - 'v2/js/climate/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Generate the full 2.56M planet with v3 default profile
+        run: node --max-old-space-size=5500 tuning/orogen/smoke.mjs --n 2560000 --profile v3 --out orogen-2560000-v3.json
+      - name: Archive full-control metrics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-full-v3-control
+          path: orogen-2560000-v3.json
+          if-no-files-found: warn
+
+  evolution-drainage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Check Evolution drainage at 160K and 640K
+        run: |
+          set -o pipefail
+          node --max-old-space-size=5500 tuning/evolution/drainage.mjs --cells 160000,640000 --diagnose 2>&1 | tee evolution-drainage.log
+      - name: Archive drainage diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-evolution-drainage
+          path: evolution-drainage.log
+          if-no-files-found: warn
+
+  strait-experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Compare Evolution 160K/640K with large coastal strait reconnection
+        run: |
+          set -o pipefail
+          node --max-old-space-size=5500 tuning/evolution/drainage.mjs --cells 160000,640000 --set largeCoastalStraitReconnection=true --diagnose 2>&1 | tee evolution-strait-experiment.log
+      - name: Archive experimental diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-evolution-strait-experiment
+          path: evolution-strait-experiment.log
+          if-no-files-found: warn
+
+  convergence-medium-high:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Check drainage convergence from 640K to 1.28M cells
+        run: |
+          set -o pipefail
+          node --max-old-space-size=5500 tuning/evolution/drainage.mjs --cells 640000,1280000 2>&1 | tee evolution-convergence-medium-high.log
+      - name: Archive convergence log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-evolution-640k-1280k
+          path: evolution-convergence-medium-high.log
+          if-no-files-found: warn
