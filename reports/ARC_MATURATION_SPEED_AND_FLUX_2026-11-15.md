@@ -77,7 +77,26 @@ No intervalo 900–1200 Ma, ARC **visível** na intensidade 1.0 cai de 24.56 par
 
 A ausência de ARC no contador de `resolve` significa zero **naquele procedimento de remoção por sobreposição**, não inexistência de reciclagem por outros mecanismos (a tabela inclui `recycledCells` separadamente).
 
-**Estado da execução na última verificação:** teste 40K de GPE 2.0 ainda em andamento; não foram registrados valores de fluxo dessa malha.
+### Validação em 40K concluída
+
+[Execução #43685183404](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43685183404): **todos os quatro jobs concluídos com sucesso**, incluindo a comparação de identidade física antes/depois dos contadores em 40K e os **21 testes de invariantes**. Artefato de 40K: `arc-flux-gpe-2.0-40000`.
+
+| GPE 2.0, 900–1200 Ma | 20K (operações) | 40K (operações) | Escala física |
+|---|---:|---:|---|
+| OCEAN→ARC por `buildArcs` | 855 | 1082 | cada célula 20K ≈ 25.502 mil km²; 40K ≈ 12.751 mil km² |
+| OCEAN→ARC por forearc | 110 | 262 | mesma malha nativa de cada run |
+| ARC→CONTINENT por maturação | 655 | 1212 | mesma malha nativa de cada run |
+| ARC absorvida em `scrapeArc` | 424 | 466 | mesma malha nativa de cada run |
+| ARC reciclada | 205 | 294 | mesma malha nativa de cada run |
+| ARC perdida na erosão marginal | 28 | 46 | mesma malha nativa de cada run |
+
+O estoque ARC **visível** em GPE2/40K evoluiu de 14.23 Mkm² aos 900 Ma para **11.63 Mkm² aos 1200 Ma** (−2.60), e o maior grupo no quadro final tem apenas **1.84 Mkm²**. No correspondente GPE2/20K, ARC passa de 23.46 para **43.07 Mkm²** (+19.61), com maior grupo **28.18 Mkm²**. Esta diferença muito grande é uma **sensibilidade histórica e/ou geométrica à resolução**, não eliminada pela correção de idade oceânica.
+
+Convertendo operações de produção de ARC vulcânica em área nominal de célula, GPE2 produziu ~**21.80 Mkm² em 20K** e ~**13.80 Mkm² em 40K** durante 900–1200 Ma. A diferença de área não prova isoladamente que a fórmula de `buildArcs` dependa erroneamente da resolução, pois as histórias de subducção, geometria e comprimento das zonas ativas também são diferentes. Exige-se um teste controlado de margens com a **mesma geometria física** nas duas malhas.
+
+**Advertência de contabilidade:** a soma assinada das operações registradas não reproduz sozinha a variação de ARC visível (nem necessariamente a nativa), porque fusões de placas, reamostragem de raster, capturas e outras transformações não estão completamente instrumentadas. Os contadores ajudam a atribuir diferenças de mecanismos, mas **não são um orçamento geológico fechado de km²**.
+
+**Próximo procedimento:** instrumentar `mergePlates` e `accreteTerrane` para diferenciar deslocamentos de ARC, absorção e variação de contagem por reamostragem, e elaborar um ensaio específico de `buildArcs` com margem prescrita em 20K/40K. Não alterar taxas físicas, idades nem a regra de GPE até localizar o processo dominante.
 
 **Próxima hipótese operacional:** comparar alteração de estoque ARC durante as operações `mergePlates` e `accreteTerrane` com a incorporação e absorção por raspagem. Uma diferença de contagem de raster durante fusão não equivale automaticamente a criação física de nova crosta; precisa ser distinguida de sobreposições e das células ocultas do mapa mundial.
 
