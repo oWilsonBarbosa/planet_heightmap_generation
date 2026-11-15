@@ -273,7 +273,7 @@ export async function finishPlanet({ frame, simMesh, seed, cells, pool = null, c
     Object.assign(stats, { water: Hy.stats });
     // (for the checks, on request: the drainage network as the hydrology left it — each cell's receiver, each lake cell's
     // outlet, discharge and drainage area, the runoff, and the sea it drained to, before the gorges were cut)
-    const net = network ? { recv: Hy.recv, lakeOutlet: Hy.lakeOutlet, q: Hy.q, area: Hy.area, runoff, pet, rain: pAnn, sea: ocean, cellKm2 } : null;
+    const net = network ? { recv: Hy.recv, lakeOutlet: Hy.lakeOutlet, lakeOrigin: Hy.lakeOrigin, q: Hy.q, area: Hy.area, runoff, pet, rain: pAnn, sea: ocean, cellKm2 } : null;
     // (the sea again, after the rivers' gorges)
     ocean = oceanMask(mesh, C.z);
     lap('water');

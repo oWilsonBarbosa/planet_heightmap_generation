@@ -24,11 +24,13 @@ import { check, section, finish } from '../../v2/tools/lib/check-kit.mjs';
 import { FINISH } from '../../v2/js/finish/finish-config.js';
 import { Water, Regime } from '../../v2/js/finish/finish-hydro.js';
 import { worldFrame, finishWorld } from './lib/world.mjs';
+import { compareLakeSnapshots } from './lib/lake-lineage.mjs';
 
 const arg = (k, d) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const SEED = Number(arg('--seed', 10673275)), CONT = Number(arg('--cont', 30)), SIM = Number(arg('--sim', 40000)), TIME = Number(arg('--time', 300));
 const CELLS = arg('--cells', '160000,640000').split(',').map(Number);
 const DIAGNOSE = process.argv.includes('--diagnose');
+const LAKE_MATCH = process.argv.includes('--lake-match');
 const SET = Object.fromEntries((arg('--set', '') || '').split(',').filter(Boolean).map(kv => { const [k, v] = kv.split('='); return [k, v === 'true' ? true : v === 'false' ? false : Number(v)]; }));
 for (const k of Object.keys(SET)) if (!(k in FINISH)) throw new Error(`--set: no constant ${k} in FINISH`);
 const F = { ...FINISH, ...SET }, SEC = 3.15576e7, R = 6371;
@@ -41,6 +43,7 @@ const pc = (a, b) => `${(100 * a / Math.max(1, b)).toFixed(2)} %`;
 const frame = await worldFrame({ seed: SEED, cont: CONT, sim: SIM, time: TIME, log });
 console.log(`Evolution world: seed ${SEED}, ${CONT} % continental, ${SIM.toLocaleString()} plate cells, ${TIME} Myr${Object.keys(SET).length ? `; ${JSON.stringify(SET)}` : ''}`);
 const measures = [];
+let previousLakeSnapshot = null;
 
 for (const cells of CELLS) {
     const traceCells = cells === 160000 ? [60166, 60543, 59789, 59933, 19158, 18925, 19535, 19391] : cells === 640000 ? [633654, 633277, 633798, 633044, 632667, 632434, 633510, 633421] : [];
@@ -224,6 +227,13 @@ for (const cells of CELLS) {
         steady: drawnPts[Regime.STEADY] / drawnN, flood: drawnPts[Regime.FLOOD] / drawnN, seasonal: (drawnPts[Regime.SEASONAL] + drawnPts[Regime.EPHEMERAL]) / drawnN,
         lakeShare: w.lakeShare, fresh: w.freshLakes, closed: w.saltLakes + w.pans, total, cellKm2, lakeKm2: bodies.map(b => b.cells.length * cellKm2) });
     log(`${cells.toLocaleString()} cells: ${w.freshLakes} fresh lakes, ${w.saltLakes} salt, ${w.pans} pans; climbs on dry land ${climbs}`);
+    if (LAKE_MATCH) {
+        const snapshot = { n, mesh, body, bodies, lake, sea, lakeOrigin: fin.network.lakeOrigin, cellKm2 };
+        if (!snapshot.lakeOrigin) throw new Error('Network diagnostics missing lakeOrigin metadata');
+        if (previousLakeSnapshot) console.log('OROGEN_LAKE_LINEAGE ' +
+            JSON.stringify(compareLakeSnapshots(previousLakeSnapshot, snapshot)));
+        previousLakeSnapshot = snapshot;
+    }
     if (diag) {
         const largeThresholdKm2 = 4 * (4*Math.PI*R*R / 160000);
         diag.riverClimbs.sort((a,b)=>b.uphillM-a.uphillM);

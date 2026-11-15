@@ -823,17 +823,20 @@ export function hydrology(ctx, F) {
     // (the network's receivers: a lake's water leaves by its outlet, or goes no further — the lake as a whole, as the
     // discharge has it, not the flood's way across its floor; and each lake cell's outlet, where its outflow is)
     const lakeOutlet = ctx.network ? new Int32Array(n).fill(-1) : null;
+    // Diagnostics only: marine=1, young glacial=2, ancient/tectonic=3, other=4.
+    const lakeOrigin = ctx.network ? new Uint8Array(n) : null;
     if (ctx.network) for (const h of hollows) if (h.kind) {
         const to = h.outflow > 0 ? h.outlet : -1;
+        const origin = h.sea ? 1 : h.glacial && !h.old ? 2 : h.old ? 3 : 4;
         // (a closed lake's outlet too, when its water stands there: it goes no further — not over the rim)
-        for (const x of h.cells) if (lakeKind[x]) { lakeOutlet[x] = to; if (x !== h.outlet || to < 0) { recv[x] = to; stepKm[x] = to >= 0 ? edgeKmOf(xyz, x, to) : 0; } }
+        for (const x of h.cells) if (lakeKind[x]) { lakeOutlet[x] = to; lakeOrigin[x] = origin; if (x !== h.outlet || to < 0) { recv[x] = to; stepKm[x] = to >= 0 ? edgeKmOf(xyz, x, to) : 0; } }
     }
     traceStage('after-network-export');
     return {
         lake: lakeKind, lakeLevel, q, area, recv, order: order.subarray(0, count),
         // (the network, on request: the cell each land cell drains into — a lake's water its outlet; −1 on the sea and
         // where the water goes no further — each lake cell's outlet, and each river point's cell)
-        ...(ctx.network ? { recv, lakeOutlet, ...(ctx.debug ? { stepKm } : {}) } : {}),
+        ...(ctx.network ? { recv, lakeOutlet, lakeOrigin, ...(ctx.debug ? { stepKm } : {}) } : {}),
         rivers: { start: Int32Array.from(L.start), lat: Float32Array.from(L.lat), lon: Float32Array.from(L.lon), q: Float32Array.from(L.q), season: Float32Array.from(L.season),
             ...(ctx.network ? { cell: Int32Array.from(L.at) } : {}), ...(regimes ?? {}) },
         terminal: ctx.debug ? hollows.filter(h => h.kind && h.kind !== Water.FRESH).sort((a, b) => b.inflow - a.inflow).slice(0, 12).map(h => {
