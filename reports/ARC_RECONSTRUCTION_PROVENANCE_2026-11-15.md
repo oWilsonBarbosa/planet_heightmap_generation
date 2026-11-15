@@ -71,6 +71,20 @@ A guarda reduz a diferença de área **não oceânica** entre 20K e 40K de ~38.0
 
 O teste de escala da nova guarda `check-scale.mjs` reproduziu a falha herdada Laramide (14.80 vs 16.54 Mkm², 10.5% de diferença > 10%) e teve **6/7 PASS**. A área de arcos no experimento prescrito ficou 1.39 Mkm² (40K) vs 1.12 Mkm² (80K): passou **por margem estreita** no critério de 20% e não resolveu o excesso em 20K.
 
+### Verificação GPE2 em três sementes 20K — ganho continental e idade oceânica
+
+A [regressão ampliada #43686456049](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43686456049) concluiu a rodada 20K/3 sementes no ramo com guarda:
+
+| Semente | Crescimento continental (p.p.) antes da guarda | Depois da guarda | Idade oceânica média depois, Ma | Fração de oceano >200 Ma, % |
+|---|---:|---:|---:|---:|
+| 12345 | +6.02 | **+11.15** | 110.24 | 19.65 |
+| 777 | +4.72 | **+7.86** | 119.33 | 18.73 |
+| 4242 | +10.93 | +10.22 | 87.01 | 10.02 |
+
+A correção local de ampliação ARC melhora a anomalia da 4242/20K, porém **aumenta o crescimento continental em duas das três sementes** e não demonstra melhora de idade oceânica no conjunto. O quarto principal indicador, `largestBlockSharePct` (maior bloco terrestre), chega a **99.85%** na semente 4242/20K sob a guarda, isto é, formação de um aglomerado continental praticamente total segundo esse indicador. Portanto, o ganho local não justifica uma incorporação universal.
+
+Os testes `check-invariants` e `check-scale` no ramo da guarda terminaram: invariantes **21/21**, escala **6/7** com a falha Laramide já conhecida. As validações Fase 13 e 40K multissemente estavam em curso na última verificação desta seção.
+
 **Decisão provisória:** a exigência de uma margem de subducção ativa tem justificativa geológica e elimina um canal de nascimento de ARC em fronteiras dormentes, mas deve ficar em branch de teste até validação multissemente de topologia continental, atividade vulcânica, e idade do fundo oceânico.
 
 ## Experimento 2 — preservar a idade de `ARC` copiada ao fechar mares
