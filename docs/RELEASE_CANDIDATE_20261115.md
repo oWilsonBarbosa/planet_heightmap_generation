@@ -11,3 +11,5 @@
 **Autorizações distintas:** após os testes e revisão, solicitar aprovação explícita para o merge no `main`; somente depois, solicitar aprovação específica da release. O workflow de produção `.github/workflows/deploy.yml` publica o site mediante `release.published`.
 
 **Reversibilidade:** preservar o SHA anterior do `main` e as tags já publicadas; não regravar arquivos canônicos nem tags de versões antigas. O problema do gelo ártico e a estabilidade lacustre permanecem pesquisa independente.
+
+**Notificação a usuários recorrentes:** o identificador local da janela What's New no Generate passou de `7` para `8`, para que a nova nota seja exibida também a quem já viu a versão anterior. Sem alterações nas regras físicas ou no formato de arquivo.

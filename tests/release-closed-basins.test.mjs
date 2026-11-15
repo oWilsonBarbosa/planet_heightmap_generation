@@ -34,4 +34,5 @@ test('Generate announces salt lakes and historical version fallback', () => {
   assert.match(html,/Salt lakes and salt pans/);
   assert.match(html,/Evolution's drainage defaults are unchanged/);
   assert.match(html,/v\/2\.3\/generate/);
+  assert.match(file('../js/main.js'), /const VERSION = '8', LS_KEY = 'wo-whatsnew-seen'/);
 });
