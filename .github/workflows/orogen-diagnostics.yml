@@ -77,3 +77,25 @@ jobs:
           name: orogen-evolution-strait-experiment
           path: evolution-strait-experiment.log
           if-no-files-found: warn
+
+  convergence-medium-high:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Check drainage convergence from 640K to 1.28M cells
+        run: |
+          set -o pipefail
+          node --max-old-space-size=5500 tuning/evolution/drainage.mjs --cells 640000,1280000 2>&1 | tee evolution-convergence-medium-high.log
+      - name: Archive convergence log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-evolution-640k-1280k
+          path: evolution-convergence-medium-high.log
+          if-no-files-found: warn
