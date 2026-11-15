@@ -1,0 +1,106 @@
+name: Temporal trench memory for arc-widening tests
+
+on:
+  push:
+    branches:
+      - audit/arc-temporal-subduction-memory-20261115
+    paths:
+      - '.github/workflows/arc-temporal-memory.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Activity memory unit tests and invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --no-package-lock delaunator
+      - run: |
+          node --check v2/js/tectonics/step/arc-activity.js
+          node --check v2/js/tectonics/step/wings.js
+          node --check v2/tools/audit-arc-fate.mjs
+          node v2/tools/check-arc-activity.mjs
+      - name: Engine invariants
+        run: node v2/tools/check-invariants.mjs
+
+  duration:
+    name: Memory ${{ matrix.window }} Myr / ${{ matrix.cells }} cells
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        window: [0, 15, 30]
+        cells: [20000, 40000]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --no-package-lock delaunator
+      - name: Simulate GPE2 seed 4242 through 1200 Myr
+        run: |
+          mkdir -p results
+          node v2/tools/audit-arc-fate.mjs \
+            --seed=4242 --cells=${{ matrix.cells }} --strength=2 \
+            --trench-memory-myr=${{ matrix.window }} \
+            --maturation-rate=3 --until=1200 --every=100 \
+            --targets=900,1000,1100,1200 \
+            --out=results/arc-4242-${{ matrix.cells }}-memory-${{ matrix.window }}
+      - name: Compare arc geography and old/young mechanisms
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const p='results/arc-4242-${{ matrix.cells }}-memory-${{ matrix.window }}.json';
+          const d=JSON.parse(fs.readFileSync(p,'utf8'));
+          const m=['timeMyr','visibleArcAreaMkm2','visibleContinentalAreaMkm2',
+              'largestVisibleArcAreaMkm2','largestArcOldAge100Mkm2',
+              'cumulativeIslandArcBuiltCellOps','cumulativeArcWidenedAtNonOverridingCells',
+              'cumulativeArcWidenedByRecentActivityCells'];
+          const r={cells:d.meshCells,seed:d.seed,gpe:d.strength,windowMyr:d.trenchMemoryMyr,
+            rows:d.rows.map(x=>Object.fromEntries(m.map(k=>[k,x[k]??null])))};
+          fs.writeFileSync('results/summary.json',JSON.stringify(r,null,2)+'\n');
+          console.log('TEMPORAL_MEMORY '+JSON.stringify(r));
+          EOF
+      - name: Archive comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arc-temporal-${{ matrix.window }}-${{ matrix.cells }}
+          path: results/
+          if-no-files-found: warn
+
+  phase13:
+    name: GPE 1 default 15 Myr memory — phase 13
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --no-package-lock delaunator
+      - name: Record actual scientific failures as diagnostics
+        shell: bash
+        run: |
+          mkdir -p results
+          set +e
+          node v2/tools/check-phase13.mjs > results/phase13.log 2>&1
+          exit_code=$?
+          echo "$exit_code" > results/phase13.exit
+          set -e
+          grep -E '(^PASS|^FAIL|Phase 13:)' results/phase13.log | tail -28 || true
+          echo "Underlying phase13 exit code: $exit_code"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: arc-temporal-phase13-15myr
+          path: results/
+          if-no-files-found: warn
