@@ -38,6 +38,16 @@ Os números de lagos e salinas são os **corpos relatados em `stats.water`**, n�
 - [Baseline e auditoria do cânone](https://github.com/oWilsonBarbosa/0r063N/blob/ccr-3c4ab8a1-olrlvi/reports/generator-v3/README.md).
 - Testes de unidade: `.github/workflows/orogen-hydrology-checks.yml`; scripts em `tuning/orogen/`.
 
+## Controle do fork anterior `c10969c`
+
+Execução: [GitHub Actions — baseline fork original](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43750723918), com a mesma semente de regressão do Evolution (10673275), resoluções 160K/640K, sem alteração do código do fork.
+
+- **Fork original:** 31 de 32 verificações aprovadas. Uma falha de convergência de regimes fluviais (permanentes estáveis 67,7% → 73,1%; estação de cheia 31,2% → 25,6%; diferença acima de 5 pontos).
+- **Integração com v3.0.1:** 29 de 32 aprovadas. A convergência dos regimes passou, mas apareceram **três falhas que não ocorrem no mesmo teste do fork original**: subida de rio de 107 m a 160K, um exutório de lago inalcançável a 640K, e convergência ruim dos lagos grandes (0,27% → 0,05% da área terrestre).
+- O fork original usa superfície/geologia anteriores e tinha 43/339 lagos doces a 160K/640K, enquanto o integrado tem 69/309. Portanto, o controle demonstra a mudança do comportamento e a localização dos portões reprovados, **não isola sozinho se a origem é o relevo, o algoritmo ou a interação entre eles**.
+
+**Resultado de revisão:** o merge não deve ser promovido. Diagnosticar com IDs e coordenadas dos trechos de subida e do lago inacessível; repetir os testes com os mesmos terrenos de entrada, se possível, para atribuir a causa. Não flexibilizar os limiares só para passar os testes.
+
 ## Portões ainda abertos
 
 1. **Evolution drainage: 3 de 32 verificações falharam** no cenário de regressão (semente 10673275): a 160K, 2 trechos de rios sobem até **107 m** (acima do máximo 100 m); a 640K, 1 lago de água doce tem saída inalcançável pelas células de lago; entre 160K e 640K, a proporção de lagos >12.752 km² muda **0,27% → 0,05%** (11 → 5), fora da tolerância de 30%. Os demais 29 checks passaram. **Não declarar aprovação física da hidrologia.**
