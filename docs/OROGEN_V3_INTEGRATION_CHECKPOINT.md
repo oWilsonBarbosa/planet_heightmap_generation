@@ -1,16 +1,22 @@
-Integration checkpoint (NOT validated; do not merge to main).
+# Integração experimental Orogen sobre v3.0.1 — 2026-11-15
 
-Base: v3.0.1 ed466f9db71292e912d8d0160e689a67a994f2d9.
-Fork source: c10969cdba2201e22fc3529fbf61af0d6903b77f, common ancestor 7026cc6526fa637611d05804a4cec8eed04de017.
+**Não migrar o cânone e não fundir no main sem testes.**
 
-Transferred 51 fork-modified files that have NO upstream changes relative to the common ancestor. Their original blobs are preserved unchanged, including climate modules, river-travel, diagnostic tests, and documentation. This is a partial tree-level transplant, not a Git merge of the 57 commits.
+Base v3.0.1: `ed466f9`; fork: `c10969c`; ancestral comum `7026cc6`. Os 51 arquivos do fork não sobrepostos foram transferidos anteriormente. A resolução tripla agora contempla:
 
-5 shared paths must undergo a proper 3-way reconciliation:
-- README.md
-- v2/README.md (auto-merges according to previous merge-tree)
-- v2/js/finish/finish-config.js
-- v2/js/finish/finish-hydro.js
-- v2/js/finish/finish.js
+- `v2/README.md`: conteúdos compatíveis combinados.
+- `v2/js/finish/finish-config.js`: parâmetros de grandes lagos do v3 e os parâmetros de bacias fechadas do fork.
+- `v2/js/finish/finish-hydro.js`: `flatKey` do v3 junto a bacias endorreicas, correções de roteamento e sazonalidade do fork.
+- `v2/js/finish/finish.js`: novos dados de geologia, agricultura, detalhes e superfície do v3, mais opção `network` e drenagem do fork.
+- `README.md`: mantida a documentação principal do v3 para evitar textos obsoletos; o histórico do fork permanece em `docs/`.
 
-Hydrology, lake salt balance, seasonal discharge and v3 finish pipeline integration are NOT validated. The old 0r063N exporter remains incompatible with v3 worker data; canonical dataset c10969c is UNCHANGED. Never adopt this checkpoint as canonical.
-Source report: oWilsonBarbosa/0r063N reports/generator-v3/README.md, commit acd4ed9.
+Foi feita apenas checagem **sintática estática** dos três arquivos JS alterados (V8 após retirada de linhas de import/export). Ainda faltam testes de importação, unidade, integração, determinismo, simulação completa, drenagem e validação física.
+
+## Próximas verificações
+1. Executar `node --test tests/river-transport.test.mjs tests/river-metrics.test.mjs`.
+2. Verificar drenagem em `tuning/evolution/drainage.mjs` (160K e 640K), conservação de água, níveis, ausência de ciclos, salinas e tempo de viagem.
+3. Gerar novamente o planeta `06cy8w6z6a89kow6psje93` com o worker atual e acabamento integrado.
+4. Comparar Köppen, extremos do Ártico, bacias endorreicas, salinas e fundo marinho ao baseline `reports/generator-v3/` do repositório 0r063N.
+5. Reescrever compatibilidade de exportação com as novas camadas tectônicas antes de qualquer migração.
+
+`closedBasins` permanece false no FINISH padrão; os recursos endorreicos precisam ser habilitados explicitamente na geração que os utilizar. Nenhuma alteração foi feita nos dados canônicos de Orogen.
