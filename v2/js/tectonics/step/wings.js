@@ -137,7 +137,7 @@ export function buildArcs(world) {
     for (plate of plates) {
         if (!plate.alive || plate.isBackground || plate.crust.count === 0) continue;
         const { mask, type, flags, slabKm } = plate.crust;
-        const born = [];
+        const born = [], dormantWidenings = new Set();
         for (let c = 0; c < mask.length; c++) {
             if (!mask[c] || type[c] !== CrustType.OCEAN || !(flags[c] & CrustFlag.TRENCH)) continue;
             let slab = slabKm[c];
@@ -151,7 +151,18 @@ export function buildArcs(world) {
                 edge = true; nx += xyz[3 * nb] - xyz[3 * c]; ny += xyz[3 * nb + 1] - xyz[3 * c + 1]; nz += xyz[3 * nb + 2] - xyz[3 * c + 2];
             }
             if (!edge || continentWithin(plate, mesh, c, noLandHops)) continue;
-            if (arcBeside(plate, mesh, c)) { const w = widenArc(plate, mesh, c, slab, nx, ny, nz, config, widthCapKm(c)); if (w >= 0) born.push(w); continue; }   // an arc already: widen it with age
+            if (arcBeside(plate, mesh, c)) {
+                const w = widenArc(plate, mesh, c, slab, nx, ny, nz, config, widthCapKm(c));
+                if (w >= 0) {
+                    born.push(w);
+                    // The pre-existing-arc widening branch does not explicitly
+                    // check whether this trench is overriding RIGHT NOW.
+                    // Count resulting conversions on non-OVERRIDING borders.
+                    plate.toWorld(xyz[3*c],xyz[3*c+1],xyz[3*c+2],P);
+                    if(boundaryKind[index.nearest(P[0],P[1],P[2])]!==BoundaryKind.OVERRIDING)dormantWidenings.add(w);
+                }
+                continue;
+            }   // an arc already: widen it with age
             plate.toWorld(xyz[3 * c], xyz[3 * c + 1], xyz[3 * c + 2], P);
             if (boundaryKind[index.nearest(P[0], P[1], P[2])] !== BoundaryKind.OVERRIDING) continue;      // an active trench, not a dormant flag
             // the arc cell: the ocean neighbour most directly behind the trench
@@ -170,6 +181,8 @@ export function buildArcs(world) {
             if (type[c] !== CrustType.OCEAN) continue;
             const { formedAt } = plate.crust;
             type[c] = CrustType.ARC; formedAt[c] = time; plate.crust.terrane[c] = plate.arcTerraneId;
+            if(dormantWidenings.has(c))
+                world.budget.arcWidenedAtNonOverridingCells = (world.budget.arcWidenedAtNonOverridingCells ?? 0)+1;
             flags[c] &= ~CrustFlag.APRON;
             plate.crust.recordOrogeny(c, OrogenyType.ARC, 0, time, config.orogenyQuietMyr);
             built++;
