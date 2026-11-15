@@ -1,0 +1,98 @@
+name: Passive ocean ridge traction triple comparison
+
+on:
+  push:
+    branches:
+      - audit/ridge-background-exclusion-20261114
+    paths:
+      - '.github/workflows/passive-ocean-ridge-triple.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  experiment:
+    name: seed ${{ matrix.seed }} / ${{ matrix.cells }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - seed: 777
+            cells: 20000
+            target: 30
+          - seed: 777
+            cells: 40000
+            target: 24
+          - seed: 12345
+            cells: 20000
+            target: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/tectonic-baseline-20261114
+          path: baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ocean-age-return-20261114
+          path: agefix
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ridge-background-exclusion-20261114
+          path: experiment
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: |
+          (cd baseline && npm install --no-save --no-package-lock delaunator)
+          (cd agefix && npm install --no-save --no-package-lock delaunator)
+          (cd experiment && npm install --no-save --no-package-lock delaunator)
+      - name: Run three identical diagnostic histories with original global parameters
+        run: |
+          mkdir -p results
+          cp experiment/v2/tools/audit-cycle-polarity.mjs baseline/v2/tools/audit-cycle-polarity.mjs
+          cp experiment/v2/tools/audit-cycle-polarity.mjs agefix/v2/tools/audit-cycle-polarity.mjs
+          node --check experiment/v2/js/tectonics/step/forces.js
+          for variant in baseline agefix experiment; do
+            (cd "$variant" && node v2/tools/audit-cycle-polarity.mjs --ridge=normal --seed=${{ matrix.seed }} --cells=${{ matrix.cells }} --until=120 --every=2 --out=../results/"$variant") > results/"$variant".log
+          done
+      - name: Locate differences and compare original, agefix and passive-ocean exclusion
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const r={};
+          for (const k of ['baseline','agefix','experiment']) r[k]=JSON.parse(fs.readFileSync('results/'+k+'.json','utf8'));
+          const keys=['ageHash','forceDigest','plateMotionDigest','polarityHash','boundaryHash','ownerHash','crustTypeHash','activePlates'];
+          const compare=(a,b)=>{
+            const result={};
+            for(const key of keys){
+              const i=a.rows.findIndex((x,j)=>x[key]!==b.rows[j][key]);
+              result[key]=i<0?null:a.rows[i].timeMyr;
+            }
+            return result;
+          };
+          const target=${{ matrix.target }};
+          const atTarget=Object.fromEntries(Object.entries(r).map(([key,run])=>{
+            const row=run.rows.find(x=>x.timeMyr===target);
+            return [key,{timeMyr:target,activePlates:row.activePlates,
+              ridgeForceCells:row.loads.reduce((sum,p)=>sum+(p.forces.find(f=>f.name==='ridge push')?.cells??0),0),
+              ownerHash:row.ownerHash,ageHash:row.ageHash}];
+          }));
+          const report={seed:r.baseline.seed,meshCells:r.baseline.meshCells,
+            baseline_vs_agefix:compare(r.baseline,r.agefix),
+            baseline_vs_experiment:compare(r.baseline,r.experiment),
+            agefix_vs_experiment:compare(r.agefix,r.experiment),
+            atTarget};
+          fs.writeFileSync('results/comparison.json',JSON.stringify(report,null,2)+'\n');
+          console.log('TRIPLE '+JSON.stringify(report));
+          EOF
+      - name: Archive three histories and comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: passive-ridge-triple-${{ matrix.seed }}-${{ matrix.cells }}
+          path: results/
+          if-no-files-found: warn
