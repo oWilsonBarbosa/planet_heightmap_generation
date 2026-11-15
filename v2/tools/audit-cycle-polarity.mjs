@@ -68,15 +68,24 @@ simulate(world,{
             omega:p.omega.map(x=>Number(x.toPrecision(12))),
             speedCmYr:Number(p.speedCmYr.toPrecision(12))
         })).sort((a,b)=>a.id-b.id);
+        const loads=f.plates.filter(p=>p.alive&&!p.isBackground&&p.cells>0).map(p=>({
+            id:p.id,name:p.name,
+            forces:(p.dynamics?.forces??[]).map(z=>({
+                name:z.name,cells:z.cells,
+                torque:Number(z.torque.toPrecision(12)),
+                vector:z.vector.map(x=>Number(x.toPrecision(12))),
+            })).sort((a,b)=>a.name.localeCompare(b.name))
+        })).sort((a,b)=>a.id-b.id);
         const events=world.events.slice(seenEvents).map(e=>({timeMyr:e.time,kind:e.kind,data:e.data}));
         seenEvents=world.events.length;
         const row={timeMyr:f.time,
             ownerHash:hash(f.owner),crustTypeHash:hash(f.type),ageHash:hash(f.formedAt),
             boundaryHash:hash(f.boundary),polarityHash:hash(world.oceanOverrider),
             activePlates:motions.length,plateMotionDigest:createHash('sha256').update(JSON.stringify(motions)).digest('hex').slice(0,20),
+            forceDigest:createHash('sha256').update(JSON.stringify(loads)).digest('hex').slice(0,20),
             inheritedOceanMkm2:oldOcean*mesh.cellAreaKm2/1e6,
             passiveOceanMkm2:backgroundOcean*mesh.cellAreaKm2/1e6,
-            counts,polarityVotes:pairs,overridingPairs:oriented,plates:motions,events};
+            counts,polarityVotes:pairs,overridingPairs:oriented,plates:motions,loads,events};
         rows.push(row);
         console.log(JSON.stringify({timeMyr:f.time,activePlates:row.activePlates,oldOceanMkm2:+row.inheritedOceanMkm2.toFixed(2),
             polarityVotes:pairs.length,overridingPairs:oriented.length,newEvents:events.length}));
