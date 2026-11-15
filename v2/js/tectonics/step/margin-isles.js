@@ -76,7 +76,12 @@ export function growMarginIsles(world, dt) {
             for (const c of trench) if (flags[c] & CrustFlag.EROSIVE) erosiveTrench++;
             const p = pErode * Math.min(1, erosiveTrench / Math.max(1, coastCells.length)), eaten = [];
             for (const [c, sea] of coastCells) if (rng() < p) eaten.push([c, crust.formedAt[sea]]);
-            for (const [c, age] of eaten) { crust.create(c, CrustType.OCEAN, age); flags[c] = CrustFlag.APRON; }
+            let arcEroded = 0;
+            for (const [c, age] of eaten) {
+                if (type[c] === CrustType.ARC) arcEroded++;
+                crust.create(c, CrustType.OCEAN, age); flags[c] = CrustFlag.APRON;
+            }
+            world.budget.arcErodedCells = (world.budget.arcErodedCells ?? 0) + arcEroded;
             if (eaten.length) { plate.dirty = true; changed += eaten.length; world.budget.erodedCells += eaten.length; }
         }
         // the fore-arc: sea between this coast and its trench, keeping the gap in front of the trench
@@ -99,6 +104,7 @@ export function growMarginIsles(world, dt) {
                 flags[c] = (flags[c] & ~CrustFlag.APRON) | CrustFlag.MARGIN_ISLE;
                 crust.terrane[c] = plate.marginIsleTerrane;
             }
+            world.budget.forearcBornCells = (world.budget.forearcBornCells ?? 0) + raise.length;
             changed += raise.length;
             plate.dirty = true;
         }
@@ -127,6 +133,7 @@ function mergeIntoMainland(world, plate) {
         merged += piece.length;
         if (piece.length * cellAreaKm2 >= config.terraneMinAreaKm2) world.log(EventKind.ISLE_MERGE, `an island off ${plate.name}’s coast (${(piece.length * cellAreaKm2 / 1e3).toFixed(0)}k km²) has grown into the mainland`, { plate: plate.id, areaKm2: piece.length * cellAreaKm2 });
     }
+    world.budget.forearcMergedCells = (world.budget.forearcMergedCells ?? 0) + merged;
     if (merged) plate.dirty = true;
     return merged;
 }
