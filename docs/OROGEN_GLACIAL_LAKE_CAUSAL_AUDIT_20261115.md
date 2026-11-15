@@ -53,3 +53,23 @@ As diferenças no clima são pequenas. A perda lacustre não é explicada direta
 **Pendências para provar o mecanismo completo:** parear as mesmas depressões pelo perímetro/footprint, não só pelo recorte; rastrear `hollow 2424` imediatamente antes e depois de `cutPockets` e da seleção de água; comparar `F.lakeMinDepthM`, `F.breachKm`, `F.glacialBreachShare` e as regras de incisão sob ensaios A/B isolados. Não concluir que o limiar de 15 m esteja errado apenas porque uma depressão ficou 0,21 m abaixo dele.
 
 **Importante:** áreas e volumes foram calculados sob hipótese de células com área média uniforme, com precisão insuficiente para inferir volumes reais de lagos tão extensos. Não migrar cânone, não alterar parâmetros padrão para obter aprovação do teste por construção.
+
+
+## Sensibilidade controlada à abertura de desfiladeiros glaciais
+
+Execução: [Actions 43758947660](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43758947660). Mesma semente, terreno, método de análise, resoluções e critérios; apenas `F.glacialBreachShare` varia. As execuções terminam com falha do workflow quando uma condição física preexistente não passa.
+
+| Participação do corte glacial | Lagos grandes, terra 640K → 1,28M | Resultado da auditoria | Água doce no recorte de 180 km |
+|---|---|---|---|
+| Padrão **0,5** | **0,44% → 0,28%** (144→77) | 31/32; falha convergência | 21→4 células |
+| Reduzida **0,1** | **0,62% → 0,36%** (183→96) | 31/32; falha convergência | 21→4 células |
+| Desativada **0** | **1,32% → 0,86%** (242→148) | 30/32; falhas convergência **e exutório** | 21→6 células |
+
+A configuração `0` permite que o grande `hollow 2424` da malha 1,28M (231.123 km², ~65 m de profundidade, vazão 10.143 m³/s) **retenha água em 580 células**, como suspeitado. Com `0,1` e `0,5`, esse corpo fica seco; no padrão, a abertura do desfiladeiro tem amplitude potencial de até `0,6 km × 0,5 = 300 m`, muito superior à profundidade da depressão. Portanto o parâmetro de corte controla fortemente a retenção desse corpo.
+
+**Porém isso não explica sozinho o lago escolhido para o ensaio:** o `hollow 2424` tem **apenas duas células dentro do recorte**, e o grande `hollow 912` tem 32 células dentro do recorte e continua inteiramente drenado por um desfiladeiro preexistente mesmo com `glacialBreachShare=0`. Isso separa pelo menos duas causas: corte através de uma depressão antes da decisão final sobre lagos, e abertura de saída causada pelo próprio mecanismo de brecha glacial.
+
+A desativação **piora a validação geomorfológica**, produzindo um lago doce adicional com exutório inacessível. Todos os três cenários continuam reprovando a convergência de lagos grandes; não são propostas de calibração aceitáveis.
+
+**Próximo ensaio rigoroso:** rastrear a conectividade e a incisão `cutAt` da depressão 912 desde a escultura do terreno, comparar soleira e rio cruzando a bacia na mesma geografia, e construir um critério geométrico e físico para persistência de um lago. Testar com dados independentes, verificar cota do exutório e evitar limiares artificialmente escolhidos para que a auditoria passe. Os números de corpos e áreas acima não são um estado aprovado de Orogen.
+
