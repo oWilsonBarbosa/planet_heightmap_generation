@@ -55,3 +55,25 @@ jobs:
           name: orogen-evolution-drainage
           path: evolution-drainage.log
           if-no-files-found: warn
+
+  strait-experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Compare Evolution 160K/640K with large coastal strait reconnection
+        run: |
+          set -o pipefail
+          node --max-old-space-size=5500 tuning/evolution/drainage.mjs --cells 160000,640000 --set largeCoastalStraitReconnection=true --diagnose 2>&1 | tee evolution-strait-experiment.log
+      - name: Archive experimental diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-evolution-strait-experiment
+          path: evolution-strait-experiment.log
+          if-no-files-found: warn

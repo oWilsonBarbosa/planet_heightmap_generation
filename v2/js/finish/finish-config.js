@@ -179,6 +179,7 @@ export const FINISH = {
                                 // with the meander as if the ground under them were this much lower where it is low (0: the
                                 // straightest way: developer, 2026-10-27 — "slightly too straight now")
     gorgeLengthKm: 0.02,
+    largeCoastalStraitReconnection: false, // EXPERIMENT ONLY: reconnect >100,000 km² marine depressions across low 30m/160km sills
     seaCutKm: 0,                // a basin below sea level opens into the ocean if its cut through dry land is at most this long
                                 // (0: never — developer: a small trapped sea is "NOT a valid end it should go out to the real sea")…
     seaCutFloorKm: 0.003,       // …else its gorge stops this little above sea level (no arm of the sea winding inland); the

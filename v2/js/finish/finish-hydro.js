@@ -34,6 +34,7 @@ export const Water = Object.freeze({ NONE: 0, FRESH: 1, SALT: 2, PAN: 3 });
  */
 export function openStraits(mesh, z, ocean, F) {
     const { adjOffset, adjList, numCells: n, xyz } = mesh;
+    const cellKm2 = 4 * Math.PI * R * R / n;
     const { fill, parent, rank } = spillFlood(mesh, z, ocean);
     // each body below sea level the ocean does not reach: its way out from the cell the flood reached first
     const seen = new Uint8Array(n);
@@ -68,7 +69,14 @@ export function openStraits(mesh, z, ocean, F) {
                 pathCells:path.slice(0,12).map(c=>({c,zM:+(1000*z[c]).toFixed(1),ocean:ocean[c]}))
             }));
         }
-        if (open < 0.5) continue;
+        // Experimental scale-invariance control: an immense below-sea-level basin
+        // separated by a single low, narrow gap may be connected ocean at finer
+        // resolution. This remains opt-in until cross-resolution tests establish
+        // whether reconnection is geologically appropriate planet-wide.
+        const largeLowSill = !!F.largeCoastalStraitReconnection
+            && cells.length * cellKm2 >= 100000
+            && sillKm <= 0.030 && barrierKm <= 160;
+        if (open < 0.5 && !largeLowSill) continue;
         for (const c of path) if (z[c] > -F.straitDepthKm) { z[c] = -F.straitDepthKm; cut++; }
         opened++;
     }
