@@ -1,0 +1,79 @@
+name: ARC sea-fill age provenance controlled A-B
+
+on:
+  push:
+    branches: [audit/arc-seafill-age-provenance-20261115]
+    paths:
+      - '.github/workflows/arc-seafill-age-provenance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    name: seed 4242 GPE2 / ${{ matrix.cells }} cells
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        cells: [20000,40000]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/arc-reconstruction-provenance-20261115
+          path: original
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/arc-seafill-age-provenance-20261115
+          path: keep-age
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: |
+          (cd original && npm install --no-save --no-package-lock delaunator)
+          (cd keep-age && npm install --no-save --no-package-lock delaunator)
+      - name: Simulate identical histories with only copied ARC formedAt varying
+        run: |
+          mkdir -p results
+          node --check keep-age/v2/js/tectonics/ops/merge-plates.js
+          (cd original && node v2/tools/audit-arc-fate.mjs --seed=4242 --cells=${{ matrix.cells }} --strength=2.0 --maturation-rate=3 --until=1200 --every=100 --targets=900,1000,1100,1200 --out=../results/original) > results/original.log
+          (cd keep-age && node v2/tools/audit-arc-fate.mjs --seed=4242 --cells=${{ matrix.cells }} --strength=2.0 --maturation-rate=3 --until=1200 --every=100 --targets=900,1000,1100,1200 --out=../results/keep-age) > results/keep-age.log
+      - name: Compare crustal stock and arc maturation
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('results/original.json','utf8'));
+          const b=JSON.parse(fs.readFileSync('results/keep-age.json','utf8'));
+          const keys=['timeMyr','visibleContinentalAreaMkm2','visibleArcAreaMkm2','largestVisibleArcAreaMkm2',
+            'largestArcOldAge100Mkm2','largestArcSamePlateLandReachableMkm2',
+            'cumulativeArcMaturedCellOps','cumulativeArcAccreteSeaFillDeltaCells','cumulativeArcMergeSeaFillDeltaCells',
+            'cumulativeArcWidenedAtNonOverridingCells'];
+          if(a.rows.length!==b.rows.length)throw Error('Different capture counts');
+          const rows=a.rows.map((x,i)=>({timeMyr:x.timeMyr,original:Object.fromEntries(keys.map(k=>[k,x[k]])),
+            keepAge:Object.fromEntries(keys.map(k=>[k,b.rows[i][k]]))}));
+          const out={seed:a.seed,cells:a.meshCells,strength:a.strength,change:'preserve formedAt on copied ARC only',rows};
+          fs.writeFileSync('results/comparison.json',JSON.stringify(out,null,2)+'\n');
+          for(const row of rows)console.log('ARC_AGE '+JSON.stringify({cells:a.meshCells,...row}));
+          EOF
+      - name: Upload A-B diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arc-seafill-provenance-${{ matrix.cells }}
+          path: results/
+          if-no-files-found: warn
+
+  invariants:
+    name: Existing tectonic invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-save --no-package-lock delaunator
+      - run: node v2/tools/check-invariants.mjs
