@@ -87,6 +87,14 @@ O controle do fork `c10969c` **não** apresenta os três erros nas mesmas verifi
 
 Riscos remanescentes: a reconexão candidata pode eliminar mares interiores reais separados por baixas barreiras; a alteração precisa de comparação geográfica e hidrológica independente, não apenas de aprovação de um teste de escala.
 
+## 15/11/2026 — controles adicionais de escala
+
+A hipótese opt-in `largeCoastalStraitReconnection=true` foi executada, sem alterar o perfil padrão, no workflow [43754211835](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43754211835). Ela realmente retira a grande depressão marinha anômala da classe de lago na malha de 160K, mas a métrica de lagos grandes **continua reprovada**: cai de **0,27% → 0,12%** (160K) contra **0,05%** (640K); 31/32 verificações passam. A reconexão é uma correção parcial e **não será promovida a padrão** com base nesses resultados.
+
+Novo controle sem mudar a geometria ou os limiares: [43754480772](https://github.com/oWilsonBarbosa/planet_heightmap_generation/actions/runs/43754480772), `tuning/evolution/drainage.mjs --cells 640000,1280000`. Conclusão: **31/32**; estabilidade de grandes lagos **reprovada**, agora com limiar de 3.188 km²: **0,44% → 0,28%** da terra, **144 → 77** corpos acima do limiar. Os restantes 31 critérios de conectividade, vazão, cota e conservação passaram. Portanto a instabilidade não se limita à comparação de 160K com 640K.
+
+**Estado de publicação:** a correção dos rios ascendentes e do exutório está operacional e validada na regressão; o experimento de conexão de estreitos permanece **desligado**; o problema da convergência de lagos demanda rastreamento individualizado de corpos entre resoluções e avaliação da produção lacustre por origem (tectônica, glacial, remanescente marinho). Não reduzir limiares nem declarar hidrologia aprovada. Nenhum cânone foi migrado.
+
 ## Portões ainda abertos
 
 1. **Evolution drainage: 3 de 32 verificações falharam** no cenário de regressão (semente 10673275): a 160K, 2 trechos de rios sobem até **107 m** (acima do máximo 100 m); a 640K, 1 lago de água doce tem saída inalcançável pelas células de lago; entre 160K e 640K, a proporção de lagos >12.752 km² muda **0,27% → 0,05%** (11 → 5), fora da tolerância de 30%. Os demais 29 checks passaram. **Não declarar aprovação física da hidrologia.**
