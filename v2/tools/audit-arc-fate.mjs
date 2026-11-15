@@ -14,15 +14,18 @@ import { CrustType, CrustFlag } from '../js/tectonics/model/crust.js';
 const opt=(key,def)=>process.argv.find(s=>s.startsWith('--'+key+'='))?.slice(key.length+3)??def;
 const seed=Number(opt('seed','4242')),cells=Number(opt('cells','20000'));
 const strength=Number(opt('strength','2')),until=Number(opt('until','1200')),every=Number(opt('every','100'));
+const maturationRate=Number(opt('maturation-rate','3'));
 const targets=opt('targets','900,1000,1100,1200').split(',').map(Number);
 const out=opt('out','reports/arc-fate-'+seed+'-'+cells+'-'+strength);
 if (![seed,cells,until,every].every(Number.isInteger) || cells<2000 || until<1 || every<1 || until%every ||
-  !Number.isFinite(strength)||strength<0||targets.some(t=>!Number.isInteger(t)||t<0||t>until||t%every)) throw Error('Invalid arguments');
+  !Number.isFinite(strength)||strength<0||!Number.isFinite(maturationRate)||maturationRate<0||maturationRate>30||targets.some(t=>!Number.isInteger(t)||t<0||t>until||t%every)) throw Error('Invalid arguments');
 const scene=TERRAIN_SCENES.find(x=>x.id==='cycle');
 if(!scene) throw Error('cycle scenario missing');
 const mesh=labMesh(cells),N=mesh.numCells,area=mesh.cellAreaKm2/1e6;
 const {adjOffset:off,adjList:adj}=mesh;
-const world=scene.build(mesh,seed);world.config.ridgeGpeStrength=strength;
+const world=scene.build(mesh,seed);
+world.config.ridgeGpeStrength=strength;
+world.config.arcContinentKmPerMyr=maturationRate;
 const rows=[],selected=new Set(targets);
 
 function largestVisibleArc(frame) {
@@ -120,8 +123,14 @@ simulate(world,{untilMyr:until,drive:w=>scene.drive(w),snapshotEveryMyr:every,ke
     mainByNativeTerrane.set(key,(mainByNativeTerrane.get(key)??0)+1);
   }
   const ordered=m=>[...m].sort((a,b)=>b[1]-a[1]).slice(0,12).map(([key,n])=>({key,cells:n,areaMkm2:n*area}));
-  const visibleArc=Array.from(f.type).filter((t,i)=>f.owner[i]>=0&&t===CrustType.ARC).length;
-  const row={seed,meshCells:N,gpeStrength:strength,timeMyr:f.time,
+  let visibleArc=0,visibleContinental=0;
+  for(let i=0;i<N;i++){
+    if(f.owner[i]<0)continue;
+    if(f.type[i]===CrustType.ARC)visibleArc++;
+    if(f.type[i]===CrustType.CONTINENT||f.type[i]===CrustType.CRATON)visibleContinental++;
+  }
+  const row={seed,meshCells:N,gpeStrength:strength,maturationRateKmPerMyr:maturationRate,timeMyr:f.time,
+    visibleContinentalAreaMkm2:visibleContinental*area,
     visibleArcAreaMkm2:visibleArc*area,
     largestVisibleArcAreaMkm2:biggest.length*area,
     largestArcMeanAgeMyr:biggest.length?mainAgeSum/biggest.length:null,
@@ -154,12 +163,12 @@ simulate(world,{untilMyr:until,drive:w=>scene.drive(w),snapshotEveryMyr:every,ke
 if(rows.length!==targets.length)throw Error('Only '+rows.length+'/'+targets.length+' targets captured');
 fs.mkdirSync(path.dirname(out),{recursive:true});
 fs.writeFileSync(out+'.json',JSON.stringify({
-  seed,meshCells:N,strength,targets,ageThresholdMyr:world.config.arcContinentAgeMyr,
+  seed,meshCells:N,strength,maturationRateKmPerMyr:maturationRate,targets,ageThresholdMyr:world.config.arcContinentAgeMyr,
   notes:['Native reachability follows only ARC cells old enough and not flagged as MARGIN_ISLE, from own-plate CONTINENT/CRATON seeds.',
   'Area figures from native plate rasters can overlap in planetary/world space: do not interpret their sum as unique planet area.',
   'A visible ARC group may comprise multiple plate rasters; giant group area is a connected world-frame area.',
   'Full front propagation depends also on per-plate arcMatureKm advances and timing; reachable is potential, not guaranteed conversion.'],rows},null,2)+'\n');
-const cols=['seed','meshCells','gpeStrength','timeMyr','visibleArcAreaMkm2','largestVisibleArcAreaMkm2',
+const cols=['seed','meshCells','gpeStrength','maturationRateKmPerMyr','timeMyr','visibleContinentalAreaMkm2','visibleArcAreaMkm2','largestVisibleArcAreaMkm2',
 'largestArcOldAge100Mkm2','largestArcEligibleMkm2','largestArcSamePlateLandReachableMkm2',
 'largestArcAdjacentToSamePlateContinentMkm2','largestArcOldWithoutContinentOnNativePlateMkm2',
 'totalNativeArcMkm2','totalNativeOldArcMkm2','totalNativeReachableMatureArcMkm2','totalNativeUnreachableMatureArcMkm2',
