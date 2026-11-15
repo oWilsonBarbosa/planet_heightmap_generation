@@ -74,7 +74,12 @@ export const TECTONICS = {
     slabMatureKm: 600,          // a trench pulls in proportion to the slab hanging from it: full strength only once
                                 // this much crust has gone down (≈ the depth of the upper mantle)
     slabSuction: 0.25,          // on the overriding plate, toward its own trench — what moves an active-margin continent
-    ridgePush: 0.05,            // on both plates at a young ridge, away from it [WBP: secondary]
+    ridgePush: 0.05,            // baseline force coefficient [WBP: secondary]
+    // Experimental branch only: replace legacy young-contact threshold with
+    // an age-gradient GPE proxy integrated over mobile oceanic plate area.
+    ridgePushMode: 'distributed-age-gradient',
+    ridgeGpeAgeScaleMyr: 80,   // smooth thermal-structure proxy, not a hard age cutoff
+    ridgeGpeStrength: 1.0,     // unitless sensitivity coefficient (not yet calibrated)
     ridgeMaxAgeMyr: 40,         // crust younger than this on both sides of a contact = an active ridge
     collisionResistance: 100,   // viscous coupling per 10⁴ km² of land-on-land overlap: colliding plates lock together —
                                 // across the front, against their closing (Phase 11; developer: collisions "more fluid, more
