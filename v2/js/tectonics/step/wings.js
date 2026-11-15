@@ -25,6 +25,7 @@ import { PLANET_RADIUS_KM } from '../../core/sim-mesh.js';
 import { normalize, tangentToward } from '../../core/sphere-geom.js';
 import { reachesWithin, hopDistance } from '../../core/mesh-bfs.js';
 import { isContinental } from './hotspots.js';
+import { updateTrenchActivity } from './arc-activity.js';
 
 
 /** Extend every trench's ends along strike by the wing growth rate. @returns cells captured or flagged */
@@ -137,9 +138,16 @@ export function buildArcs(world) {
     for (plate of plates) {
         if (!plate.alive || plate.isBackground || plate.crust.count === 0) continue;
         const { mask, type, flags, slabKm } = plate.crust;
-        const born = [], dormantWidenings = new Set();
+        const born = [], dormantWidenings = new Set(), recentWidenings = new Set();
         for (let c = 0; c < mask.length; c++) {
             if (!mask[c] || type[c] !== CrustType.OCEAN || !(flags[c] & CrustFlag.TRENCH)) continue;
+            // Record boundary activity before any slab/edge threshold filters.
+            // A dormant trench flag can persist after OVERRIDING disappears,
+            // but temporary gaps are allowed only within a bounded window.
+            plate.toWorld(xyz[3*c],xyz[3*c+1],xyz[3*c+2],P);
+            const activeNow=boundaryKind[index.nearest(P[0],P[1],P[2])]===BoundaryKind.OVERRIDING;
+            const recentEnough=updateTrenchActivity(
+                world, plate.id, c, activeNow, config.arcWidenTrenchMemoryMyr);
             let slab = slabKm[c];
             for (let k = adjOffset[c]; k < adjOffset[c + 1]; k++) { const nb = adjList[k]; if (mask[nb] && (flags[nb] & CrustFlag.TRENCH) && slabKm[nb] > slab) slab = slabKm[nb]; }
             if (slab < config.arcMatureConsumedKm) continue;
@@ -152,6 +160,7 @@ export function buildArcs(world) {
             }
             if (!edge || continentWithin(plate, mesh, c, noLandHops)) continue;
             if (arcBeside(plate, mesh, c)) {
+                if (!recentEnough) continue;
                 const w = widenArc(plate, mesh, c, slab, nx, ny, nz, config, widthCapKm(c));
                 if (w >= 0) {
                     born.push(w);
@@ -159,7 +168,10 @@ export function buildArcs(world) {
                     // check whether this trench is overriding RIGHT NOW.
                     // Count resulting conversions on non-OVERRIDING borders.
                     plate.toWorld(xyz[3*c],xyz[3*c+1],xyz[3*c+2],P);
-                    if(boundaryKind[index.nearest(P[0],P[1],P[2])]!==BoundaryKind.OVERRIDING)dormantWidenings.add(w);
+                    if(!activeNow){
+                        dormantWidenings.add(w);
+                        if(recentEnough)recentWidenings.add(w);
+                    }
                 }
                 continue;
             }   // an arc already: widen it with age
@@ -183,6 +195,8 @@ export function buildArcs(world) {
             type[c] = CrustType.ARC; formedAt[c] = time; plate.crust.terrane[c] = plate.arcTerraneId;
             if(dormantWidenings.has(c))
                 world.budget.arcWidenedAtNonOverridingCells = (world.budget.arcWidenedAtNonOverridingCells ?? 0)+1;
+            if(recentWidenings.has(c))
+                world.budget.arcWidenedByRecentActivityCells = (world.budget.arcWidenedByRecentActivityCells ?? 0)+1;
             flags[c] &= ~CrustFlag.APRON;
             plate.crust.recordOrogeny(c, OrogenyType.ARC, 0, time, config.orogenyQuietMyr);
             built++;
