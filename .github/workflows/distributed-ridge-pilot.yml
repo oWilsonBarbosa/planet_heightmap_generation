@@ -1,0 +1,100 @@
+name: Distributed ridge GPE pilot
+
+on:
+  push:
+    branches: [audit/distributed-ridge-gpe-20261114]
+    paths:
+      - '.github/workflows/distributed-ridge-pilot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: GPE unit checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install mesh dependency
+        run: npm install --no-save --no-package-lock delaunator
+      - name: Check syntax
+        run: |
+          node --check v2/js/tectonics/step/ridge-gpe.js
+          node --check v2/js/tectonics/step/forces.js
+          node --check v2/tools/check-ridge-gpe.mjs
+      - name: Unit tests
+        run: node v2/tools/check-ridge-gpe.mjs
+
+  compare:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: seed 777 at 20K
+            seed: 777
+            cells: 20000
+          - label: seed 777 at 40K
+            seed: 777
+            cells: 40000
+          - label: seed 12345 at 20K
+            seed: 12345
+            cells: 20000
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ocean-age-return-20261114
+          path: agefix
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/distributed-ridge-gpe-20261114
+          path: gradient
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Dependencies
+        run: |
+          (cd agefix && npm install --no-save --no-package-lock delaunator)
+          (cd gradient && npm install --no-save --no-package-lock delaunator)
+      - name: Matched 120-Myr histories
+        run: |
+          mkdir -p results
+          (cd agefix && node v2/tools/audit-cycle-polarity.mjs --seed=${{ matrix.seed }} --cells=${{ matrix.cells }} --until=120 --every=2 --out=../results/agefix) > results/agefix.log
+          (cd gradient && node v2/tools/audit-cycle-polarity.mjs --seed=${{ matrix.seed }} --cells=${{ matrix.cells }} --until=120 --every=2 --out=../results/gradient) > results/gradient.log
+      - name: Summarize forces and divergence
+        run: |
+          node --input-type=module <<'EOF'
+          import fs from 'node:fs';
+          const a=JSON.parse(fs.readFileSync('results/agefix.json','utf8'));
+          const b=JSON.parse(fs.readFileSync('results/gradient.json','utf8'));
+          const keys=['ageHash','forceDigest','plateMotionDigest','polarityHash','boundaryHash','ownerHash','crustTypeHash','activePlates'];
+          const first={};
+          for(const key of keys){
+            const i=a.rows.findIndex((r,j)=>r[key]!==b.rows[j][key]);
+            first[key]=i<0?null:a.rows[i].timeMyr;
+          }
+          const snapshots=[0,20,40,80,120].map(timeMyr=>{
+            const x=a.rows.find(r=>r.timeMyr===timeMyr),y=b.rows.find(r=>r.timeMyr===timeMyr);
+            const ridge=r=>r.loads.reduce((sum,p)=>sum+(p.forces.find(q=>q.name==='ridge push')?.cells??0),0);
+            return {timeMyr,agefix:{plates:x.activePlates,ridgeCells:ridge(x)},
+                gradient:{plates:y.activePlates,gradientCells:ridge(y)},
+                sameOwners:x.ownerHash===y.ownerHash};
+          });
+          const result={seed:a.seed,meshCells:a.meshCells,first,snapshots};
+          fs.writeFileSync('results/comparison.json',JSON.stringify(result,null,2)+'\n');
+          console.log('PILOT '+JSON.stringify(result));
+          EOF
+      - name: Archive pilot data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: distributed-ridge-seed${{ matrix.seed }}-cells${{ matrix.cells }}
+          path: results/
+          if-no-files-found: warn
