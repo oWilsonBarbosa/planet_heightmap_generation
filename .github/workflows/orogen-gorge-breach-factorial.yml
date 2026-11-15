@@ -1,0 +1,43 @@
+name: Orogen gorge route x glacial breach factorial controls
+
+on:
+  pull_request:
+    paths:
+      - 'v2/js/finish/**'
+      - '.github/workflows/orogen-gorge-breach-factorial.yml'
+      - 'tuning/evolution/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  combined:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: connected-no-breach
+            share: '0'
+          - name: connected-shallow-breach
+            share: '0.1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Delaunator
+        run: npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts delaunator@5.0.1
+      - name: Run two-factor control at 640K and 1.28M
+        run: |
+          set -o pipefail
+          node --max-old-space-size=5500 tuning/evolution/drainage.mjs --cells 640000,1280000 --glacial-site --lake-match --set requireContinuousGorgeDrainage=true,glacialBreachShare=${{ matrix.share }} 2>&1 | tee "factorial-${{ matrix.name }}.log"
+      - name: Archive controls
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orogen-gorge-breach-${{ matrix.name }}
+          path: factorial-${{ matrix.name }}.log
+          if-no-files-found: warn
