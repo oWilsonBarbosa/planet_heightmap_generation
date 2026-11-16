@@ -69,8 +69,12 @@ try{
   // Ignore the automatic Earth preview; upload and import a synthetic 2:1 grayscale PNG.
   const imported=await browser.newPage({viewport:{width:1366,height:768}});
   const errsI=capture(imported);
-  await imported.route('**/assets/earth.png',r=>r.abort());
+  // Import intentionally auto-loads Earth and holds its controls inert during that first build.
+  // Do not abort the initial image: doing so would leave the page disabled by design.
   await open(imported,'/import.html?gpu=0');
+  await imported.waitForFunction(()=>document.querySelector('#stats')?.textContent?.includes('Regions:')
+    && document.querySelector('#ui')?.inert === false,null,{timeout:180000});
+  console.log('PASS IMPORT DEFAULT','built-in Earth preview accepted and controls released');
   await imported.locator('#mapCanvas').waitFor({state:'attached',timeout:30000});
   const dataUrl=await imported.evaluate(()=>{
     const c=document.createElement('canvas');c.width=128;c.height=64;

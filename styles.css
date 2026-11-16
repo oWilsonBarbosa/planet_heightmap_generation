@@ -208,9 +208,6 @@ body { background: var(--ui-page); overflow: hidden; font-family: var(--font-ui)
 @media (max-width: 1000px) { .nav-follow { display: none; } }
 
 #ui {
-    /* Keep the control panel above the full-screen rendering canvas, including GPU fallback.
-       Map/layer controls remain below nav (60), modals (200) and errors (3000). */
-    z-index: 30;
     position: absolute; top: calc(var(--nav-h) + 16px); left: 16px;
     background: color-mix(in srgb, var(--bg) 96%, transparent); backdrop-filter: blur(12px);
     padding: var(--space-5); border-radius: var(--radius-xl);
