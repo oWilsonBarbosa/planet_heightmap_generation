@@ -48,9 +48,13 @@ export function knobOverrides(s = {}) {
 /**
  * The finish's config overrides for the sliders (finish-config.js FINISH: Evolution's finish, which carves Generate's
  * ground again by the climate's runoff — plans/SHARED_CORE_PLAN.md U1): Hydraulic Erosion is how long its rivers work too.
+ * And Generate's and Import's own rule for the rivers (the owner, 2026-11-15, as the fork's headless exports had it in
+ * js/water-new.js WATER): a basin on land its rivers cannot fill is where they end — a salt lake at its water balance, or
+ * a salt pan — where Evolution's rivers all reach the sea (finish-config.js closedBasins; Evolution's page passes no
+ * overrides and keeps its default).
  */
 export function finishOverrides(s = {}) {
-    return { carveTimeMyr: FINISH.carveTimeMyr * (s.hydraulicErosion ?? DEFAULTS.hydraulicErosion) / DEFAULTS.hydraulicErosion };
+    return { carveTimeMyr: FINISH.carveTimeMyr * (s.hydraulicErosion ?? DEFAULTS.hydraulicErosion) / DEFAULTS.hydraulicErosion, closedBasins: true };
 }
 /** The finish's config for the sliders. */
 export const finishConfigOf = (s = {}) => ({ ...FINISH, ...finishOverrides(s) });

@@ -1,0 +1,37 @@
+name: Release candidate — browser UI smoke
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    name: Chromium desktop/mobile UI initialization
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts playwright@1.58.0
+          npx playwright install --with-deps chromium
+      - name: Start local static website
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/orogen-http.log 2>&1 &
+          sleep 2
+      - name: Exercise Generate, Import and Evolution on desktop and mobile
+        run: node tests/release-browser-smoke.mjs
+      - name: Publish browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-screenshots
+          path: browser-smoke/*.png
+          if-no-files-found: warn

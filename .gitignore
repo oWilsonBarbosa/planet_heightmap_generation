@@ -6,6 +6,9 @@ tuning/screenshots/
 tuning/results/*.json
 tuning/results/climate/
 tuning/climate/data/
+tuning/water/data/
+tuning/relief/data/
+tuning/evolution/data/
 tuning/climate/maps/
 v2/out/
 
