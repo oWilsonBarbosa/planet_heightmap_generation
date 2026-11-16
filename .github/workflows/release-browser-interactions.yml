@@ -1,0 +1,44 @@
+name: Release candidate — functional browser journeys
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/release-browser-interactions.mjs'
+      - '.github/workflows/release-browser-interactions.yml'
+      - 'js/**'
+      - 'v2/js/**'
+      - 'generate.html'
+      - 'import.html'
+      - 'evolution.html'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  journeys:
+    name: Generate, Import and historical Evolution file
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium and Playwright
+        run: |
+          npm install --no-save --no-package-lock --no-audit --no-fund --ignore-scripts playwright@1.58.0
+          npx playwright install --with-deps chromium
+      - name: Serve candidate locally
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/orogen-http.log 2>&1 &
+          sleep 2
+      - name: Exercise real page actions and old saved file
+        run: node tests/release-browser-interactions.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-functional-journeys
+          path: browser-interactions/*.png
+          if-no-files-found: warn
