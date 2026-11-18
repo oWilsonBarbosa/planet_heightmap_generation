@@ -269,7 +269,7 @@ export async function finishPlanet({ frame, simMesh, seed, cells, pool = null, c
     const months = { at: (c, m0, M, share, arid) => { corners(climGrid, lat[c], lon[c], bi, bw); for (let j = 0; j < M; j++) { share[j] = at(monthly.share[m0 + j], c); arid[j] = at(monthly.arid[m0 + j], c); } } };
     // (across a flat, the rivers wander as the carving's did: the same meander, read where the water needs it)
     const wander = meanderV ? c => meanderV[c] : meanderAt(mesh, seed, F, fade);
-    const Hy = hydrology({ mesh, z: C.z, ocean, runoff, pet, rain: pAnn, wetMonths, ice, glaciated: I.ice, tectonic: B.tectonic, seaBasin, fillHollows: true, lat, lon, months, wander, network, debug }, F);
+    const Hy = hydrology({ mesh, z: C.z, ocean, runoff, pet, rain: pAnn, wetMonths, ice, glaciated: I.ice, tectonic: B.tectonic, sink: B.sink, seaBasin, fillHollows: true, lat, lon, months, wander, network, debug }, F);
     Object.assign(stats, { water: Hy.stats });
     // (for the checks, on request: the drainage network as the hydrology left it — each cell's receiver, each lake cell's
     // outlet, discharge and drainage area, the runoff, and the sea it drained to, before the gorges were cut)

@@ -14,8 +14,10 @@ Referências conferidas em 26/10/2026. Este documento registra o que foi feito e
 > acabamento, as opções que `js/water-new.js` ligava para a exportação antiga (`WATER`) não passam por ele: o dono
 > decidiu em 15/11 ligar `closedBasins` para o Generate e o Import (`v2/js/present/knobs.js` `finishOverrides`: uma
 > bacia em terra que os rios não enchem é onde eles acabam, num lago salgado ou numa salina), deixar `seaRemnantAnySize`
-> só na exportação antiga, e manter a regra do estreito (`openStraits`) como está. O Evolution não muda. A tabela de
-> branches abaixo é a de 26/10.
+> só na exportação antiga, e manter a regra do estreito (`openStraits`) como está. O Evolution não muda. Em 18/11 uma
+> bacia fechada passou a ser o fim dos desfiladeiros de montante (`floorWay`; `docs/DRAINAGE_20261029.md`): antes, o
+> corte de uma bacia pequena acima atravessava a borda e a drenava, conforme a malha. A tabela de branches abaixo é a
+> de 26/10.
 >
 > O ensaio de drenagem do Evolution sobre a árvore fundida achou 3 falhas de 32; duas eram da hidrologia do fork e foram
 > corrigidas em `623043c` (o caminho de um desfiladeiro que volta à bacia fica; um lago que baixa até uma saída cortada

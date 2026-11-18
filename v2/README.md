@@ -219,7 +219,10 @@ windyness is good"; 0 keeps every course, 1 takes the way of least work); no clo
 filled in to sea level); only the real oceans are sea. (Generate and Import turn closed basins on — `closedBasins`, through
 `v2/js/present/knobs.js` `finishOverrides`: a basin on land its rivers cannot fill, not with `closedBasinPluvial` times
 what they bring, ends them in a salt lake at its water balance or a salt pan — the owner's choice of 2026-11-15, as the
-fork's headless exports had it; the Evolution keeps every river reaching the sea.) **Inland seas** (2026-10-15): a sea behind a low, short barrier
+fork's headless exports had it; a gorge cut from a hollow upstream ends in such a basin, down its lowest way to its floor
+(`floorWay`), and neither it nor a gorge beside the basin reads as draining it — at 640K, 1.28 M, 5 M and 10 M cells
+one cut through the rim had drained a 145,000 km² salt lake that stood at 2.56 M; the Evolution keeps every river
+reaching the sea.) **Inland seas** (2026-10-15): a sea behind a low, short barrier
 (sill ≲ 30 m, ≲ 160 km of dry land — a strait narrower than the cells) is opened into the ocean; a remnant of the sea cut
 off in a basin (≳ 5 000–20 000 km² and 50–200 m below sea level) has its floor filled with sediment toward ≤ ~1 km below its
 rim. It is its hole — the basin's cells below sea level — and its water stays in it (developer: lakes over trapped
