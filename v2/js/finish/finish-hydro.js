@@ -234,17 +234,16 @@ export function hydrology(ctx, F) {
     // (and where each gorge ran, at what level: a lake further down that a gorge cut through below its rim drains by it)
     const cutAt = new Float32Array(n).fill(Infinity);
     // (where F.closedBasins: a closed basin — a lake hollow holding a basin its rivers could not fill before the carving,
-    // finish-basins.js `sink` — is where a gorge from upstream ends: on down to its floor, not over its rim, which its own
-    // water decides. Cut over the rim, the gorge of any small hollow upstream drained it — which basins depending on the
-    // hollows the mesh resolves: Selvana's 145,000 km² salt lake of planet 06cy8w6z6a89kow6psje93 stood at 2.56 M cells,
-    // and drained at 640K, 1.28 M, 5 M and 10 M. endAt: the hollows that are such ends (set once the hollows are known);
-    // each cut cell's gorge (the one that cut it lowest) and where each gorge ended, so a gorge that ends in a basin does
-    // not read as draining it)
-    let endAt = null, floorNext = null, floorDone = null, gorge = -1;
-    const cutBy = new Int32Array(n).fill(-1), gorgeEnd = [];
-    const lower = (y, level) => { if (z[y] > level) { const d = z[y] - level; cutCells++; cutKm3 += d * cellKm2; if (d > cutMaxKm) cutMaxKm = d; z[y] = level; if (level < cutAt[y]) { cutAt[y] = level; cutBy[y] = gorge; } } };
-    // (inside such a hollow, each cell's next step toward its floor: a flood from its deepest cell over its cells, the lowest
-    // way first — once per hollow, when a gorge first ends in it)
+    // finish-basins.js `sink` — waits for its own fate before a gorge from upstream goes on through it: closed, the gorge
+    // ends on its floor, down its lowest way, and the basin's own water decides its rim; open, the gorge goes on over its
+    // rim as any gorge does. Cut over the rim at once, the gorge of any small hollow upstream drained it — which basins,
+    // depending on the hollows the mesh resolves: Selvana's 145,000 km² salt lake of planet 06cy8w6z6a89kow6psje93 stood
+    // at 2.56 M cells and drained at 640K, 1.28 M, 5 M and 10 M. endAt: the hollows that are such basins (set once the
+    // hollows are known); endFate: 1 closed, 2 open, once its outlet is reached; endWait: the gorges waiting at its edge)
+    let endAt = null, endFate = null, endWait = null, floorNext = null, floorDone = null;
+    const lower = (y, level) => { if (z[y] > level) { const d = z[y] - level; cutCells++; cutKm3 += d * cellKm2; if (d > cutMaxKm) cutMaxKm = d; z[y] = level; if (level < cutAt[y]) cutAt[y] = level; } };
+    // (inside such a basin, each cell's next step toward its floor: a flood from its deepest cell over its cells, the lowest
+    // way first — once per basin, when a gorge first ends in it)
     const floorWay = (id) => {
         if (floorDone[id]) return floorNext;
         floorDone[id] = 1;
@@ -262,6 +261,37 @@ export function hydrology(ctx, F) {
         }
         return floorNext;
     };
+    // (a gorge into a closed basin: cut down to `level` on its lowest way to its floor, and its water with it — each cell on
+    // that way, to the floor, drains down it (its receiver had led toward the rim), and the floor goes no further: the basin's
+    // own water is counted as a lake's, not along its receivers, so the order is untouched)
+    const toFloor = (id, x, level) => {
+        const H = hollows[id], next = floorWay(id);
+        let cutting = true;
+        for (let y = x, g = 0; y >= 0 && g < 1e6; g++) {
+            if (cutting) lower(y, level);
+            if (y === H.deepCell) { if (z[y] < H.floor) H.floor = z[y]; break; }
+            const r = next[y];
+            if (r < 0) break;
+            if (recv[y] !== r) { recv[y] = r; stepKm[y] = edgeKmOf(xyz, y, r); }
+            if (z[r] < level) cutting = false;
+            y = r;
+        }
+        recv[H.deepCell] = -1; stepKm[H.deepCell] = 0;
+    };
+    // (down the receivers from x, cut to `level` until the ground is lower — a closed basin met on the way waits, or ends it)
+    const descend = (x, level, own) => {
+        for (let guard = 0; x >= 0 && rank[x] >= 0 && guard < 100000; guard++) {
+            const hx = hollow[x];
+            if (endAt && hx >= 0 && hx !== own && endAt[hx] && endFate[hx] !== 2) {
+                if (!endFate[hx]) { (endWait[hx] ??= []).push([x, level, own]); return; }
+                toFloor(hx, x, level); return;
+            }
+            lower(x, level);
+            const r = recv[x];
+            if (r < 0 || rank[r] < 0 || (z[r] < level && !(own >= 0 && hollow[r] === own))) break;
+            x = r;
+        }
+    };
     const cut = (x, level, ground = groundZ, exitAt = null) => {
         // (below sea level only to open a small trapped sea into the ocean nearby — its cut through dry land at most
         // seaCutKm long; further, the sea would wind inland down the gorge: then the gorge stops at sea level)
@@ -276,33 +306,13 @@ export function hydrology(ctx, F) {
             }
             if (!(open && km <= F.seaCutKm)) level = Math.max(level, F.seaCutFloorKm);
         }
-        gorge = gorgeEnd.length; gorgeEnd.push(-1);
         const own = hollow[x];
         if (own >= 0 && x !== hollows[own].outlet && keepCourse > 0) {
             const out = hollows[own].outlet, way = gorgeWay(x, own, out, level, ground, exitAt);
             if (way.length) { for (const y of way) lower(y, level); x = way[way.length - 1]; }
             if (x !== out) return level;                            // (it ended where its water runs out anyway)
         }
-        for (let guard = 0; x >= 0 && rank[x] >= 0 && guard < 100000; guard++) {
-            const hx = hollow[x];
-            if (endAt && hx >= 0 && hx !== own && endAt[hx]) {
-                // (into a closed basin: on down its lowest way to its floor, and no further)
-                gorgeEnd[gorge] = hx;
-                const H = hollows[hx], next = floorWay(hx);
-                for (let y = x, g = 0; y >= 0 && g < 1e6; g++) {
-                    lower(y, level);
-                    if (y === H.deepCell) { if (z[y] < H.floor) H.floor = z[y]; break; }
-                    const r = next[y];
-                    if (r < 0 || z[r] < level) break;
-                    y = r;
-                }
-                break;
-            }
-            lower(x, level);
-            const r = recv[x];
-            if (r < 0 || rank[r] < 0 || (z[r] < level && !(own >= 0 && hollow[r] === own))) break;
-            x = r;
-        }
+        descend(x, level, own);
         return level;
     };
     // ── hollows: connected cells under their spill level, one spill level each (one lake, if it were full) ──
@@ -379,7 +389,8 @@ export function hydrology(ctx, F) {
     // (the finishing's hollows cut through once every hollow is found — a cell cut below the flood's surface mid-search
     // read as a hollow of its own: spurious lakes the size of plains — each drained whole, its pockets too)
     if (F.closedBasins && ctx.sink) {
-        endAt = new Uint8Array(hollows.length); floorNext = new Int32Array(n).fill(-1); floorDone = new Uint8Array(hollows.length);
+        endAt = new Uint8Array(hollows.length); endFate = new Uint8Array(hollows.length); endWait = new Array(hollows.length);
+        floorNext = new Int32Array(n).fill(-1); floorDone = new Uint8Array(hollows.length);
         for (let id = 0; id < hollows.length; id++) { const h = hollows[id]; if (h.lake && !h.sea) for (const c of h.cells) if (ctx.sink[c]) { endAt[id] = 1; break; } }
     }
     for (const id of pits) { const h = hollows[id]; for (const c of h.cells) if (z[c] < h.level) z[c] = h.level; }
@@ -492,12 +503,18 @@ export function hydrology(ctx, F) {
             let crossed = Infinity;
             // (and one cut along its shore or through its way out below its level: a lake does not stand above a gorge
             // beside it — at 640K one stood 205 m above its own way out, cut by its tributary's gorge)
-            // (not a gorge that ends in it, in a closed basin — above; and beside a closed basin only a gorge through its own
-            // cells: its water stands far below its rim, where a gorge outside it does not reach)
-            const endsHere = x => cutBy[x] >= 0 && gorgeEnd[cutBy[x]] === hollow[c], shore = !endAt?.[hollow[c]];
-            if (!h.sea) for (const x of h.cells) {
-                if (cutAt[x] < crossed && !endsHere(x)) crossed = cutAt[x];
-                if (shore) for (let k = adjOffset[x]; k < adjOffset[x + 1]; k++) { const nb = adjList[k]; if (hollow[nb] !== hollow[c] && rank[nb] >= 0 && cutAt[nb] < crossed && !endsHere(nb)) crossed = cutAt[nb]; }
+            // (a closed basin's fate first — closed where its rivers would not fill it, not with closedBasinPluvial times what
+            // they bring — and then the gorges that waited at its edge: on to its floor, or over its rim. Closed, no gorge
+            // has drained it)
+            const idC = hollow[c];
+            if (endAt?.[idC]) {
+                endFate[idC] = !h.sea && h.inflow * F.closedBasinPluvial < full ? 1 : 2;
+                for (const [x, lv, ow] of endWait[idC] ?? []) descend(x, lv, ow);
+                endWait[idC] = null;
+            }
+            if (!h.sea && endFate?.[idC] !== 1) for (const x of h.cells) {
+                if (cutAt[x] < crossed) crossed = cutAt[x];
+                for (let k = adjOffset[x]; k < adjOffset[x + 1]; k++) { const nb = adjList[k]; if (hollow[nb] !== hollow[c] && rank[nb] >= 0 && cutAt[nb] < crossed) crossed = cutAt[nb]; }
             }
             const drained = crossed < h.level - 0.01;
             // (and a major river only a huge one — developer, 2026-10-27: major rivers ending in a lake "< 1% unless the lake
@@ -603,6 +620,8 @@ export function hydrology(ctx, F) {
                 level = z[low[Math.max(0, kLow)]] + 1e-3;
             }
             for (const x of water) { lakeKind[x] = kind; lakeLevel[x] = level; }
+            // (a closed basin a gorge ended in: its floor, where that gorge's water goes no further, is in its lake or pan)
+            if (closed && endFate?.[id] === 1 && floorDone?.[id] && !lakeKind[h.deepCell] && water.length) { lakeKind[h.deepCell] = kind; lakeLevel[h.deepCell] = level; }
             if (h.sea ? kind === Water.FRESH : !closed && !water.length) cutPockets(h, id, c);
             h.kind = water.length ? kind : h.pan ? Water.PAN : Water.NONE; h.levelNow = level; h.outflow = outflow; h.fullEvap = full; h.outletIn = h.inflow;
             // (a basin its rivers end in passes nothing on: its outlet is its dry ground like the rest, its own water and

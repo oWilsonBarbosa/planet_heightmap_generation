@@ -150,7 +150,8 @@ finish (plans/GENERATE_REDESIGN_PLAN.md, plans/SHARED_CORE_PLAN.md):
   `finishOverrides`, the finish's `closedBasins`): a basin on land its rivers cannot fill — what flows in less than its
   lake would evaporate, even with twice the water — is where they end, a salt lake at its water balance or a salt pan,
   as Earth's Tarim, Great Basin and Lake Eyre; a gorge cut from a hollow upstream ends there too, down its lowest way to
-  its floor, never over its rim, so a closed basin stays closed at any Detail; on Evolution every river reaches the sea.
+  its floor, never over its rim, so whether a basin stays closed is its water's doing at any Detail; on Evolution every
+  river reaches the sea.
 
 ## How It Works
 
