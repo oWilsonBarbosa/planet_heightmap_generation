@@ -266,14 +266,16 @@ export function hydrology(ctx, F) {
     // own water is counted as a lake's, not along its receivers, so the order is untouched)
     const toFloor = (id, x, level) => {
         const H = hollows[id], next = floorWay(id);
-        let cutting = true;
+        // (the way down never climbs: past where the ground is below the gorge, the lip of a pocket on the floor's way is cut
+        // to the pocket's level — at 10 M cells, water had climbed 189 m out of one)
+        let lv = level;
         for (let y = x, g = 0; y >= 0 && g < 1e6; g++) {
-            if (cutting) lower(y, level);
+            lower(y, lv);
+            if (z[y] < lv) lv = z[y];
             if (y === H.deepCell) { if (z[y] < H.floor) H.floor = z[y]; break; }
             const r = next[y];
             if (r < 0) break;
             if (recv[y] !== r) { recv[y] = r; stepKm[y] = edgeKmOf(xyz, y, r); }
-            if (z[r] < level) cutting = false;
             y = r;
         }
         recv[H.deepCell] = -1; stepKm[H.deepCell] = 0;
