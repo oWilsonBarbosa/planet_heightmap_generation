@@ -275,10 +275,29 @@ export const TERRAIN = {
     foreArcIsleKm: 0.2,         // a fore-arc island (step/margin-isles.js): low
 
     // ── Oceans ──
-    fabricPeriodMyr: 2,         // abyssal hills run along the isochrons, one every this much crust age
-    fabricKm: 0.12,             // their height on young floor…
-    fabricOldKm: 0.03,          // …and on old floor, buried in sediment
+    fabricPeriodMyr: 2,         // (records.js: the isochrons' spacing for this much crust age — read as the spreading rate)
+    // abyssal hills (2026-11-20, the owner: "como na Terra"; before, one sine ridge every fabricPeriodMyr of crust age, as
+    // regular as corduroy on a fine mesh): Earth's most common landform, the ridge's faulted crust carried away — a random
+    // field drawn out along the isochrons (Goff & Jordan 1988; Goff 1991; Goff et al. 1997), its octaves from
+    // abyssFromKm down to abyssToKm and to what the mesh can show; each octave's share by a von Kármán spectrum about its
+    // corner, rising to it as 1/λ and falling past it as λ^abyssHurst. By the full spreading rate, from abyssSlowMmYr
+    // (or slower: the Mid-Atlantic) to abyssFastMmYr (or faster: the East Pacific Rise):
+    abyssSlowMmYr: 20,          // (Earth's ridges: ultraslow < 20, slow 20–55, intermediate 55–80, fast > 80 mm/yr)
+    abyssFastMmYr: 100,
+    abyssSlowKm: 0.22,          // rms height (Goff 1991, Goff & Arbic 2010: ~0.05–0.1 km fast, ~0.2–0.3 km slow)
+    abyssFastKm: 0.06,
+    abyssSlowCornerKm: 30,      // the corner wavelength across the isochrons (2π × the characteristic width: ~5 km slow…
+    abyssFastCornerKm: 12,      // …~2 km fast)
+    abyssSlowAspect: 2,         // how much longer than wide (2–5: slow floor's hills blocky and chaotic, fast floor's lineated)
+    abyssFastAspect: 4.5,
+    abyssHurst: 0.9,            // (0.7–1: Goff & Jordan's fits)
+    abyssFromKm: 120,
+    abyssToKm: 1.5,
+    abyssBuriedShare: 0.25,     // on old floor the sediment leaves this share of their height (fabricTauMyr: its time scale)
     fabricTauMyr: 60,
+    abyssPlainShare: 0.85,      // near a continent its sediment buries this much more: an abyssal plain, the flattest ground
+    abyssPlainNearKm: 300,      // on Earth, at the foot of the continental rise — from abyssPlainNearKm, fading by
+    abyssPlainFarKm: 1200,      // abyssPlainFarKm (Earth's run a few hundred to ~1,000 km out)
     trenchKm: 2.4,              // a trench is this much deeper than the floor beside it (under an old slab; a young one 60 %)
     trenchHalfKm: 55,           // its half-width
     riseKm: 0.35,               // the outer rise on the subducting plate, this high…

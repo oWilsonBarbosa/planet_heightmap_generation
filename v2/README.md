@@ -1063,6 +1063,17 @@ explosive breakups, moth-eaten ocean plateaus, a featureless sea floor and a fla
   records its distance from the two plates' spreading pole (`Crust.fzU`, `model/segments.js`; averaged rotations): the
   segments' floor reads a little older or younger and the ridge and isochrons step; troughs mark where it passes a whole
   number of segment lengths. **Open-ocean arcs** stand deeper (`arcOceanMatureKm` −1.5 km): a ridge its volcanoes break.
+- **Abyssal hills** (2026-11-20, the owner's "como na Terra"; `terrain-config.js` `abyss*`, `synthesize.js`): Earth's
+  commonest landform, the ridge's faulted crust carried away, as a random field drawn out along the isochrons (Goff &
+  Jordan 1988; Goff 1991): its octaves from `abyssFromKm` down, each's share by a von Kármán spectrum about a corner
+  wavelength; taller, wider and more chaotic on slowly spread floor (`abyssSlow*`: rms 0.22 km, corner 30 km, twice as long
+  as wide), lower, narrower and lineated on fast (`abyssFast*`: 0.06 km, 12 km, 4.5 times); buried by sediment with age
+  (`abyssBuriedShare`, `fabricTauMyr`) and under an abyssal plain near a continent (`abyssPlain*`). Read across the
+  isochrons by the distance from the ridge — the crust's age × its plate's half spreading rate (`records.js` `abyssHalf`,
+  one rate a plate, so the hills do not bend where the rate read from the age gradient varies) — and along them where the
+  crust lies; down to what the mesh can show, so a finer mesh draws more of the same field. Before, one sine ridge every
+  `fabricPeriodMyr` of crust age ran unbroken across an ocean: at 2.5 M cells the mesh broke it into texture, at 10 M it
+  read as corduroy.
 - **Old ranges in the start supercontinent:** worn Ural-type belts along about half its suture network (`startSuture*`),
   records only — the plate history is unchanged (hash).
 - **Coasts at the sim's own scale:** a coast read over the plates' cells ran as a chain of rounded lobes one cell across

@@ -262,7 +262,8 @@ const plainOf = (m, mature) => (m.youngPlainKm === undefined ? m.plainKm : m.you
  *   shelfKm / plainKm / slopeKm (from the nearest coast's kind) · maturity (the nearest coast's, if passive: 0 young … 1
  *   mature — its relief buried under the shelf and plain by that share; its shelf widened by it on the open ocean only:
  *   widen) · depthKm (sea floor, ocean cells) · ageMyr and
- *   fabricKm (abyssal-hill wavelength) for ocean cells · trenchKm / trenchDepthKm (distance to, and depth of, the
+ *   fabricKm (the isochrons' spacing for fabricPeriodMyr: the spreading rate) and abyssHalf (its plate's half rate) for
+ *   ocean cells · trenchKm / trenchDepthKm (distance to, and depth of, the
  *   live trench nearby) · riseKm (distance to it on the subducting plate) · platformKm (what a land cell stands at
  *   before relief) · armKm (distance from a failed rift arm) · erosion (how many times faster than the reference things
  *   erode here, by the latitude's estimated rainfall) · belts: [current, overprinted] (beltLayer below; the
@@ -400,6 +401,19 @@ export function deriveRecords(frame, simMesh, cfg, seed = 0, A = buildAnchor(fra
         const g = gradient(simMesh, ageMyr, w, nb => !land[nb], grad);     // Myr per km
         fabricKm[w] = g > 1e-4 ? cfg.fabricPeriodMyr / g : 1e4;
     }
+    // (the abyssal hills' coordinate across the isochrons, synthesize.js: the crust's age × its plate's half spreading rate
+    // — one rate a plate, the median its floor's age gradient reads (km/Myr = mm/yr): a rate that varied from cell to cell
+    // would bend the hills wherever it did)
+    const abyssHalf = new Float32Array(n), halves = new Map();
+    for (let w = 0; w < n; w++) {
+        if (land[w] || !(fabricKm[w] < 1e4) || frame.owner[w] < 0) continue;
+        const p = frame.owner[w];
+        if (!halves.has(p)) halves.set(p, []);
+        halves.get(p).push(fabricKm[w] / cfg.fabricPeriodMyr);
+    }
+    const plateHalf = new Map();
+    for (const [p, v] of halves) { v.sort((a, b) => a - b); plateHalf.set(p, Math.min(100, Math.max(2, v[v.length >> 1]))); }
+    for (let w = 0; w < n; w++) if (!land[w]) abyssHalf[w] = plateHalf.get(frame.owner[w]) ?? 20;
 
     // the fracture zones themselves are drawn where the coordinate, read across the terrain mesh, passes a whole number
     // (synthesize.js): the ocean's coordinates, handed on
@@ -536,7 +550,7 @@ export function deriveRecords(frame, simMesh, cfg, seed = 0, A = buildAnchor(fra
         }
     }
 
-    return { coastRaster, land, arc, craton, riverIncKm: frame.riverIncKm, riverKm2: frame.riverKm2, coastKm, coastKind, maturity, coastFresh: fresh, shelfKm, plainKm, slopeKm, depthKm, ageMyr, fabricKm, trenchKm, riseKm, trenchDepthKm, fractureU,
+    return { coastRaster, land, arc, craton, riverIncKm: frame.riverIncKm, riverKm2: frame.riverKm2, coastKm, coastKind, maturity, coastFresh: fresh, shelfKm, plainKm, slopeKm, depthKm, ageMyr, fabricKm, abyssHalf, trenchKm, riseKm, trenchDepthKm, fractureU,
         platformKm, upliftKm, cratons, terrane: frame.terrane, lipKm, lipWornKm, lipSrc, lipBornMyr, lipEdgeKm, lipOutKm, quietMyr, armKm, erosion, kind, dKm, reach, reliefKm, shear, across, belts: [current, overprinted], time,
         ...farFieldRecords(frame, n, cfg) };
 }

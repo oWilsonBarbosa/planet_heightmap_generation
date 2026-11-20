@@ -1,7 +1,7 @@
 // Terrain synthesis, stage 1 (Phase 8a): the TECTONIC SURFACE — the planet as its tectonic history built it,
 // before rivers carve it (8b). WBP Part VIIc draws ranges "higher and broader than the target, since erosion
 // removes material"; this is that drawing, done from the records:
-//   · the sea floor from crust age (ridges, abyssal plains, fracture-zone steps), abyssal hills along the isochrons,
+//   · the sea floor from crust age (ridges, abyssal plains, fracture-zone steps), abyssal hills drawn out along the isochrons,
 //     trenches with their outer rise, oceanic plateaus;
 //   · continents on an isostatic platform (thickened crust floats high, and sinks back as a quiet belt's root
 //     erodes), with shelves, slopes and coastal plains by kind of margin;
@@ -366,6 +366,12 @@ export function surfaceRange(plan, cfg, seed, edgeKm, xyz, sCells, sWeights, fro
         if (!(amp > 0.001)) break;
         hillsF.push(R / lam); hillsAmp.push(amp);
     }
+    // the abyssal hills' octaves (terrain-config abyss*): wavelengths across the isochrons, each faded to what this mesh can
+    // show — a finer mesh draws more of the same field; and the noise's own spread, so the field drawn has the rms asked
+    const abyssL = [], abyssFade = [];
+    for (let o = 0, lam = cfg.abyssFromKm ?? 0; lam > 0 && lam >= (cfg.abyssToKm ?? 1) && o < 10; o++, lam /= 2) { abyssL.push(lam); abyssFade.push(fade(lam)); }
+    let abyssStd = 0;
+    if (abyssL.length) { let s2 = 0; for (let i = 0; i < 4096; i++) { const v = noise.noise3D(1.7319 * i + 0.31, 0.9131 * i + 5.1, 2.3611 * i + 9.7); s2 += v * v; } abyssStd = Math.sqrt(s2 / 4096); }
     const islandF = R / Math.max(1, cfg.arcIslandKm ?? 140), strait = cfg.arcStraitKm ?? 0;
     const renewedNoise = (u, v, w) => fadeB > 0 ? fadeA * noise.noise3D(u + offA, v + offA, w + offA) + fadeB * noise.noise3D(u + offB, v + offB, w + offB) : noise.noise3D(u + offA, v + offA, w + offA);
     const coastCurve = cfg.coastCurve ?? 0, mountainCurve = cfg.mountainCurve ?? 0, crestFollow = cfg.crestFollow ?? 0;
@@ -424,7 +430,7 @@ export function surfaceRange(plan, cfg, seed, edgeKm, xyz, sCells, sWeights, fro
     };
     const floorFor = after => floorKm + (floorRoll > 0 || floorDeep > 0 ? (floorRoll + floorDeep * Math.min(1, Math.max(0, floorKm - after) / floorDeepAt)) * floorNoise() : 0);
     const { cratons: CR, terrane } = rec;
-    const { coastKm, land, arc: arcCrust, craton, quietMyr, kind: beltKind, riverIncKm, platformKm, upliftKm, lipKm, lipWornKm, lipSrc, lipBornMyr, lipEdgeKm, lipOutKm, depthKm, shelfKm, plainKm, maturity, slopeKm, ageMyr, fabricKm, trenchKm, riseKm, trenchDepthKm, armKm, fractureU, coastFresh, envShape, rootShape, farGrain, farFold, farPhase } = rec;
+    const { coastKm, land, arc: arcCrust, craton, quietMyr, kind: beltKind, riverIncKm, platformKm, upliftKm, lipKm, lipWornKm, lipSrc, lipBornMyr, lipEdgeKm, lipOutKm, depthKm, shelfKm, plainKm, maturity, slopeKm, ageMyr, fabricKm, abyssHalf, trenchKm, riseKm, trenchDepthKm, armKm, fractureU, coastFresh, envShape, rootShape, farGrain, farFold, farPhase } = rec;
     // the far field (records.js farFieldRecords; plans/V2_FAR_FIELD_PLAN.md F3–F4): its folds and the grain it leaves, both
     // read as noise ACROSS its phase — near enough the distance from the fronts that pushed the crust — and slowly along it
     const farOn = !!farPhase, foldStretch = cfg.farFoldStretch ?? 1, foldWanderF = R / (cfg.farFoldWanderKm ?? 800);
@@ -981,12 +987,31 @@ export function surfaceRange(plan, cfg, seed, edgeKm, xyz, sCells, sWeights, fro
             const floor = ow > 0 ? (oc(c0, w0) * depthKm[c0] + oc(c1, w1) * depthKm[c1] + oc(c2, w2) * depthKm[c2]) / ow : 3;
             const slope = w0 * slopeKm[c0] + w1 * slopeKm[c1] + w2 * slopeKm[c2];
             h = cfg.shelfEdgeKm + (-floor - cfg.shelfEdgeKm) * smooth(0, slope, -coast);
-            // abyssal hills along the isochrons, faded where the mesh cannot show them
-            if (ow > 0) {
+            // abyssal hills (terrain-config abyss*): a random field drawn out along the isochrons — across them read by the
+            // distance from the ridge (the crust's age × its plate's half spreading rate: records.js abyssHalf), along them by
+            // where the crust lies; sized by the spreading rate there, buried by sediment with age and under an abyssal plain near
+            // a continent; down to what the mesh can show
+            if (ow > 0 && abyssL.length) {
                 const age = (oc(c0, w0) * ageMyr[c0] + oc(c1, w1) * ageMyr[c1] + oc(c2, w2) * ageMyr[c2]) / ow;
-                const lam = (oc(c0, w0) * fabricKm[c0] + oc(c1, w1) * fabricKm[c1] + oc(c2, w2) * fabricKm[c2]) / ow, f = fade(lam);
-                if (f > 0) h += f * smooth(0, 150, -coast) * (cfg.fabricOldKm + (cfg.fabricKm - cfg.fabricOldKm) * Math.exp(-age / cfg.fabricTauMyr))
-                    * Math.sin(2 * Math.PI * age / cfg.fabricPeriodMyr + 2 * noise.noise3D(x * 20, y * 20, z * 20));
+                const lam = (oc(c0, w0) * fabricKm[c0] + oc(c1, w1) * fabricKm[c1] + oc(c2, w2) * fabricKm[c2]) / ow;
+                const half = Math.min(100, Math.max(2, lam / cfg.fabricPeriodMyr)), slow = 1 - smooth(cfg.abyssSlowMmYr, cfg.abyssFastMmYr, 2 * half);
+                const H = cfg.abyssFastKm + (cfg.abyssSlowKm - cfg.abyssFastKm) * slow, corner = cfg.abyssFastCornerKm + (cfg.abyssSlowCornerKm - cfg.abyssFastCornerKm) * slow;
+                const plateHalf = (oc(c0, w0) * abyssHalf[c0] + oc(c1, w1) * abyssHalf[c1] + oc(c2, w2) * abyssHalf[c2]) / ow;
+                const aspect = cfg.abyssFastAspect + (cfg.abyssSlowAspect - cfg.abyssFastAspect) * slow, across = age * plateHalf;
+                let sum = 0, norm = 0;
+                for (let o = 0; o < abyssL.length; o++) {
+                    const L = abyssL[o], r = L / corner, wo = r >= 1 ? 1 / r : r ** cfg.abyssHurst;
+                    norm += wo * wo;
+                    if (abyssFade[o] > 0) {
+                        const F = R / (L * aspect), U = across / L;
+                        sum += abyssFade[o] * wo * noise.noise3D(x * F + 0.6 * U + 41.7 + 3.1 * o, y * F + 0.64 * U + 13.3 + 1.9 * o, z * F + 0.48 * U + 27.1 + 2.7 * o);
+                    }
+                }
+                if (sum !== 0) {
+                    const buried = cfg.abyssBuriedShare + (1 - cfg.abyssBuriedShare) * Math.exp(-age / cfg.fabricTauMyr);
+                    const plain = 1 - cfg.abyssPlainShare * (1 - smooth(cfg.abyssPlainNearKm, cfg.abyssPlainFarKm, -coast));
+                    h += H * buried * plain * smooth(0, 150, -coast) * sum / (Math.sqrt(norm) * abyssStd);
+                }
             }
             // the trench, and the outer rise on the plate going down
             const tk = w0 * trenchKm[c0] + w1 * trenchKm[c1] + w2 * trenchKm[c2];
