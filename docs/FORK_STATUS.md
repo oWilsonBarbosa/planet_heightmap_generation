@@ -16,8 +16,10 @@ Referências conferidas em 26/10/2026. Este documento registra o que foi feito e
 > bacia em terra que os rios não enchem é onde eles acabam, num lago salgado ou numa salina), deixar `seaRemnantAnySize`
 > só na exportação antiga, e manter a regra do estreito (`openStraits`) como está. O Evolution não muda. Em 18/11 uma
 > bacia fechada passou a ser o fim dos desfiladeiros de montante (`floorWay`; `docs/DRAINAGE_20261029.md`): antes, o
-> corte de uma bacia pequena acima atravessava a borda e a drenava, conforme a malha. A tabela de branches abaixo é a
-> de 26/10.
+> corte de uma bacia pequena acima atravessava a borda e a drenava, conforme a malha. Em 20/11 as colinas abissais
+> deixaram de ser uma senoide por idade da crosta e passaram a ser um campo aleatório alongado ao longo das isócronas,
+> como na Terra (`f51a6f6`; `v2/README.md`, "Abyssal hills"; a pedido do dono, "como na Terra"). A terra não muda. A
+> tabela de branches abaixo é a de 26/10.
 >
 > O ensaio de drenagem do Evolution sobre a árvore fundida achou 3 falhas de 32; duas eram da hidrologia do fork e foram
 > corrigidas em `623043c` (o caminho de um desfiladeiro que volta à bacia fica; um lago que baixa até uma saída cortada
